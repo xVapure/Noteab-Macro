@@ -3,7 +3,6 @@ Application made for Roblox Sol's RNG biome tracking (using Discord Rich Presenc
 
 # Requirements to make this work:
 (1) Bloxstrap and Discord App installed
-
 (2) Follow this tutorial: https://streamable.com/kp2uwv
 
 # Notes:

@@ -44,7 +44,7 @@ def save_config():
            "The private server link you provided is a share link, this is not safe to use due to fake link will get your account terminated. "
            "To get the code link, paste the share link into your browser and run it. This should convert the link to a privateServerLinkCode link. "
            "Copy and paste the converted link into the Private Server setting to fix this issue.\n\n"
-           "The link should look like: https://www.roblox.com/games/15532962292/Sols-RNG?privateServerLinkCode=..."
+           "The link should look like: https://www.roblox.com/games/15532962292/Sols-RNG-Eon1-1?privateServerLinkCode=..."
        )
        return
    
@@ -66,12 +66,13 @@ def save_config():
            "HELL": hell_var.get(),
            "STARFALL": starfall_var.get(),
            "CORRUPTION": corruption_var.get(),
+           "GRAVEYARD": graveyard_var.get(),
+           "PUMPKIN MOON": pumpkin_moon_var.get(),
            "NULL": null_var.get(),
            "GLITCHED": glitched_var.get()
        },
        "auto_pop_hp2": auto_pop_hp2_var.get(),
        "hp2_amount": hp2_amount_var.get(),
-       # Include inventory coordinates
        "inventory_menu": existing_config.get("inventory_menu", [0, 0]),
        "items_tab": existing_config.get("items_tab", [0, 0]),
        "search_bar": existing_config.get("search_bar", [0, 0]),
@@ -145,7 +146,7 @@ class SnippingWidget:
 # Biome notifier GUI
 root = tk.Tk()
 root.title("Biome Settings")
-root.geometry("532x480")
+root.geometry("532x520")
 
 tk.Label(root, text="Webhook URL:").grid(row=0, column=0, sticky="e")
 webhook_url_entry = tk.Entry(root, width=50)
@@ -164,7 +165,7 @@ private_server_link_entry = tk.Entry(root, width=50)
 private_server_link_entry.grid(row=2, column=1, columnspan=2, pady=5)
 private_server_link_entry.insert(0, config.get("private_server_link", ""))
 
-biomes = ["WINDY", "RAINY", "SNOWY", "SAND STORM", "HELL", "STARFALL", "CORRUPTION", "NULL", "GLITCHED"]
+biomes = ["WINDY", "RAINY", "SNOWY", "SAND STORM", "HELL", "STARFALL", "CORRUPTION", "NULL", "GLITCHED", "GRAVEYARD", "PUMPKIN MOON"]
 options = ["None", "Message", "Ping"]
 variables = {}
 
@@ -184,6 +185,10 @@ starfall_var = variables["STARFALL"]
 corruption_var = variables["CORRUPTION"]
 null_var = variables["NULL"]
 glitched_var = variables["GLITCHED"]
+
+# EVENT BIOMES
+graveyard_var = variables["GRAVEYARD"]
+pumpkin_moon_var = variables["PUMPKIN MOON"]
 
 
 ## AUTO POP HEAVENLY POTION 2 SETTINGS
