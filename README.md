@@ -1,5 +1,5 @@
-# Sol-Biome-Tracker
-Application made for Roblox Sol's RNG biome tracking (using Discord Rich Presence)
+# Noteab-Biome-Macro
+Application made for Roblox Sol's RNG biome tracking (And merchant sniping lol)
 
 # Requirements to make this work:
 (1) Bloxstrap and Discord App installed
