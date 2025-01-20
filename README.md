@@ -10,4 +10,4 @@ If you're unsure if my application are not "somehow" safe, I have include all my
 
 # Credits:
 - Noteab - Main developers for Sol's Biome Detection
-- Heavily inspired by Maxstellar's Biome Detection (His youtube: https://www.youtube.com/@maxstellar_)
+- Heavily inspired by Maxstellar's Biome Detection [(His youtube: https://www.youtube.com/@maxstellar_)](https://www.youtube.com/@maxstellar_)
