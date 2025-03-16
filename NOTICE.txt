@@ -1,0 +1,7 @@
+== BIOME MACRO SOURCE CODE DISCLAIMER ==
+
+This project contains original work by Noteab himself.
+Any adoption of macro code, functions, or direct copy-pasting of this project's macro-related code is not permitted, even with ATTRIBUTION/PROPER CREDITED.
+
+--> Users must request explicit permission from Noteab and get accepted before using core macro functions and any related asset in the macro.  
+--> Unauthorized use, modification, or redistribution of these functions will be considered a violation.  
