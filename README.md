@@ -11,3 +11,6 @@ If you're unsure if my application are not "somehow" safe, I have include all my
 # Credits:
 - Noteab - Main developers for Sol's Biome Detection
 - Heavily inspired by Maxstellar's Biome Detection [(His youtube: https://www.youtube.com/@maxstellar_)](https://www.youtube.com/@maxstellar_)
+
+# For any developer who want to take source code of my biome macro for distribution:
+- Make sure to read "NOTICE.txt" to see further about crediting, distribute your macro that include my code!
