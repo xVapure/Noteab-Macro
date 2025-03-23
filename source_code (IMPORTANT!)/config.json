@@ -1,0 +1,42 @@
+{
+    "webhook_url": "",
+    "webhook_user_id": "",
+    "private_server_link": "",
+    "biome_notifier": {
+        "WINDY": "Message",
+        "RAINY": "Message",
+        "SNOWY": "Message",
+        "SAND STORM": "Message",
+        "HELL": "Message",
+        "STARFALL": "Message",
+        "CORRUPTION": "Message",
+        "NULL": "Message",
+        "GLITCHED": "Message"
+    },
+    "auto_pop_hp2": false,
+    "hp2_amount": "1",
+    "inventory_menu": [
+        41,
+        538
+    ],
+    "items_tab": [
+        1272,
+        329
+    ],
+    "search_bar": [
+        855,
+        358
+    ],
+    "first_item_slot": [
+        839,
+        434
+    ],
+    "amount_box": [
+        594,
+        570
+    ],
+    "use_button": [
+        710,
+        573
+    ]
+}
