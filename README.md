@@ -2,7 +2,7 @@
 Application made for Roblox Sol's RNG biome tracking (And merchant sniping lol)
 
 # Install my macro in here:
-https://github.com/noteab/Noteab-Macro/releases
+https://github.com/xVapure/Noteab-Macro/releases
 
 # Notes:
 If you're unsure if my application are not "somehow" safe, I have include all my source code, you can compare it and even I have include the python to exe file which you can convert at your own for better experience and your own modification.
