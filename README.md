@@ -11,6 +11,7 @@ Or you can ahead to this virus scanner and scan the biome macro by yourself: htt
 
 # Credits:
 - Noteab - Main developers for Sol's Biome Detection
+- Criticize - Taking over Noteab's macro from now on (main developer).
 - Heavily inspired by Maxstellar's Biome Detection [(His youtube: https://www.youtube.com/@maxstellar_)](https://www.youtube.com/@maxstellar_)
 
 # For any developer who want to take source code of my biome macro for distribution:
