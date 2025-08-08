@@ -1,9 +1,12 @@
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, locale, win32gui, win32process
 import traceback
 import pygetwindow as gw
+
+
 from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk
 from datetime import datetime, timedelta
+
 import ttkbootstrap as ttk
     
 class SnippingWidget:
@@ -129,48 +132,48 @@ class BiomePresence():
         default_biome_data = {
             "NORMAL": {
                 "color": "0xffffff",
-                "thumbnail_url": "fuck is this for??"
+                "thumbnail_url": "https://i.postimg.cc/sxfQdw2X/image.png"
             },
             "WINDY": {
                 "color": "0x9ae5ff",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/WINDY.png"
+                "thumbnail_url": "https://i.postimg.cc/6qPH4wy6/image.png"
             },
             "RAINY": {
                 "color": "0x027cbd",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/RAINY.png"
+                "thumbnail_url": "https://static.wikia.nocookie.net/sol-rng/images/e/ec/Rainy.png"
             },
             "SNOWY": {
                 "color": "0xDceff9",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SNOWY.png"
+                "thumbnail_url": "https://static.wikia.nocookie.net/sol-rng/images/d/d7/Snowy_img.png"
             },
             "SAND STORM": {
                 "color": "0x8F7057",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SAND%20STORM.png"
+                "thumbnail_url": "https://i.postimg.cc/3JyL25Kz/image.png"
             },
             "HELL": {
                 "color": "0xff4719",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/HELL.png"
+                "thumbnail_url": "https://i.postimg.cc/hGC5xNyY/image.png"
             },
             "STARFALL": {
                 "color": "0x011ab7",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/STARFALL.png"
+                "thumbnail_url": "https://i.postimg.cc/1t0dY4J8/image.png"
             },
             "CORRUPTION": {
                 "color": "0x6d32a8",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/CORRUPTION.png"
+                "thumbnail_url": "https://i.postimg.cc/ncZQ84Dh/image.png"
             },
             "NULL": {
                 "color": "0x838383",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NULL.png"
+                "thumbnail_url": "https://static.wikia.nocookie.net/sol-rng/images/f/fc/NULLLL.png"
             },
             "GLITCHED": {
                 "color": "0xbfff00",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png"
+                "thumbnail_url": "https://i.postimg.cc/W3Lhtn5g/image.png"
             },
             
             "DREAMSPACE": {
                 "color": "0xea9dda",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png",
+                "thumbnail_url": "https://i.postimg.cc/rFjCcW3w/image.png",
             "BLAZING SUN": {
                 "color": "0xfbc02d",
                 "thumbnail_url": "https://maxstellar.github.io/biome_thumb/BLAZING%20SUN.png"
@@ -307,8 +310,7 @@ class BiomePresence():
             "1st_add_button": self.config.get("1st_add_button", [798, 620]),
             "2nd_add_button": self.config.get("2nd_add_button", [796, 673]),
             "3rd_add_button": self.config.get("3rd_add_button", [808, 760]),
-            "4th_add_button": self.config.get("4th_add_button", [804, 779]),
-            "detect_merchant_no_mt": self.detect_merchant_no_mt_var.get(),
+            "4th_add_button": self.config.get("4th_add_button", [804, 779])
         })
 
         if not config["auto_buff_glitched"]:
@@ -388,7 +390,6 @@ class BiomePresence():
             self.mari_user_id_var.set(config.get("mari_user_id", ""))
             self.ping_jester_var.set(config.get("ping_jester", False))
             self.jester_user_id_var.set(config.get("jester_user_id", ""))
-            self.detect_merchant_no_mt_var.set(config.get("detect_merchant_no_mt", True))
             
             # biome count
             self.biome_counts = config.get("biome_counts", {biome: 0 for biome in self.biome_data})
@@ -413,7 +414,7 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
         
         self.root = ttk.Window(themename=selected_theme)
-        self.root.title("""Noteab's Biome Macro (Patch 1.6 by "@criticize.") (Idle)""")
+        self.root.title("Noteab's Biome Macro (Criticize's summer update FIXED) (Idle)")
         self.root.geometry("695x385")
         
         try:
@@ -442,7 +443,7 @@ class BiomePresence():
         notebook.add(misc_frame, text='Misc')
         notebook.add(merchant_frame, text='Merchant')
         notebook.add(aura_webhook_frame, text='Auras')
-        notebook.add(hp_craft_frame, text='Auto Craft (DISCONTINUED)')
+        notebook.add(hp_craft_frame, text='Auto Craft (BETA)')
         notebook.add(stats_frame, text='Stats')
         notebook.add(credits_frame, text='Credits')
    
@@ -491,7 +492,7 @@ class BiomePresence():
         if dont_ask_again: return
         
         try:
-            response = requests.get("https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest")
+            response = requests.get("https://api.github.com/repos/noteab/Noteab-Macro/releases/latest")
             response.raise_for_status()
             latest_release = response.json()
             latest_version = latest_release['tag_name']
@@ -627,21 +628,17 @@ class BiomePresence():
         ttk.Button(frame, text="Import Config", command=self.import_config).grid(row=5, column=2, pady=10)
         
     def create_notice_tab(self, frame):
-        msg_text = (
-            "🔔 Welcome to Noteab's Biome Macro v1.6.0\n\n"
-            "- Hello so um, this is \"@criticize.\", not Noteab. Noteab has discontinued this project.\n"
-            "- I will be taking over updates from now on (mostly biomes & auras).\n"
-            "- You can check out other awesome tools by Scope Team (yay!), BiomeScope & Sol's Scope.\n"
-            "- Join their Discord community for updates and support by clicking the link below:\n"
-        )
+        notice_text = (
+            "🔔 Welcome to Noteab's Biome Macro v1.5.5-summer update!\n\n"
+            """- Hello so um, this is "criticize.", not Noteab. Noteab have discontinued this project. \n"""
+            "- Myself, I will not be releasing any other Noteab macro updates, but rather to notify you guys about this unfortunate incident.\n"
+            "- However, I can introduce you to other quality alternatives, made by Scope Team (yay), BiomeScope & Sol's Scope. They have the same features as Noteab macro but even better and more enhanced!\n\n"
+            "- Join their Discord community for updates and support, (Noteab's Discord will not be receiving anymore macro update): https://discord.gg/vuHAR97FWZ\n"
+            "https://discord.gg/vuHAR97FWZ\n"
+                    )
 
-        ttk.Label(frame, text=msg_text, justify="left", wraplength=650).pack(padx=10, pady=(10, 0), anchor="w")
-        link = "https://discord.gg/vuHAR97FWZ"
-        link_label = ttk.Label(frame, text=link, foreground="blue", cursor="hand2", wraplength=650)
-        link_label.pack(padx=10, pady=5, anchor="w")
-        link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link))
-
-    
+        label = ttk.Label(frame, text=notice_text, justify="left", wraplength=650)
+        label.pack(padx=10, pady=10, anchor="w")    
 
     def create_misc_tab(self, frame):
         hp2_frame = ttk.Frame(frame)
@@ -934,17 +931,9 @@ class BiomePresence():
         ping_jester_check.grid(row=4, column=0, padx=5, pady=3, sticky="w")
 
         self.jester_user_id_var = ttk.StringVar(value=self.config.get("jester_user_id", ""))
-        self.detect_merchant_no_mt_var = ttk.BooleanVar(value=self.config.get("detect_merchant_no_mt", True))
         jester_user_id_entry = ttk.Entry(frame, textvariable=self.jester_user_id_var, width=15)
         jester_user_id_entry.grid(row=4, column=1, padx=0, pady=3, sticky="w")
         jester_user_id_entry.bind("<FocusOut>", lambda event: self.save_config())
-
-        merchant_no_mt_check = ttk.Checkbutton(
-            frame, text="Merchant detection without Merchant Teleporter gamepass.",
-            variable=self.detect_merchant_no_mt_var, command=self.save_config
-        )
-        merchant_no_mt_check.grid(row=6, column=0, padx=5, pady=3, sticky="w")
-
 
         jester_label = ttk.Label(frame, text="")
         jester_label.grid(row=4, column=2, padx=5, pady=3, sticky="w")
@@ -1279,7 +1268,7 @@ class BiomePresence():
 
         if noteab_image:
             ttk.Label(noteab_frame, image=noteab_image).pack(pady=5)
-        ttk.Label(noteab_frame, text="""Main Developer: Noteab & "@Criticize." """).pack()
+        ttk.Label(noteab_frame, text="Main Developer: Noteab & Criticize (for summer update)").pack()
 
         discord_label = ttk.Label(noteab_frame, text="Join Scope's community server", foreground="#03cafc", cursor="hand2")
         discord_label.pack()
@@ -1537,7 +1526,7 @@ class BiomePresence():
                 )
                 self.auto_craft_thread.start()
             
-            self.root.title("""Noteab's Biome Macro (Patch 1.6 by "@criticize.") (Running)""")
+            self.root.title("Noteab's Biome Macro (Criticize's summer update FIXED) (Running)")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             print("Biome detection started.")
 
@@ -1549,7 +1538,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
 
             self.start_time = None
-            self.root.title("""Noteab's Biome Macro (Patch 1.6 by "@criticize.") (Stopped)""")
+            self.root.title("Noteab's Biome Macro (Criticize's summer update FIXED) (Stopped)")
             self.send_webhook_status("Macro stopped!", color=0xff0000)
             self.save_config()
             print("Biome detection stopped.")
@@ -1565,15 +1554,7 @@ class BiomePresence():
             return []
 
         def is_chat_log(line):
-            if "ExpChat" in line or "mountClientApp" in line:
-                excluded_phrases = [
-                    "[Merchant]: Mari has arrived on the island...",
-                    "[Merchant]: Jester has arrived on the island!!",   
-                    "The Devourer of the Void, Eden has appeared somewhere in The Limbo."
-                ]
-                return not any(phrase in line for phrase in excluded_phrases)
-            return False
-
+            return "ExpChat" in line or "mountClientApp" in line
 
         with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as file:
             file.seek(self.last_position)
@@ -1902,7 +1883,7 @@ class BiomePresence():
                         self.send_webhook_status("Roblox instance closed!", color=0xff0000)
                         self.has_sent_disconnected_message = True
                     
-                    self.root.title("""Noteab's Biome Macro (Patch 1.6 by "@criticize.") (Roblox Disconnected :c )""")
+                    self.root.title("Noteab's Biome Macro (Criticize's summer update FIXED) (Roblox Disconnected :c )")
                     self.reconnecting_state = True
                     
                     time.sleep(4.5)
@@ -1920,7 +1901,7 @@ class BiomePresence():
                                 print(f"Reconnecting to your server... hold on bro (Attempt #{attempt})")
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server... hold on bro", color=0xffff00)
-                                self.root.title("""Noteab's Biome Macro (Patch 1.6 by "@criticize.") (Reconnecting)""")
+                                self.root.title("Noteab's Biome Macro (Criticize's summer update FIXED) (Reconnecting)")
                                 
                                 os.startfile(roblox_deep_link)
                                 time.sleep(36)
@@ -1960,7 +1941,7 @@ class BiomePresence():
                 
                 # Reset flag if Roblox is running
                 self.has_sent_disconnected_message = False
-                self.root.title("""Noteab's Biome Macro (Patch 1.6 by "@criticize.") (Running)""")
+                self.root.title("Noteab's Biome Macro (Criticize's summer update FIXED) (Running)")
                 
                 if self.reconnecting_state:
                     time.sleep(18)
@@ -1981,7 +1962,7 @@ class BiomePresence():
     
     def reconnect_check_start_button(self):
         try:
-            self.root.title("""Noteab's Biome Macro (Patch 1.6 by "@criticize.") (Reconnecting - In Main Menu)""")
+            self.root.title("Noteab's Biome Macro (Criticize's summer update FIXED) (Reconnecting - In Main Menu)")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -2001,7 +1982,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.root.title("""Noteab's Biome Macro (Patch 1.6 by "@criticize.") (Running)""")
+                    self.root.title("Noteab's Biome Macro (Criticize's summer update FIXED) (Running)")
                     return True  # yay joins!!
                 
                 print("Still in Main Menu, clicking again...")
@@ -2433,7 +2414,7 @@ class BiomePresence():
             "title": title,
             "color": biome_color,
             "footer": {
-                "text": """Noteab's Biome Macro (Patch 1.6 by "@criticize.")""",
+                "text": "Noteab's Biome Macro (Criticize's summer update FIXED)",
                 "icon_url": icon_url
             },
             "fields": fields
@@ -2536,7 +2517,7 @@ class BiomePresence():
                     "description": description,
                     "color": color,
                     "footer": {
-                        "text": """Noteab's Biome Macro (Patch 1.6 by "@criticize.")""",
+                        "text": "Noteab's Macro (Criticize's summer update FIXED)",
                         "icon_url": icon_url
                     }
                 }
@@ -2571,7 +2552,7 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {status}",
                 "color": embed_color,
                 "footer": {
-                    "text": """Noteab's Biome Macro (Patch 1.6 by "@criticize.")""",
+                    "text": "Noteab's Macro (Criticize's summer update FIXED)",
                     "icon_url": icon_url
                 }
             }]
