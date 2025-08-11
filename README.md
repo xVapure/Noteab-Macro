@@ -22,3 +22,18 @@
 - A lot of new features are being planned to add currently.
 ## III. Ending statement
 - Noteab have permanently stepped down from the position of the owner and developer for Noteab's macro, that is a really sudden and unfortunate news for not only me but I believe for a lot of people. Since this is one of the biggest Sol's macro, it would be unsuitable if no one continues to maintain it. If you are looking for other alternatives for Noteab's Biome Macro, I suggest checking out [Scope Team](https://discord.gg/vuHAR97FWZ). But for now, I will be trying my absolute best as the lead developer for Noteab's Biome Macro, and I look forward to work with everyone.
+## IV. FAQs and common fixes
+Q: Macro has virus?
+A: No, it is Window's false positives. You can check out the source code or reverse engineer if you wish. Or put the file into a virtual machine/Virus Total.
+Q: Merchant and Eden detection from logs not working.
+A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ryeAMV3fLM).
+```
+{
+  "FStringDebugLuaLogLevel": "trace",
+  "FStringDebugLuaLogPattern": "ExpChat/mountClientApp"
+}
+```
+Q: I got this bug "Exception: Unsupported locale setting:
+A: [Fix](https://cdn.discordapp.com/attachments/1284692110687076397/1365668681467826248/caption.gif?ex=689a8d52&is=68993bd2&hm=065da6283ec646874fc092274230fb232a4cc0c90bb5ddccb49d77cfc2b28ef0&).
+Q: How to calibrate merchants?
+A: [Follow this tutorial](https://youtu.be/OhzKdd7g-ws).
