@@ -6,7 +6,7 @@
 2) The project.
 - This project is a fork of the original [Noteab's Biome Macro](https://github.com/noteab/Noteab-Macro/).
 - Abides by the [Apache 2.0 license](https://github.com/noteab/Noteab-Macro/blob/main/LICENSE).
-  - Even if [Noteab's notice](https://github.com/noteab/Noteab-Macro/blob/main/NOTICE.txt) states that "Users must request explicit permission from Noteab and get accepted before using core macro functions and any related asset in the macro.", however Noteab's macro abides by the [Apache 2.0 license](https://github.com/noteab/Noteab-Macro/blob/main/LICENSE), he is not legally allowed to stop anyone from redistributing the code.
+  - Even if [Noteab's notice](https://github.com/noteab/Noteab-Macro/blob/main/NOTICE.txt) states that "Users must request explicit permission from Noteab and get accepted before using core macro functions and any related asset in the macro.", however Noteab's macro abides by the [Apache 2.0 license](https://github.com/noteab/Noteab-Macro/blob/main/LICENSE), he is not legally allowed to stop anyone from redistributing the code, his statement strongly contradicts with the type of license he's using.
 ## II. About Noteab's Biome Macro.
 1) What does Noteab Biome Macro offer?
 - Merchant detections using two methods, OCR detection and logs reading detection.
