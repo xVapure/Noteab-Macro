@@ -32,7 +32,8 @@ A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ry
   "FStringDebugLuaLogLevel": "trace",
   "FStringDebugLuaLogPattern": "ExpChat/mountClientApp"
 }
-```<br>
+```
+<br>
 Q: I got this bug "Exception: Unsupported locale setting:<br>
 A: [Fix](https://cdn.discordapp.com/attachments/1284692110687076397/1365668681467826248/caption.gif?ex=689a8d52&is=68993bd2&hm=065da6283ec646874fc092274230fb232a4cc0c90bb5ddccb49d77cfc2b28ef0&).<br>
 Q: How to calibrate merchants?<br>
