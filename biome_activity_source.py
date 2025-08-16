@@ -3080,6 +3080,23 @@ class BiomePresence():
                     print(f"Failed to send webhook status to {webhook_url}: {e}")
         except Exception as e:
             print(f"An error occurred in webhook_status: {e}")
+
+    def activate_roblox_window(self):
+        windows = gw.getAllTitles()
+        roblox_window = None
+        
+        for window in windows:
+            if "Roblox" in window:
+                roblox_window = gw.getWindowsWithTitle(window)[0]
+                break
+
+        if roblox_window:
+            try:
+                roblox_window.activate()
+            except Exception as e:
+                print(f"Failed to activate window: {e}")
+        else:
+            print("Roblox window not found.")
     
     def autoit_hold_left_click(self, posX, posY, holdTime=3300):
         autoit.mouse_click("left", posX, posY, 5, speed=2)
