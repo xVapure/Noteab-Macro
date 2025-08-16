@@ -256,6 +256,24 @@ class BiomePresence():
             
         self.logs_dir = os.path.join(os.getenv('LOCALAPPDATA'), 'Roblox', 'logs')
         self.config = self.load_config()
+        raw_webhook = self.config.get("webhook_url", "")
+        if isinstance(raw_webhook, list):
+            self.webhook_urls = [u for u in raw_webhook if isinstance(u, str) and u.strip()]
+        elif isinstance(raw_webhook, str):
+            rw = raw_webhook.strip()
+            if rw.startswith("[") and rw.endswith("]"):
+                try:
+                    parsed = json.loads(rw)
+                    if isinstance(parsed, list):
+                        self.webhook_urls = [u for u in parsed if isinstance(u, str) and u.strip()]
+                    else:
+                        self.webhook_urls = [rw] if rw else []
+                except Exception:
+                    self.webhook_urls = [rw] if rw else []
+            else:
+                self.webhook_urls = [rw] if rw else []
+        else:
+            self.webhook_urls = []
         self.auras_data = self.load_auras_json()
         self.biome_data = self.load_biome_data()
         
@@ -269,6 +287,15 @@ class BiomePresence():
                 
         self.start_time = None
         self.saved_session = self.parse_session_time(self.config.get("session_time", "0:00:00"))
+        self.session_window_start = None
+        session_window_str = self.config.get("session_window_start", "")
+        if session_window_str:
+            try:
+                self.session_window_start = datetime.fromisoformat(session_window_str)
+            except Exception:
+                self.session_window_start = None
+        self.has_started_once = False
+        self.stop_sent = False
         
         self.last_position = 0
         self.detection_running = False
@@ -357,13 +384,13 @@ class BiomePresence():
             
             "DREAMSPACE": {
                 "color": "0xea9dda",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png",
+                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"},
+
             "BLAZING SUN": {
                 "color": "0xfbc02d",
                 "thumbnail_url": "https://maxstellar.github.io/biome_thumb/BLAZING%20SUN.png"
             }
             }
-        }
         
         try:
             for path in biomes_paths:
@@ -427,17 +454,25 @@ class BiomePresence():
                 config = json.load(file)
         except FileNotFoundError:
             config = {}
-
         auto_buff_glitched = config.get("auto_buff_glitched", self.config.get("auto_buff_glitched", {}))
         session_time = self.get_total_session_time()
-
+        if hasattr(self, "webhook_urls") and self.webhook_urls:
+            webhook_save_val = self.webhook_urls
+        else:
+            webhook_save_val = self.config.get("webhook_url", "")
+        macro_last_start_val = self.config.get("macro_last_start", "")
+        if self.start_time:
+            macro_last_start_val = self.start_time.isoformat()
+        session_window_start_val = self.session_window_start.isoformat() if self.session_window_start else self.config.get("session_window_start", "")
         config.update({
-            "webhook_url": self.webhook_url_entry.get(),
+            "webhook_url": webhook_save_val,
             "private_server_link": self.private_server_link_entry.get(),
             "auto_reconnect": self.auto_reconnect_var.get(),
             "biome_notifier": {biome: self.variables[biome].get() for biome in self.biome_data},
             "biome_counts": self.biome_counts,
             "session_time": session_time,
+            "session_window_start": session_window_start_val,
+            "macro_last_start": macro_last_start_val,
             "biome_randomizer": self.br_var.get(),
             "br_duration": self.br_duration_var.get(),
             "strange_controller": self.sc_var.get(),
@@ -480,7 +515,7 @@ class BiomePresence():
             "reconnect_start_button": self.config.get("reconnect_start_button", [954, 876]),
             "inventory_click_delay": self.click_delay_var.get(),
             "record_rare_biome":  self.record_rarest_biome_var.get(),
-            "rare_biome_record_keybind":  self.rarest_biome_keybind_var.get(), 
+            "rare_biome_record_keybind":  self.rarest_biome_keybind_var.get(),
             "enable_auto_craft": self.enable_auto_craft_var.get(),
             "potion_crafting_switch_minute": self.potion_switching_duration_var.get(),
             "first_potion_slot": [self.first_potion_slot_x.get(), self.first_potion_slot_y.get()],
@@ -497,13 +532,10 @@ class BiomePresence():
             "4th_add_button": self.config.get("4th_add_button", [804, 779]),
             "detect_merchant_no_mt": self.detect_merchant_no_mt_var.get(),
         })
-
         if not config["auto_buff_glitched"]:
             config["auto_buff_glitched"] = auto_buff_glitched
-
         with open("config.json", "w") as file:
             json.dump(config, file, indent=4)
-
         self.config = config
 
     def load_config(self):
@@ -539,8 +571,17 @@ class BiomePresence():
             self.config = config
             
             # da webhook
-            self.webhook_url_entry.delete(0, 'end')
-            self.webhook_url_entry.insert(0, config.get("webhook_url", ""))
+            raw = config.get("webhook_url", "")
+            if isinstance(raw, list):
+                self.webhook_urls = [u for u in raw if u]
+                entry_val = raw[0] if len(raw) == 1 else f"{len(raw)} webhooks configured"
+            else:
+                self.webhook_urls = [raw] if raw else []
+                entry_val = raw
+            if hasattr(self, "webhook_display_label"):
+                self.webhook_display_label.config(text=entry_val)
+
+
             self.private_server_link_entry.delete(0, 'end')
             self.private_server_link_entry.insert(0, config.get("private_server_link", ""))
             
@@ -600,7 +641,7 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
         
         self.root = ttk.Window(themename=selected_theme)
-        self.root.title("""Noteab's Biome Macro (Patch 1.6.1 by "@criticize.") (Idle)""")
+        self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Idle)""")
         self.root.geometry("695x385")
         
         try:
@@ -672,7 +713,7 @@ class BiomePresence():
         
 
     def check_for_updates(self):
-        current_version = "v1.6.1"
+        current_version = "v1.6.2"
         dont_ask_again = self.config.get("dont_ask_for_update", False)
         
         if dont_ask_again: return
@@ -798,28 +839,85 @@ class BiomePresence():
             entry.bind("<FocusOut>", lambda event: self.save_config())
 
     def create_webhook_tab(self, frame):
-        ttk.Label(frame, text="Webhook URL:").grid(row=0, column=0, sticky="e", padx=5, pady=5)
-        self.webhook_url_entry = ttk.Entry(frame, width=50, show="*")
-        self.webhook_url_entry.grid(row=0, column=1, columnspan=2, pady=5)
-        self.webhook_url_entry.insert(0, self.config.get("webhook_url", ""))
-        self.webhook_url_entry.bind("<FocusOut>", lambda event: self.save_config())
+        ttk.Label(frame, text="Webhook settings:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        ttk.Button(frame, text="Open Webhooks settings", command=self.open_webhooks_settings).grid(row=0, column=1, sticky="w", padx=5, pady=5)
+        self.webhook_display_label = ttk.Label(frame, text="")
+        self.webhook_display_label.grid(row=0, column=2, sticky="w", padx=5, pady=5)
 
-        ttk.Label(frame, text="Private Server Link:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
+        ttk.Label(frame, text="Private Server Link:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
         self.private_server_link_entry = ttk.Entry(frame, width=50)
-        self.private_server_link_entry.grid(row=2, column=1, columnspan=2, pady=5)
+        self.private_server_link_entry.grid(row=1, column=1, columnspan=2, sticky="we", pady=5)
         self.private_server_link_entry.insert(0, self.config.get("private_server_link", ""))
         self.private_server_link_entry.bind("<FocusOut>", lambda event: self.validate_and_save_ps_link())
 
-        ttk.Button(frame, text="Configure Biomes", command=self.open_biome_settings).grid(row=5, column=1, pady=10)
-        ttk.Button(frame, text="Import Config", command=self.import_config).grid(row=5, column=2, pady=10)
-        
+        frame.grid_columnconfigure(1, weight=1)
+
+        ttk.Button(frame, text="Configure Biomes", command=self.open_biome_settings).grid(row=2, column=1, pady=10, sticky="e", padx=10)
+        ttk.Button(frame, text="Import Config", command=self.import_config).grid(row=2, column=2, pady=10, sticky="w", padx=10)
+
+    def open_webhooks_settings(self):
+        win = ttk.Toplevel(self.root)
+        win.title("Webhooks settings")
+        win.geometry("520x360")
+        ttk.Label(win, text="Active Webhooks (input your webhook(s) in the small field below and click 'add webhook'):").pack(padx=10, pady=5, anchor="w")
+        urls_text = ttk.Text(win, height=12)
+        urls_text.pack(fill="both", expand=True, padx=10, pady=5)
+        urls_text.insert("1.0", "\n".join(self.webhook_urls))
+        entry = ttk.Entry(win, width=60)
+        entry.pack(padx=10, pady=5)
+        def add_url():
+            v = entry.get().strip()
+            if v:
+                current = urls_text.get("1.0", "end").strip()
+                new = f"{current}\n{v}" if current else v
+                urls_text.delete("1.0", "end")
+                urls_text.insert("1.0", new)
+                entry.delete(0, "end")
+        def save_close():
+            lines = [ln.strip() for ln in urls_text.get("1.0", "end").splitlines() if ln.strip()]
+            self.webhook_urls = lines
+            display = ""
+            if self.webhook_urls:
+                display = self.webhook_urls[0] if len(self.webhook_urls) == 1 else f"{len(self.webhook_urls)} webhooks configured"
+            if hasattr(self, "webhook_display_label"):
+                self.webhook_display_label.config(text=display)
+            self.save_config()
+            win.destroy()
+
+        btn_frame = ttk.Frame(win)
+        btn_frame.pack(fill="x", padx=10, pady=5)
+        ttk.Button(btn_frame, text="Add webhook", command=add_url).pack(side="left")
+        ttk.Button(btn_frame, text="Save & Close", command=save_close).pack(side="right")
+    def get_webhook_list(self):
+        try:
+            if hasattr(self, "webhook_urls") and isinstance(self.webhook_urls, list):
+                return [u for u in self.webhook_urls if isinstance(u, str) and u.strip()]
+            raw = self.config.get("webhook_url", "")
+            if isinstance(raw, list):
+                return [u for u in raw if isinstance(u, str) and u.strip()]
+            if isinstance(raw, str):
+                s = raw.strip()
+                if not s:
+                    return []
+                try:
+                    parsed = json.loads(s)
+                    if isinstance(parsed, list):
+                        return [u for u in parsed if isinstance(u, str) and u.strip()]
+                except Exception:
+                    return [s]
+            return []
+        except Exception:
+            return []
+
     def create_notice_tab(self, frame):
         msg_text = (
-            "🔔 Welcome to Noteab's Biome Macro v1.6.0\n\n"
-            "- Hello so um, this is \"@criticize.\", not Noteab. Noteab has discontinued this project.\n"
-            "- I will be taking over updates from now on (mostly biomes & auras).\n"
-            "- You can check out other awesome tools by Scope Team (yay!), BiomeScope & Sol's Scope.\n"
-            "- Join their Discord community for updates and support by clicking the link below:\n"
+            "🔔 Welcome to Noteab's Biome Macro v1.6.2, what's new?\n\n"
+            "- Added multi webhook support. However please avoid cross macroing if you're in any Glitched Hunt as it shows how many active webhooks you're using. Also remember to consult a staff member in your Glitched Hunt and make sure to have their approval if you want to use this feature.\n"
+            "- Reminder: Eden detection is ON by default. You cannot turn it on or off.\n"
+            """   - Also, if Merchant Detection without Merchant Teleporter/Eden detection is not working for you, please read the\n    "readme.md" file in the same folder directory.\n"""
+            "- Added total macroing hours tracker!\n"
+            "   - Also, when the macro is running and you close the app, it sends the macro stopped embed!\n"
+            "- JOIN SCOPE'S DISCORD SERVER BELOW!!\n"
         )
 
         ttk.Label(frame, text=msg_text, justify="left", wraplength=650).pack(padx=10, pady=(10, 0), anchor="w")
@@ -1453,20 +1551,25 @@ class BiomePresence():
             return None
 
         credits_frame_content = ttk.Frame(credits_frame)
-        credits_frame_content.pack(pady=20)
+        credits_frame_content.pack(pady=20, fill='both', expand=True)
 
         noteab_image = load_image("tea.png", (85, 85))
         maxstellar_image = load_image("maxstellar.png", (85, 85))
 
         noteab_frame = ttk.Frame(credits_frame_content, borderwidth=2, relief="solid")
-        noteab_frame.grid(row=0, column=0, padx=10, pady=2)
+        noteab_frame.grid(row=0, column=0, padx=10, pady=2, sticky='nsew')
 
         maxstellar_frame = ttk.Frame(credits_frame_content, borderwidth=2, relief="solid")
-        maxstellar_frame.grid(row=0, column=1, padx=10, pady=2)
+        maxstellar_frame.grid(row=0, column=1, padx=10, pady=2, sticky='nsew')
+
+        credits_frame_content.grid_columnconfigure(0, weight=1)
+        credits_frame_content.grid_columnconfigure(1, weight=1)
+        credits_frame_content.grid_rowconfigure(1, weight=1)
 
         if noteab_image:
             ttk.Label(noteab_frame, image=noteab_image).pack(pady=5)
-        ttk.Label(noteab_frame, text="""Main Developer: Noteab & "@Criticize." """).pack()
+            noteab_frame._img = noteab_image
+        ttk.Label(noteab_frame, text='Main Developer: Noteab & "@Criticize." ').pack()
 
         discord_label = ttk.Label(noteab_frame, text="Join Scope's community server", foreground="#03cafc", cursor="hand2")
         discord_label.pack()
@@ -1474,18 +1577,39 @@ class BiomePresence():
 
         github_label = ttk.Label(noteab_frame, text="GitHub: Noteab Biome Macro!", foreground="#03cafc", cursor="hand2")
         github_label.pack()
-        github_label.bind("<Button-1>", lambda e: webbrowser.open_new("https://github.com/noteab/Sol-Biome-Tracker"))
+        github_label.bind("<Button-1>", lambda e: webbrowser.open_new("https://github.com/xVapure/Noteab-Macro"))
 
         if maxstellar_image:
             ttk.Label(maxstellar_frame, image=maxstellar_image).pack(pady=5)
+            maxstellar_frame._img = maxstellar_image
         ttk.Label(maxstellar_frame, text="Inspired Biome Macro Creator: Maxstellar").pack()
-        maxstellar_yt = ttk.Label(maxstellar_frame, text="Their YT channel", foreground="#03cafc", cursor="hand2")
-        maxstellar_yt.pack()
-        maxstellar_yt.bind("<Button-1>", lambda e: webbrowser.open_new("https://www.youtube.com/@maxstellar_"))
+        ttk.Label(maxstellar_frame, text="Their YT channel", foreground="#03cafc", cursor="hand2").pack()
+        ttk.Label(maxstellar_frame, text="").pack()
 
-        self.noteab_image = noteab_image
-        self.maxstellar_image = maxstellar_image
-    
+        extra_frame = ttk.LabelFrame(credits_frame_content, text="Extra Credits")
+        extra_frame.grid(row=1, column=0, columnspan=2, sticky='nsew', padx=10, pady=10)
+
+        extra_inner = ttk.Frame(extra_frame)
+        extra_inner.pack(fill='both', expand=True)
+
+        scrollbar = ttk.Scrollbar(extra_inner, orient='vertical')
+        credits_text = ttk.Text(extra_inner, height=6, wrap='word', yscrollcommand=scrollbar.set)
+        scrollbar.config(command=credits_text.yview)
+        scrollbar.pack(side='right', fill='y')
+        credits_text.pack(side='left', fill='both', expand=True, padx=(5,0), pady=5)
+
+        extra_credits = [
+            "Maxstellar - Inspiration and I used some of his logics.",
+            "Vexthecoder - Thank you for the icons <3",
+            "ManasAarohi - For teaching me how FFlag works"
+        ]
+
+        credits_text.config(state='normal')
+        credits_text.delete("1.0", "end")
+        for person in extra_credits:
+            credits_text.insert("end", f"- {person}\n")
+        credits_text.config(state='disabled') 
+
     def update_stats(self):
         total_biomes = sum(self.biome_counts.values())
 
@@ -1494,8 +1618,7 @@ class BiomePresence():
 
         self.total_biomes_label.config(text=f"Total Biomes Found: {total_biomes}", foreground="light green")
         self.session_label.config(text=f"Running Session: {self.get_total_session_time()}")
-        self.save_config()
-        
+        self.save_config()    
 
     def get_total_session_time(self):
         try:
@@ -1701,10 +1824,28 @@ class BiomePresence():
 
     def start_detection(self):
         if not self.detection_running:
+            now = datetime.now()
             self.detection_running = True
-            self.start_time = datetime.now()
-            
-            # macro important threads
+            self.start_time = now
+            self.has_started_once = True
+            self.stop_sent = False
+
+            if not self.session_window_start:
+                self.session_window_start = now
+                self.saved_session = 0
+            else:
+                try:
+                    if (now - self.session_window_start).total_seconds() >= 86400:
+                        self.session_window_start = now
+                        self.saved_session = 0
+                except Exception:
+                    self.session_window_start = now
+                    self.saved_session = 0
+
+            self.config["session_window_start"] = self.session_window_start.isoformat()
+            self.config["macro_last_start"] = now.isoformat()
+            self.save_config()
+
             threads = [
                 (self.check_disconnect_loop, "Disconnect Check"),
                 (self.biome_loop_check, "Biome Check"),
@@ -1712,7 +1853,7 @@ class BiomePresence():
                 (self.aura_loop_check, "Aura Check"),
                 (self.merchant_log_check, "Merchant Check")
             ]
-            
+
             for thread_func, name in threads:
                 thread = threading.Thread(target=thread_func, name=name, daemon=True)
                 thread.start()
@@ -1724,21 +1865,25 @@ class BiomePresence():
                     daemon=True
                 )
                 self.auto_craft_thread.start()
-            
-            self.root.title("""Noteab's Biome Macro (Patch 1.6.1 by "@criticize.") (Running)""")
+
+            self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             print("Biome detection started.")
 
     def stop_detection(self):
         if self.detection_running:
+            now = datetime.now()
             self.detection_running = False
-
-            elapsed_time = int((datetime.now() - self.start_time).total_seconds())
+            if self.start_time:
+                elapsed_time = int((now - self.start_time).total_seconds())
+            else:
+                elapsed_time = 0
             self.saved_session += elapsed_time
-
             self.start_time = None
-            self.root.title("""Noteab's Biome Macro (Patch 1.6.1 by "@criticize.") (Stopped)""")
-            self.send_webhook_status("Macro stopped!", color=0xff0000)
+            self.stop_sent = True
+            self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Stopped)""")
+            total_time_str = self.get_total_session_time()
+            self.send_webhook_status(f"Macro stopped! Macroed for: {total_time_str} in the past 24 hours!", color=0xff0000)
             self.save_config()
             print("Biome detection stopped.")
     
@@ -2194,7 +2339,7 @@ class BiomePresence():
                         self.send_webhook_status("Roblox instance closed!", color=0xff0000)
                         self.has_sent_disconnected_message = True
                     
-                    self.root.title("""Noteab's Biome Macro (Patch 1.6.1 by "@criticize.") (Roblox Disconnected :c )""")
+                    self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Roblox Disconnected :c )""")
                     self.reconnecting_state = True
                     
                     time.sleep(4.5)
@@ -2212,7 +2357,7 @@ class BiomePresence():
                                 print(f"Reconnecting to your server... hold on bro (Attempt #{attempt})")
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server... hold on bro", color=0xffff00)
-                                self.root.title("""Noteab's Biome Macro (Patch 1.6.1 by "@criticize.") (Reconnecting)""")
+                                self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Reconnecting)""")
                                 
                                 os.startfile(roblox_deep_link)
                                 time.sleep(36)
@@ -2252,7 +2397,7 @@ class BiomePresence():
                 
                 # Reset flag if Roblox is running
                 self.has_sent_disconnected_message = False
-                self.root.title("""Noteab's Biome Macro (Patch 1.6.1 by "@criticize.") (Running)""")
+                self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Running)""")
                 
                 if self.reconnecting_state:
                     time.sleep(18)
@@ -2273,7 +2418,7 @@ class BiomePresence():
     
     def reconnect_check_start_button(self):
         try:
-            self.root.title("""Noteab's Biome Macro (Patch 1.6.1 by "@criticize.") (Reconnecting - In Main Menu)""")
+            self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -2293,7 +2438,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.root.title("""Noteab's Biome Macro (Patch 1.6.1 by "@criticize.") (Running)""")
+                    self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Running)""")
                     return True  # yay joins!!
                 
                 print("Still in Main Menu, clicking again...")
@@ -2687,74 +2832,61 @@ class BiomePresence():
     
         
     def send_webhook(self, biome, message_type, event_type):
-        webhook_url = self.config.get("webhook_url")
-        if not webhook_url:
+        urls = self.get_webhook_list()
+        if not urls:
             print("Webhook URL is missing/not included in the config.json")
             return
-
         if message_type == "None": return
-
         biome_info = self.biome_data[biome]
         biome_color = int(biome_info["color"], 16)
-        timestamp = time.strftime("[%H:%M:%S]") 
+        timestamp = time.strftime("[%H:%M:%S]")
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
-        
         content = ""
-        
         if event_type == "start" and biome in ["GLITCHED", "DREAMSPACE"]:
             content = "@everyone"
-
         title = f"{timestamp} Biome Started - {biome}" if event_type == "start" else f"{timestamp} Biome Ended - {biome}"
-
         fields = []
         if event_type == "start":
             private_server_link = self.config.get("private_server_link")
             if private_server_link == "":
                 private_server_link = "No link provided (ManasAarohi ate the link blame him)"
-                
             fields.append({
                 "name": "Private Server Link",
                 "value": private_server_link,
                 "inline": False
             })
-
         embed = {
             "title": title,
             "color": biome_color,
             "footer": {
-                "text": """Noteab's Biome Macro (Patch 1.6.1 by "@criticize.")""",
+                "text": """Noteab's Biome Macro (Patch 1.6.2 by "@criticize.")""",
                 "icon_url": icon_url
             },
             "fields": fields
         }
-
         if event_type == "start":
             embed["thumbnail"] = {"url": biome_info["thumbnail_url"]}
-
         payload = {
             "content": content,
             "embeds": [embed]
         }
-
-        try:
-            response = requests.post(webhook_url, json=payload)
-            response.raise_for_status()
-            print(f"[Line 1744] Sent {message_type} for {biome} - {event_type}")
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to send webhook: {e}")
+        for webhook_url in urls:
+            try:
+                response = requests.post(webhook_url, json=payload)
+                response.raise_for_status()
+                print(f"[Line 1744] Sent {message_type} for {biome} - {event_type} to {webhook_url}")
+            except requests.exceptions.RequestException as e:
+                print(f"Failed to send webhook to {webhook_url}: {e}")
     
     def send_merchant_webhook(self, merchant_name, screenshot_path=None, source='ocr'):
-        webhook_url = self.config.get("webhook_url")
-        if not webhook_url:
+        urls = self.get_webhook_list()
+        if not urls:
             print("Webhook URL is missing/not included in the config.json")
             return
-
         merchant_thumbnails = {
             "Mari": "https://raw.githubusercontent.com/vexthecoder/OysterDetector/refs/heads/main/mari.png",
             "Jester": "https://raw.githubusercontent.com/vexthecoder/OysterDetector/refs/heads/main/jester.png"
         }
-
         if merchant_name == "Mari":
             ping_id = self.mari_user_id_var.get() if hasattr(self, 'mari_user_id_var') else self.config.get("mari_user_id", "")
             ping_enabled = self.ping_mari_var.get() if hasattr(self, 'ping_mari_var') else self.config.get("ping_mari", False)
@@ -2764,10 +2896,8 @@ class BiomePresence():
         else:
             ping_id = ""
             ping_enabled = False
-
         content = f"<@{ping_id}>" if (source == 'logs' and ping_enabled and ping_id) else ""
         ps_link = self.config.get("private_server_link", "")
-
         embed = {
             "title": f"{merchant_name} Detected!",
             "description": f"{merchant_name} has been detected.\n\nMerchant PS Link: {ps_link}",
@@ -2777,29 +2907,36 @@ class BiomePresence():
                 {"name": "Detection Source", "value": source.upper(), "inline": True}
             ]
         }
-
         try:
             if screenshot_path and os.path.exists(screenshot_path):
-                embed["image"] = {"url": f"attachment://{os.path.basename(screenshot_path)}"}
-                with open(screenshot_path, "rb") as image_file:
-                    files = {"file": (os.path.basename(screenshot_path), image_file, "image/png")}
-                    response = requests.post(
-                        webhook_url,
-                        data={
-                            "payload_json": json.dumps({
-                                "content": content,
-                                "embeds": [embed]
-                            })
-                        },
-                        files=files
-                    )
+                for webhook_url in urls:
+                    embed["image"] = {"url": f"attachment://{os.path.basename(screenshot_path)}"}
+                    with open(screenshot_path, "rb") as image_file:
+                        files = {"file": (os.path.basename(screenshot_path), image_file, "image/png")}
+                        response = requests.post(
+                            webhook_url,
+                            data={
+                                "payload_json": json.dumps({
+                                    "content": content,
+                                    "embeds": [embed]
+                                })
+                            },
+                            files=files
+                        )
+                        try:
+                            response.raise_for_status()
+                            print(f"Webhook sent successfully for {merchant_name} to {webhook_url}: {response.status_code}")
+                        except requests.exceptions.RequestException as e:
+                            print(f"Failed to send merchant webhook to {webhook_url}: {e}")
             else:
                 payload = {"content": content, "embeds": [embed]}
-                response = requests.post(webhook_url, json=payload)
-
-            response.raise_for_status()
-            print(f"Webhook sent successfully for {merchant_name}: {response.status_code}")
-
+                for webhook_url in urls:
+                    try:
+                        response = requests.post(webhook_url, json=payload)
+                        response.raise_for_status()
+                        print(f"Webhook sent successfully for {merchant_name} to {webhook_url}: {response.status_code}")
+                    except requests.exceptions.RequestException as e:
+                        print(f"Failed to send merchant webhook to {webhook_url}: {e}")
         except requests.exceptions.RequestException as e:
             print(f"Failed to send merchant webhook: {e}")
 
@@ -2835,14 +2972,13 @@ class BiomePresence():
             self.error_logging(e, "Error in check_eden_in_logs function")
 
     def send_eden_webhook(self):
-        webhook_url = self.config.get("webhook_url")
-        if not webhook_url:
+        urls = self.get_webhook_list()
+        if not urls:
             print("Webhook URL is missing/not included in the config.json")
             return
         eden_image = "https://raw.githubusercontent.com/vexthecoder/OysterDetector/refs/heads/main/eden.png"
         aura_user_id = self.aura_user_id_var.get() if hasattr(self, 'aura_user_id_var') else self.config.get("aura_user_id", "")
         content = f"<@{aura_user_id}>" if aura_user_id else ""
-        timestamp = time.strftime("[%H:%M:%S]")
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
         embed = {
             "title": "Eden Detected!",
@@ -2850,47 +2986,43 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """Noteab's Biome Macro (Patch 1.6.1 by "@criticize.")""",
+                "text": """Noteab's Biome Macro (Patch 1.6.2 by "@criticize.")""",
                 "icon_url": icon_url
             }
         }
         payload = {"content": content, "embeds": [embed]}
-        try:
-            response = requests.post(webhook_url, json=payload)
-            response.raise_for_status()
-            print("Eden webhook sent")
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to send eden webhook: {e}")
+        for webhook_url in urls:
+            try:
+                response = requests.post(webhook_url, json=payload)
+                response.raise_for_status()
+                print(f"Eden webhook sent to {webhook_url}")
+            except requests.exceptions.RequestException as e:
+                print(f"Failed to send eden webhook to {webhook_url}: {e}")
 
             
     def send_aura_webhook(self, aura_name, rarity, biome_message):
-        webhook_url = self.config.get("webhook_url")
-        if not webhook_url:
+        urls = self.get_webhook_list()
+        if not urls:
             print("Webhook URL is missing/not included in the config.json")
             return
-        
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
         ping_minimum = int(self.config.get("ping_minimum", "100000"))
         color = 0xffffff
-        
-        # sigma rarity
         if rarity is not None:
             rarity_value = int(rarity.replace(',', ''))
             if 99000 <= rarity_value < 1000000:
-                color = 0x3dd3e0  # 99k - 999k
+                color = 0x3dd3e0
             elif 1000000 <= rarity_value < 10000000:
-                color = 0xff73ec  # 1m - 9m
+                color = 0xff73ec
             elif 10000000 <= rarity_value < 99000000:
-                color = 0x2d30f7  # 10m - 99m
+                color = 0x2d30f7
             elif 99000000 <= rarity_value < 1000000000:
-                color = 0xed2f59  # 99m - 999m
+                color = 0xed2f59
             else:
-                color = 0xff9447 #orange: hi, just pretend I didn't exist
-
+                color = 0xff9447
             description = f"## {time.strftime('[%H:%M:%S]')} \n ## > Aura found/last equipped: {aura_name} | 1 in {rarity} {biome_message}"
         else:
             description = f"## {time.strftime('[%H:%M:%S]')} \n ## > Aura found/last equipped: {aura_name}"
-
         payload = {
             "embeds": [
                 {
@@ -2898,72 +3030,56 @@ class BiomePresence():
                     "description": description,
                     "color": color,
                     "footer": {
-                        "text": """Noteab's Biome Macro (Patch 1.6.1 by "@criticize.")""",
+                        "text": """Noteab's Biome Macro (Patch 1.6.2 by "@criticize.")""",
                         "icon_url": icon_url
                     }
                 }
             ]
         }
-
-        if rarity is not None and rarity_value >= ping_minimum:     #jon lauri is a fucking femboy
+        if rarity is not None and 'rarity_value' in locals() and rarity_value >= ping_minimum:
             aura_user_id = self.config.get("aura_user_id", "")
             if aura_user_id:
                 payload["content"] = f"<@{aura_user_id}>"
-            
-        try:
-            response = requests.post(webhook_url, json=payload)
-            response.raise_for_status()
-            print(f"Aura webhook sent for {aura_name}")
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to send aura webhook: {e}")
-                   
+        for webhook_url in urls:
+            try:
+                response = requests.post(webhook_url, json=payload)
+                response.raise_for_status()
+                print(f"Aura webhook sent for {aura_name} to {webhook_url}")
+            except requests.exceptions.RequestException as e:
+                print(f"Failed to send aura webhook to {webhook_url}: {e}")
+
     def send_webhook_status(self, status, color=None):
         try:
-            webhook_url = self.config.get("webhook_url")
-            if not webhook_url:
+            urls = self.get_webhook_list()
+            if not urls:
                 print("Webhook URL is missing/not included in the config.json")
                 return
-            
             default_color = 3066993 if "started" in status.lower() else 15158332
             embed_color = color if color is not None else default_color
             icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
-
+            if "started" in status.lower():
+                n = len(urls)
+                status = f"{status} ({n} webhook{'s' if n != 1 else ''} active)"
             embeds = [{
                 "title": "== 🌟 Macro Status 🌟 ==",
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {status}",
                 "color": embed_color,
                 "footer": {
-                    "text": """Noteab's Biome Macro (Patch 1.6.1 by "@criticize.")""",
+                    "text": """Noteab's Biome Macro (Patch 1.6.2 by "@criticize.")""",
                     "icon_url": icon_url
                 }
             }]
-            response = requests.post(
-                webhook_url,
-                data={"payload_json": json.dumps({"embeds": embeds})}
-            )
-            response.raise_for_status()
-
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to send webhook: {e}")
+            for webhook_url in urls:
+                try:
+                    response = requests.post(
+                        webhook_url,
+                        data={"payload_json": json.dumps({"embeds": embeds})}
+                    )
+                    response.raise_for_status()
+                except requests.exceptions.RequestException as e:
+                    print(f"Failed to send webhook status to {webhook_url}: {e}")
         except Exception as e:
             print(f"An error occurred in webhook_status: {e}")
-        
-    def activate_roblox_window(self):
-        windows = gw.getAllTitles()
-        roblox_window = None
-        
-        for window in windows:
-            if "Roblox" in window:
-                roblox_window = gw.getWindowsWithTitle(window)[0]
-                break
-
-        if roblox_window:
-            try:
-                roblox_window.activate()
-            except Exception as e:
-                print(f"Failed to activate window: {e}")
-        else:
-            print("Roblox window not found.")
     
     def autoit_hold_left_click(self, posX, posY, holdTime=3300):
         autoit.mouse_click("left", posX, posY, 5, speed=2)
@@ -3112,4 +3228,27 @@ try:
 except KeyboardInterrupt:
     print("Exited (Keyboard Interrupted)")
 finally:
-    keyboard.unhook_all()
+    try:
+        if 'biome_presence' in globals() and isinstance(biome_presence, BiomePresence):
+            bp = biome_presence
+            if getattr(bp, 'has_started_once', False):
+                if bp.detection_running:
+                    now = datetime.now()
+                    if bp.start_time:
+                        elapsed = int((now - bp.start_time).total_seconds())
+                        bp.saved_session += elapsed
+                        bp.start_time = None
+                    bp.detection_running = False
+                    bp.stop_sent = True
+                    total_time_str = bp.get_total_session_time()
+                    bp.send_webhook_status(f"Macro ended! Macroed for: {total_time_str} in the past 24 hours!", color=0xff0000)
+                    bp.save_config()
+                elif not getattr(bp, 'stop_sent', False):
+                    total_time_str = bp.get_total_session_time()
+                    bp.send_webhook_status(f"Macro ended! Macroed for: {total_time_str} in the past 24 hours!", color=0xff0000)
+                    bp.stop_sent = True
+                    bp.save_config()
+    except Exception:
+        pass
+    finally:
+        keyboard.unhook_all()
