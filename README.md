@@ -27,7 +27,7 @@
 ## IV. FAQs and common fixes
 Q: Macro has virus?<br>
 A: No, it is Window's false positives. You can check out the source code or reverse engineer if you wish. Or put the file into a virtual machine/Virus Total.<br>
-Q: Merchant and Eden detection from logs not working.<br>
+Q: Some detection features doesn't work?<br>
 A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ryeAMV3fLM).<br>
 ```
 {
