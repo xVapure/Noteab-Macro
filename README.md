@@ -31,8 +31,10 @@ Q: Some detection features doesn't work?<br>
 A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ryeAMV3fLM).<br>
 ```
 {
-  "FStringDebugLuaLogLevel": "trace",
-  "FStringDebugLuaLogPattern": "ExpChat/mountClientApp"
+  "DFFlagDebugPerfMode": "True",
+  "FFlagHandleAltEnterFullscreenManually": "False",
+  "FStringDebugLuaLogPattern": "ExpChat/mountClientApp",
+  "FStringDebugLuaLogLevel": "trace"
 }
 ```
 <br>
