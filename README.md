@@ -1,4 +1,4 @@
-<img width="1919" height="1006" alt="image" src="https://github.com/user-attachments/assets/c0f12605-daee-4ed3-bc48-8524073a5918" /># Noteab's Biome Macro notice.
+# Noteab's Biome Macro notice.
 ## I. Introduction
 1) New developer??!?
 - Hi everyone. I will be replacing Noteab as the main developer/maintainer for Noteab's Biome Macro. I am Vapure, aka "criticize." or "C". If you have any enquires, feel free to contact me on discord `criticize.` or by email `work.vapure@gmail.com`.
