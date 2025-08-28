@@ -43,8 +43,8 @@ A: https://i.postimg.cc/ZqBXBFfG/image.png<br>
 Q: How to calibrate merchants?<br>
 A: https://i.postimg.cc/3NdGYNrF/image.png & https://i.postimg.cc/15VFd8j9/image.png<br>
 Q: Where is Eden detection?<br>
-A: It is on by default and you cannot turn it off.
-Q: What is the first item slot?
-A: https://i.postimg.cc/9X6tt3Wg/image.png
-Q: Why doesn't merchant detection work? I tried calibrating but nothing works.
-A: Install Tesseract OCR: https://github.com/tesseract-ocr/tesseract/releases/tag/5.5.1
+A: It is on by default and you cannot turn it off.<br>
+Q: What is the first item slot?<br>
+A: https://i.postimg.cc/9X6tt3Wg/image.png<br>
+Q: Why doesn't merchant detection work? I tried calibrating but nothing works.<br>
+A: Install Tesseract OCR: https://github.com/tesseract-ocr/tesseract/releases/tag/5.5.1<br>
