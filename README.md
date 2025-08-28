@@ -1,4 +1,4 @@
-# Noteab's Biome Macro notice.
+<img width="1919" height="1006" alt="image" src="https://github.com/user-attachments/assets/c0f12605-daee-4ed3-bc48-8524073a5918" /># Noteab's Biome Macro notice.
 ## I. Introduction
 1) New developer??!?
 - Hi everyone. I will be replacing Noteab as the main developer/maintainer for Noteab's Biome Macro. I am Vapure, aka "criticize." or "C". If you have any enquires, feel free to contact me on discord `criticize.` or by email `work.vapure@gmail.com`.
@@ -39,8 +39,12 @@ A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ry
 ```
 <br>
 Q: I got this bug "Exception: Unsupported locale setting":<br>
-A: https://cdn.discordapp.com/attachments/1284692110687076397/1365668681467826248/caption.gif?ex=689a8d52&is=68993bd2&hm=065da6283ec646874fc092274230fb232a4cc0c90bb5ddccb49d77cfc2b28ef0&<br>
+A: https://i.postimg.cc/ZqBXBFfG/image.png<br>
 Q: How to calibrate merchants?<br>
-A: https://youtu.be/OhzKdd7g-ws<br>
+A: https://i.postimg.cc/3NdGYNrF/image.png & https://i.postimg.cc/15VFd8j9/image.png<br>
 Q: Where is Eden detection?<br>
 A: It is on by default and you cannot turn it off.
+Q: What is the first item slot?
+A: https://i.postimg.cc/9X6tt3Wg/image.png
+Q: Why doesn't merchant detection work? I tried calibrating but nothing works.
+A: Install Tesseract OCR: https://github.com/tesseract-ocr/tesseract/releases/tag/5.5.1
