@@ -1,13 +1,15 @@
-import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, locale, win32gui, win32process
+import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, locale, win32gui, win32process, re
 import traceback
 import pygetwindow as gw
 from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import ttkbootstrap as ttk
 import logging
 import shutil, glob
-    
+import atexit
+import difflib
+
 def apply_fast_flags(version=None, force=False):
     config_paths = [
         "config.json",
@@ -68,8 +70,10 @@ def apply_fast_flags(version=None, force=False):
         return
 
     flags = {
-        "FStringDebugLuaLogLevel": "debug",
-        "FStringDebugLuaLogPattern": "ExpChat/mountClientApp"
+        "DFFlagDebugPerfMode": "True",
+        "FFlagHandleAltEnterFullscreenManually": "False",
+        "FStringDebugLuaLogPattern": "ExpChat/mountClientApp",
+        "FStringDebugLuaLogLevel": "trace"
     }
 
     keep_backups = 5
@@ -256,6 +260,7 @@ class BiomePresence():
             
         self.logs_dir = os.path.join(os.getenv('LOCALAPPDATA'), 'Roblox', 'logs')
         self.config = self.load_config()
+        self.config["enable_auto_craft"] = False
         raw_webhook = self.config.get("webhook_url", "")
         if isinstance(raw_webhook, list):
             self.webhook_urls = [u for u in raw_webhook if isinstance(u, str) and u.strip()]
@@ -299,6 +304,7 @@ class BiomePresence():
         
         self.last_position = 0
         self.detection_running = False
+        self._stop_player_logger_thread()
         self.detection_thread = None
         self.lock = threading.Lock()
         self.logs = self.load_logs()
@@ -308,6 +314,10 @@ class BiomePresence():
         self.last_sc_time = datetime.min
         self.last_mt_time = datetime.min
         self.on_auto_merchant_state = False
+        self._merchant_pending_from_logs = False
+        self._merchant_pending_name = None
+        self._br_sc_running = False
+
         
         # Buff variables
         self.auto_pop_state = False
@@ -316,6 +326,7 @@ class BiomePresence():
         
         # Reconnect state
         self.reconnecting_state = False
+        self.register_shutdown_handler()
          
         # start gui
         self.variables = {}
@@ -333,13 +344,7 @@ class BiomePresence():
         return []
     
     def load_biome_data(self):
-        biomes_paths = [
-            "biomes_data.json",
-            "source_code/biomes_data.json",
-            os.path.join(os.path.dirname(__file__), "biomes_data.json"),
-            os.path.join(os.path.dirname(__file__), "source_code/biomes_data.json")
-        ]
-        
+        url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/biomes_data.json"
         default_biome_data = {
             "NORMAL": {
                 "color": "0xffffff",
@@ -381,31 +386,20 @@ class BiomePresence():
                 "color": "0xbfff00",
                 "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png"
             },
-            
             "DREAMSPACE": {
                 "color": "0xea9dda",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"},
-
-            "BLAZING SUN": {
-                "color": "0xfbc02d",
-                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/BLAZING%20SUN.png"
+                "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
             }
-            }
-        
+        }
         try:
-            for path in biomes_paths:
-                if os.path.exists(path):
-                    with open(path, "r") as file:
-                        biome_data = json.load(file)
-                        return biome_data
+            r = requests.get(url, timeout=10)
+            r.raise_for_status()
+            data = r.json()
+            if isinstance(data, dict) and data:
+                return data
         except Exception as e:
-            print(f"Error loading biomes_data.json: {e}")
-            self.error_logging(e, f"Error loading biomes_data.json")
-        
-        with open("biomes_data.json", "w") as file:
-            json.dump(default_biome_data, file, indent=4)
-            print("Default biomes_data.json created.")
-        
+            print(f"Error loading biomes_data.json from {url}: {e}")
+            self.error_logging(e, f"Error loading biomes_data.json from {url}")
         return default_biome_data
 
     def error_logging(self, exception, custom_message=None, max_log_size=3 * 1024 * 1024):
@@ -436,6 +430,15 @@ class BiomePresence():
             log.write("-" * 40 + "\n")
 
         print(f"Error logged to {log_file}.")
+
+    def set_title_threadsafe(self, title_text):
+        try:
+            if threading.current_thread() is threading.main_thread():
+                self.root.title(title_text)
+            else:
+                self.root.after(0, lambda: self.root.title(title_text))
+        except Exception as e:
+            self.error_logging(e, "Error in set_title_threadsafe")
     
     def save_logs(self):
         log_file_path = 'macro_logs.txt'
@@ -516,22 +519,11 @@ class BiomePresence():
             "inventory_click_delay": self.click_delay_var.get(),
             "record_rare_biome":  self.record_rarest_biome_var.get(),
             "rare_biome_record_keybind":  self.rarest_biome_keybind_var.get(),
-            "enable_auto_craft": self.enable_auto_craft_var.get(),
-            "potion_crafting_switch_minute": self.potion_switching_duration_var.get(),
-            "first_potion_slot": [self.first_potion_slot_x.get(), self.first_potion_slot_y.get()],
-            "second_potion_slot": [self.second_potion_slot_x.get(), self.second_potion_slot_y.get()],
-            "third_potion_slot": [self.third_potion_slot_x.get(), self.third_potion_slot_y.get()],
-            "first_potion_craft": self.first_potion_craft_var.get(),
-            "second_potion_craft": self.second_potion_craft_var.get(),
-            "third_potion_craft": self.third_potion_craft_var.get(),
-            "craft_button": self.config.get("craft_button", [576, 565]),
-            "auto_button": self.config.get("auto_button", [716, 572]),
-            "1st_add_button": self.config.get("1st_add_button", [798, 620]),
-            "2nd_add_button": self.config.get("2nd_add_button", [796, 673]),
-            "3rd_add_button": self.config.get("3rd_add_button", [808, 760]),
-            "4th_add_button": self.config.get("4th_add_button", [804, 779]),
             "detect_merchant_no_mt": self.detect_merchant_no_mt_var.get(),
+            "player_logger": self.player_logger_var.get(),
+            "first_item_slot_ocr_pos": self.config.get("first_item_slot_ocr_pos", [0, 0, 80, 80]),
         })
+
         if not config["auto_buff_glitched"]:
             config["auto_buff_glitched"] = auto_buff_glitched
         with open("config.json", "w") as file:
@@ -596,6 +588,7 @@ class BiomePresence():
             self.mt_var.set(config.get("merchant_teleporter", False))
             self.mt_duration_var.set(config.get("mt_duration", "1"))
             self.auto_reconnect_var.set(config.get("auto_reconnect", False))
+            self.player_logger_var.set(config.get("player_logger", True))
             self.click_delay_var.set(config.get("inventory_click_delay", "0"))
             auto_buff_glitched = config.get("auto_buff_glitched", {})
             for buff, (enabled, amount) in auto_buff_glitched.items():
@@ -641,8 +634,8 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
         
         self.root = ttk.Window(themename=selected_theme)
-        self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Idle)""")
-        self.root.geometry("695x385")
+        self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3 by "@criticize.") (Idle)""")
+        self.root.geometry("800x700")
         
         try:
             self.root.iconbitmap(icon_path)
@@ -661,7 +654,9 @@ class BiomePresence():
         aura_webhook_frame = ttk.Frame(notebook)
         merchant_frame = ttk.Frame(notebook)
         credits_frame = ttk.Frame(notebook)
+        donations_frame = ttk.Frame(notebook)
         stats_frame = ttk.Frame(notebook)
+        other_features_frame = ttk.Frame(notebook)
         hp_craft_frame = ttk.Frame(notebook)
         notice_frame = ttk.Frame(notebook)
 
@@ -670,17 +665,21 @@ class BiomePresence():
         notebook.add(misc_frame, text='Misc')
         notebook.add(merchant_frame, text='Merchant')
         notebook.add(aura_webhook_frame, text='Auras')
-        notebook.add(hp_craft_frame, text='Auto Craft (DISCONTINUED)')
+        notebook.add(hp_craft_frame, text='Potion Crafting (UPDATED)')
         notebook.add(stats_frame, text='Stats')
+        notebook.add(other_features_frame, text='Other Features')
         notebook.add(credits_frame, text='Credits')
+        notebook.add(donations_frame, text='Donations <3')
    
         self.create_notice_tab(notice_frame)
         self.create_webhook_tab(webhook_frame)
         self.create_misc_tab(misc_frame)
+        self.create_other_features_tab(other_features_frame)
         self.create_auras_tab(aura_webhook_frame)
         self.create_merchant_tab(merchant_frame)
         self.create_stats_tab(stats_frame)
         self.create_credit_tab(credits_frame)
+        self.create_donations_tab(donations_frame)
         self.create_potion_craft_tab(hp_craft_frame)
         
         button_frame = ttk.Frame(self.root)
@@ -713,7 +712,7 @@ class BiomePresence():
         
 
     def check_for_updates(self):
-        current_version = "v1.6.2"
+        current_version = "v1.6.3-open_beta"
         dont_ask_again = self.config.get("dont_ask_for_update", False)
         
         if dont_ask_again: return
@@ -855,6 +854,34 @@ class BiomePresence():
         ttk.Button(frame, text="Configure Biomes", command=self.open_biome_settings).grid(row=2, column=1, pady=10, sticky="e", padx=10)
         ttk.Button(frame, text="Import Config", command=self.import_config).grid(row=2, column=2, pady=10, sticky="w", padx=10)
 
+    def create_donations_tab(self, frame):
+        t1 = "My projects are 100% free to use and you're allowed to recycle any fraction of my code with proper credits. However, if you want to support me, you can help me by purchasing any of the gamepasses below :)"
+        t2 = """It helps me out a lot mentally, any donations above 100 Robux will get you on the appreciation list below, 500 Robux will give you the permission to leave a special message on the appreciation list (must be sfw though) :D Normally I will check donations history daily, but if your Roblox username isn't displayed here please DM "@criticize." on Discord. The appreciation list also takes up to 5 minutes to update due to Github."""
+        link = "https://www.roblox.com/games/18203398779/Medival-castle#!/store"
+        ttk.Label(frame, text=t1, justify="left", wraplength=700).pack(padx=10, pady=(12,6), anchor="w")
+        ttk.Label(frame, text=t2, justify="left", wraplength=700).pack(padx=10, pady=(0,6), anchor="w")
+        link_label = ttk.Label(frame, text=link, foreground="blue", cursor="hand2", wraplength=700)
+        link_label.pack(padx=10, pady=(0,12), anchor="w")
+        link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link))
+        hall = ttk.LabelFrame(frame, text="Donators hall of fame (it automatically updates)")
+        hall.pack(fill='both', expand=True, padx=5, pady=5)
+        txt = ttk.Text(hall, height=14, wrap="word")
+        txt.pack(fill="both", expand=True, padx=8, pady=8)
+        url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/appreciation_list.txt"
+        try:
+            r = requests.get(url, timeout=10)
+            r.raise_for_status()
+            body = r.text.strip() or "(No entries yet)"
+        except Exception:
+            body = "Unable to load appreciation list."
+        txt.insert("1.0", body)
+        txt.config(state="disabled")
+
+    def create_other_features_tab(self, frame):
+        self.player_logger_var = ttk.BooleanVar(value=True)
+        c = ttk.Checkbutton(frame, text="Player logger (Requires FFlags, the macro should auto apply it. If not, please refer to README.md)", variable=self.player_logger_var)
+        c.pack(anchor="w", padx=10, pady=10)
+
     def open_webhooks_settings(self):
         win = ttk.Toplevel(self.root)
         win.title("Webhooks settings")
@@ -909,14 +936,49 @@ class BiomePresence():
         except Exception:
             return []
 
+    def _make_player_embed(self, kind, name, pid, ts_iso, duration_text=None):
+        color = 3066993 if kind == "join" else 15158332
+        title = "Player Joined" if kind == "join" else "Player Left"
+        desc = f"**{name}**\n`{pid}`"
+        fields = []
+        if duration_text:
+            fields.append({"name": "Stayed", "value": duration_text, "inline": True})
+        embed = {
+            "title": title,
+            "description": desc,
+            "color": color,
+            "timestamp": ts_iso,
+            "footer": {"text": "Noteab Macro • Player Logger"},
+            "fields": fields
+        }
+        return embed
+
+    def _send_embeds_to_all(self, embeds):
+        urls = self.get_webhook_list()
+        if not urls:
+            return
+        payload = {"embeds": embeds}
+        for url in urls:
+            try:
+                requests.post(url, json=payload, timeout=5)
+            except Exception:
+                pass
+
     def create_notice_tab(self, frame):
         msg_text = (
-            "🔔 Welcome to Noteab's Biome Macro v1.6.2, what's new?\n\n"
-            "- Added multi webhook support. However please avoid cross macroing if you're in any Glitched Hunt as it shows how many active webhooks you're using. Also remember to consult a staff member in your Glitched Hunt and make sure to have their approval if you want to use this feature.\n"
-            "- Reminder: Eden detection is ON by default. You cannot turn it on or off.\n"
-            """   - Also, if Merchant Detection without Merchant Teleporter/Eden detection is not working for you, please read the\n    "readme.md" file in the same folder directory.\n"""
-            "- Added total macroing hours tracker!\n"
-            "   - Also, when the macro is running and you close the app, it sends the macro stopped embed!\n"
+            "🔔 Welcome to Noteab's Biome Macro v1.6.3-open_beta, what's new?\n\n"
+            "- Expanded the UI window size to 800x700 because the old UI was too small.\n"
+            """- Merchant detection improved (it will cancel all current action and use merchant teleporter immediately if a merchant was detected via logs, even if the option "merchant detection via logs" is off).\n"""
+            """- Additionally, fixed a very crucial bug regarding merchant detection using OCR that has been persisting from older versions.\n"""
+            """- Added OCR failsafe to inventory first slot (you must calibrate yourself) as a failsafe, it makes sure to not use your rare potions on accident, located in "misc" tab.\n"""
+            "- Player logger (it will show which player joined your private server at which time and when did they leave the server + how long did they stayed inside your server).\n"
+            """- Fixed (attempted to) the issue with the "macroed in xx:xx:xx in the past 24 hours" going over 24 hours which isn't possible.\n"""
+            """- Biomes data and auras data will be loaded from Github now instead of keeping a local file (thanks to "@rnd.xy" for the help and the suggestion).\n"""
+            "- Potion crafting is back! But it's a bit different now, please refer to the Potion Crafting tab for more info.\n"
+            """- Added "Speed Potion" to Jester items purchase list, Idk why it wasn't there in the first place...\n"""
+            """- And lastly, added a "Donations" tab, if you want to support me you can purchase any of the gamepasses there (it helps me out a lot mentally), also added an appreciation list that automatically updates from Github.\n"""
+            """- Due to v1.6.3 being the biggest Noteab macro update ever, I decided to make this version open beta for now, so please report any bugs you find to "@criticize." on Discord.\n"""
+            """- !!IF YOU HAVE ISSUES WITH THE MACRO, SEND A DM TO "@criticize." ON DISCORD, AND READ THE README.md FILE FIRST BEFORE DOING SO!! \n"""
             "- JOIN SCOPE'S DISCORD SERVER BELOW!!\n"
         )
 
@@ -925,8 +987,6 @@ class BiomePresence():
         link_label = ttk.Label(frame, text=link, foreground="blue", cursor="hand2", wraplength=650)
         link_label.pack(padx=10, pady=5, anchor="w")
         link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link))
-
-    
 
     def create_misc_tab(self, frame):
         hp2_frame = ttk.Frame(frame)
@@ -1046,6 +1106,139 @@ class BiomePresence():
             command=self.open_assign_inventory_window
         )
         assign_inventory_button.grid(row=6, column=2, pady=5, sticky="w")
+        ocr_failsafe_button = ttk.Button(
+            hp2_frame,
+            text="OCR failsafe (CLICK ME TO PREVENT THE MACRO FROM USING YOUR RARE POTIONS)",
+            command=self.setup_ocr_failsafe
+        )
+        ocr_failsafe_button.grid(row=7, column=0, columnspan=3, padx=5, pady=8, sticky="w")
+
+    def calibrate_ocr_failsafe(self):
+        if not self.check_tesseract_ocr():
+            messagebox.showerror("OCR", "Tesseract OCR not found. Install it in Merchant tab first.")
+            return
+        messagebox.showinfo("OCR failsafe", "please click the first item slot inside your items inventory")
+        win = ttk.Toplevel(self.root)
+        win.attributes("-fullscreen", True)
+        win.attributes("-alpha", 0.01)
+        win.configure(bg="black")
+        win.focus_set()
+        def on_click(e):
+            x, y = e.x_root, e.y_root
+            size = 80
+            left = max(0, x - size // 2)
+            top = max(0, y - size // 2)
+            self.config["first_item_slot"] = [x, y]
+            self.config["first_item_slot_ocr_pos"] = [left, top, size, size]
+            self.save_config()
+            win.destroy()
+        win.bind("<Button-1>", on_click)
+
+    def _ocr_read_first_slot(self):
+        pos = self.config.get("first_item_slot_ocr_pos")
+        if not pos:
+            fs = self.config.get("first_item_slot", [0, 0])
+            if fs and fs[0] and fs[1]:
+                size = int(self.config.get("first_item_slot_ocr_size", 80))
+                left = max(0, fs[0] - size // 2)
+                top = max(0, fs[1] - size // 2)
+                pos = [left, top, size, size]
+            else:
+                return ""
+        img = pyautogui.screenshot(region=tuple(pos))
+        img = img.convert("L")
+        txt = pytesseract.image_to_string(img, lang="eng", config="--psm 6")
+        return txt or ""
+
+    def _normalize_text_for_match(self, s):
+        return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
+
+    def _ocr_phrase_match(self, expected, observed):
+        e = self._normalize_text_for_match(expected)
+        o = self._normalize_text_for_match(observed)
+        toks = [t for t in e.split() if len(t) >= 4] or ([e] if e else [])
+        if any(t in o for t in toks):
+            return True
+        from difflib import SequenceMatcher
+        return SequenceMatcher(None, e, o).ratio() >= 0.72
+
+    def ocr_failsafe_wait(self, expected_phrase, interval=1.2):
+        if not expected_phrase:
+            return
+        while True:
+            t = self._ocr_read_first_slot()
+            if self._ocr_phrase_match(expected_phrase, t):
+                break
+            time.sleep(interval)
+
+    def setup_ocr_failsafe(self):
+        try:
+            if not self.check_tesseract_ocr():
+                messagebox.showerror("OCR", "Tesseract OCR not found. Install it in Merchant tab first.")
+                return
+            messagebox.showinfo("OCR Failsafe", "please click the first item slot inside your items inventory")
+            win = ttk.Toplevel(self.root)
+            win.attributes("-fullscreen", True)
+            win.attributes("-alpha", 0.01)
+            win.attributes("-topmost", True)
+            win.configure(bg="black")
+            win.focus_force()
+            try:
+                win.grab_set()
+            except Exception:
+                pass
+            def on_click(e):
+                x, y = e.x_root, e.y_root
+                size = 80
+                left = max(0, x - size // 2)
+                top = max(0, y - size // 2)
+                self.config["first_item_slot"] = [x, y]
+                self.config["first_item_slot_ocr_pos"] = [left, top, size, size]
+                self.config["ocr_failsafe_enabled"] = True
+                self.save_config()
+                try:
+                    win.grab_release()
+                except Exception:
+                    pass
+                win.destroy()
+                messagebox.showinfo("OCR Failsafe", f"Saved OCR region: {self.config['first_item_slot_ocr_pos']}")
+            win.bind("<Button-1>", on_click)
+        except Exception as e:
+            try:
+                self.error_logging(e, "Error in setup_ocr_failsafe")
+            except Exception:
+                pass
+
+    def ocr_wait_for_phrase(self, phrase, max_attempts=None):
+        region = self.config.get("first_item_slot_ocr_pos")
+        if not region:
+            messagebox.showwarning("OCR Failsafe", "No OCR region saved. Click the OCR Failsafe button first.")
+            return False
+        attempts = 0
+        expected = "".join(ch for ch in str(phrase).lower() if ch.isalnum() or ch.isspace()).strip()
+        while True:
+            try:
+                x, y, w, h = region
+                screenshot = pyautogui.screenshot(region=(x, y, w, h))
+                text = pytesseract.image_to_string(screenshot, config='--psm 6')
+                norm = "".join(ch for ch in str(text).lower() if ch.isalnum() or ch.isspace()).strip()
+                if expected and expected in norm:
+                    return True
+                if expected:
+                    ratio = difflib.SequenceMatcher(None, expected, norm).ratio()
+                    if ratio >= 0.55:
+                        return True
+            except Exception as e:
+                try:
+                    self.error_logging(e, "OCR read error")
+                except Exception:
+                    pass
+            attempts += 1
+            if max_attempts and attempts >= max_attempts:
+                return False
+            if not getattr(self, "detection_running", True):
+                return False
+            time.sleep(1.5)
     
     def create_auras_tab(self, frame):
         self.enable_aura_detection_var = ttk.BooleanVar(value=self.config.get("enable_aura_detection", False))
@@ -1098,82 +1291,14 @@ class BiomePresence():
         aura_record_minimum_entry.bind("<FocusOut>", lambda event: self.save_config())
         
     def create_potion_craft_tab(self, frame):
-        potion_craft_frame = ttk.LabelFrame(frame, text="Auto Potion Crafting")
-        potion_craft_frame.pack(fill='x', padx=5, pady=5)
-        
-        self.enable_auto_craft_var = ttk.BooleanVar(value=self.config.get("enable_auto_craft", False))
-        enable_auto_craft_check = ttk.Checkbutton(
-            potion_craft_frame, 
-            text="Enable Auto Crafting", 
-            variable=self.enable_auto_craft_var,
-            command=self.save_config
-        )
-        enable_auto_craft_check.grid(row=0, column=0, sticky="w", padx=5, pady=5)
-
-        # #1 pot coords
-        ttk.Label(potion_craft_frame, text="#1 Potion slot (X,Y):").grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        self.first_potion_slot_x = ttk.IntVar(value=self.config.get("first_potion_slot", [0, 0])[0])
-        self.first_potion_slot_y = ttk.IntVar(value=self.config.get("first_potion_slot", [0, 0])[1])
-        ttk.Entry(potion_craft_frame, textvariable=self.first_potion_slot_x, width=6).grid(row=1, column=1, padx=0, pady=0)
-        ttk.Entry(potion_craft_frame, textvariable=self.first_potion_slot_y, width=6).grid(row=1, column=2, padx=0, pady=0)
-        ttk.Button(potion_craft_frame, text="Assign Click", command=lambda: self.start_capture_thread("first_potion_slot", {"first_potion_slot": (self.first_potion_slot_x, self.first_potion_slot_y)})).grid(row=1, column=3, padx=5, pady=5)
-        self.first_potion_craft_var = ttk.BooleanVar(value=self.config.get("first_potion_craft", False))
-        ttk.Checkbutton(potion_craft_frame, text="Craft this 1# potion?", variable=self.first_potion_craft_var, command=self.save_config).grid(row=1, column=4, sticky="w", padx=5, pady=5)
-
-        # #2 pot coords
-        ttk.Label(potion_craft_frame, text="#2 Potion slot (X,Y):").grid(row=2, column=0, sticky="w", padx=5, pady=5)
-        self.second_potion_slot_x = ttk.IntVar(value=self.config.get("second_potion_slot", [0, 0])[0])
-        self.second_potion_slot_y = ttk.IntVar(value=self.config.get("second_potion_slot", [0, 0])[1])
-        ttk.Entry(potion_craft_frame, textvariable=self.second_potion_slot_x, width=6).grid(row=2, column=1, padx=0, pady=0)
-        ttk.Entry(potion_craft_frame, textvariable=self.second_potion_slot_y, width=6).grid(row=2, column=2, padx=0, pady=0)
-        ttk.Button(potion_craft_frame, text="Assign Click", command=lambda: self.start_capture_thread("second_potion_slot", {"second_potion_slot": (self.second_potion_slot_x, self.second_potion_slot_y)})).grid(row=2, column=3, padx=5, pady=5)
-        self.second_potion_craft_var = ttk.BooleanVar(value=self.config.get("second_potion_craft", False))
-        ttk.Checkbutton(potion_craft_frame, text="Craft this 2# potion?", variable=self.second_potion_craft_var, command=self.save_config).grid(row=2, column=4, sticky="w", padx=5, pady=5)
-
-        # #3 pot coords
-        ttk.Label(potion_craft_frame, text="#3 Potion slot (X,Y):").grid(row=3, column=0, sticky="w", padx=5, pady=5)
-        self.third_potion_slot_x = ttk.IntVar(value=self.config.get("third_potion_slot", [0, 0])[0])
-        self.third_potion_slot_y = ttk.IntVar(value=self.config.get("third_potion_slot", [0, 0])[1])
-        ttk.Entry(potion_craft_frame, textvariable=self.third_potion_slot_x, width=6).grid(row=3, column=1, padx=0, pady=0)
-        ttk.Entry(potion_craft_frame, textvariable=self.third_potion_slot_y, width=6).grid(row=3, column=2, padx=0, pady=0)
-        ttk.Button(potion_craft_frame, text="Assign Click", command=lambda: self.start_capture_thread("third_potion_slot", {"third_potion_slot": (self.third_potion_slot_x, self.third_potion_slot_y)})).grid(row=3, column=3, padx=5, pady=5)
-        self.third_potion_craft_var = ttk.BooleanVar(value=self.config.get("third_potion_craft", False))
-        ttk.Checkbutton(potion_craft_frame, text="Craft this 3# potion?", variable=self.third_potion_craft_var, command=self.save_config).grid(row=3, column=4, sticky="w", padx=5, pady=5)
-        
-        # switch pot label
-        ttk.Label(potion_craft_frame, text="Switching potion crafting order\n(1st -> 2nd..) in every minutes:").grid(row=5, column=0, sticky="w", padx=5, pady=5)
-        self.potion_switching_duration_var = ttk.StringVar(value=self.config.get("potion_crafting_switch_minute", "5"))
-        potion_switching_dur_entry = ttk.Entry(potion_craft_frame, textvariable=self.potion_switching_duration_var, width=5)
-        potion_switching_dur_entry.grid(row=5, column=1, padx=0, pady=5)
-        potion_switching_dur_entry.bind("<FocusOut>", lambda event: self.save_config())
-        
-        # assign potion clicks
-        assign_potion_button = ttk.Button(
-            potion_craft_frame, 
-            text="Assign Potion Crafting Clicks", 
-            command=self.open_assign_potion_craft_window
-        )
-        assign_potion_button.grid(row=5, column=3, pady=0)
-        
-        warning_label = ttk.Label(potion_craft_frame, text="Click this for a REMINDER when using this feature", foreground="red", cursor="hand2")
-        warning_label.grid(row=7, column=0, columnspan=2, pady=10)
-        warning_label.bind("<Button-1>", lambda e: auto_craft_warning())
-        
-        tutorial_label = ttk.Label(potion_craft_frame, text="Assign potion crafting tutorial video (Click me!!)", foreground="red", cursor="hand2")
-        tutorial_label.grid(row=8, column=0, columnspan=2)
-        tutorial_label.bind("<Button-1>", lambda e: open_tutorial())
-        
-        def auto_craft_warning():
-            messagebox.showinfo(
-                "Heyyyy!",
-                "To use this feature, you have to be inside Stella's Cave and have the potion crafting menu opened.\n\n"
-                "While the macro is in auto crafting mode, other functions: 'BR + SC + Merchant teleporter/Auto merchant' will not be usable to prevent conflicts in auto craft mode ^-^\n\n"
-                "Also it is recommended that you should put a high amount of add recipe to the potion you wanna craft:\n"
-                "- For example, set the add amount for 'Lucky Potion' in Heavenly Potion equal or higher than 250 so it could make auto craft progress more faster!\n\n"
-                "Make sure the potion you want to be on auto craft doesn't have 'Auto Add' status (selected potion that have whole green border around it) so the macro won't disable it during crafting!"
-            )
-            
-        def open_tutorial(): webbrowser.open("https://www.youtube.com/watch?v=dK4Hrzi1RiY")
+        frame_label = ttk.LabelFrame(frame, text="Auto Potion Crafting")
+        frame_label.pack(fill='both', expand=True, padx=5, pady=5)
+        ttk.Label(frame_label, text="Potion crafting has been discontinued inside Noteab's Macro.", justify="left", wraplength=700).pack(padx=10, pady=(12,6), anchor="w")
+        ttk.Label(frame_label, text="""However, you can download the best potion crafting macro here, made by "@criticize." (aka me):""", justify="left", wraplength=700).pack(padx=10, pady=(0,6), anchor="w")
+        link = "https://github.com/xVapure/solsrngpotioncrafter/releases/latest"
+        link_label = ttk.Label(frame_label, text=link, foreground="blue", cursor="hand2", wraplength=700)
+        link_label.pack(padx=10, pady=(0,12), anchor="w")
+        link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link))
 
     def create_merchant_tab(self, frame):
         mari_frame = ttk.LabelFrame(frame, text="Mari")
@@ -1428,7 +1553,7 @@ class BiomePresence():
             "Oblivion Potion", "Potion of bound", "Heavenly Potion", "Rune of Everything", "Rune of Dust",
             "Rune of Nothing", "Rune Of Corruption", "Rune Of Hell", "Rune of Galaxy",
             "Rune of Rainstorm", "Rune of Frost", "Rune of Wind", "Strange Potion", "Lucky Potion",
-            "Stella's Candle", "Merchant Tracker", "Random Potion Sack"
+            "Stella's Candle", "Merchant Tracker", "Random Potion Sack", "Speed Potion"
         ]
 
         item_frame = ttk.Frame(jester_window)
@@ -1601,7 +1726,9 @@ class BiomePresence():
         extra_credits = [
             "Maxstellar - Inspiration and I used some of his logics.",
             "Vexthecoder - Thank you for the icons <3",
-            "ManasAarohi - For teaching me how FFlag works"
+            "ManasAarohi - For teaching me how FFlag works",
+            "rnd.xy (or Randy) - For doing external works that I was too lazy to do tysm.",
+            """All the testers that made the update possible with as less flaws as possible. Notably: "ethan03228', "rnd.xy", "tilesdrop", "alonexii", "_bread.0", "lordelmothewise"."""
         ]
 
         credits_text.config(state='normal')
@@ -1619,7 +1746,7 @@ class BiomePresence():
         self.total_biomes_label.config(text=f"Total Biomes Found: {total_biomes}", foreground="light green")
         self.session_label.config(text=f"Running Session: {self.get_total_session_time()}")
         self.save_config()    
-
+        
     def get_total_session_time(self):
         try:
             if self.start_time:
@@ -1628,11 +1755,22 @@ class BiomePresence():
             else:
                 total_seconds = self.saved_session
 
-            # hours, minutes, and seconds
+            if total_seconds >= 86400:
+                self.saved_session = 0
+                self.start_time = None
+                self.session_window_start = datetime.now()
+                try:
+                    self.config["session_window_start"] = self.session_window_start.isoformat()
+                except Exception:
+                    pass
+                try:
+                    self.save_config()
+                except Exception:
+                    pass
+                return "00:00:00"
+
             hours, remainder = divmod(total_seconds, 3600)
             minutes, seconds = divmod(remainder, 60)
-
-            # Format time string
             return f"{hours:02}:{minutes:02}:{seconds:02}"
 
         except Exception as e:
@@ -1654,18 +1792,7 @@ class BiomePresence():
     
     def update_session_time(self):
         try:
-            if self.start_time:
-                elapsed_time = datetime.now() - self.start_time
-                total_seconds = int(elapsed_time.total_seconds()) + self.saved_session
-
-                # hours, minutes, and seconds
-                hours, remainder = divmod(total_seconds, 3600)
-                minutes, seconds = divmod(remainder, 60)
-
-                # Format string
-                session_time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
-                self.session_label.config(text=f"Running Session: {session_time_str}")
-
+            self.session_label.config(text=f"Running Session: {self.get_total_session_time()}")
         except Exception as e:
             self.error_logging(e, "Error in update_session_time function.")
     
@@ -1826,6 +1953,7 @@ class BiomePresence():
         if not self.detection_running:
             now = datetime.now()
             self.detection_running = True
+            self._start_player_logger_thread()
             self.start_time = now
             self.has_started_once = True
             self.stop_sent = False
@@ -1858,15 +1986,7 @@ class BiomePresence():
                 thread = threading.Thread(target=thread_func, name=name, daemon=True)
                 thread.start()
 
-            if self.config.get("enable_auto_craft", False):
-                self.auto_craft_thread = threading.Thread(
-                    target=self.auto_craft_loop,
-                    name="Auto Craft",
-                    daemon=True
-                )
-                self.auto_craft_thread.start()
-
-            self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Running)""")
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             print("Biome detection started.")
 
@@ -1874,6 +1994,7 @@ class BiomePresence():
         if self.detection_running:
             now = datetime.now()
             self.detection_running = False
+            self._stop_player_logger_thread()
             if self.start_time:
                 elapsed_time = int((now - self.start_time).total_seconds())
             else:
@@ -1881,7 +2002,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
             self.start_time = None
             self.stop_sent = True
-            self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Stopped)""")
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Stopped)""")
             total_time_str = self.get_total_session_time()
             self.send_webhook_status(f"Macro stopped! Macroed for: {total_time_str} in the past 24 hours!", color=0xff0000)
             self.save_config()
@@ -1952,22 +2073,17 @@ class BiomePresence():
             return file.readlines()
         
     def load_auras_json(self):
-        auras_paths = [
-            "auras.json",
-            "source_code/auras.json",
-            os.path.join(os.path.dirname(__file__), "auras.json"),
-            os.path.join(os.path.dirname(__file__), "source_code/auras.json")
-        ]
-        
+        url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/auras.json"
         try:
-            for path in auras_paths:
-                if os.path.exists(path):
-                    with open(path, "r") as file:
-                        aura_data = json.load(file)
-                        return aura_data
+            r = requests.get(url, timeout=10)
+            r.raise_for_status()
+            data = r.json()
+            if isinstance(data, dict):
+                return data
+            return {}
         except Exception as e:
-            print(f"Error loading auras.json: {e}")
-            self.error_logging(e, f"Error loading auras.json")
+            print(f"Error loading auras.json from {url}: {e}")
+            self.error_logging(e, f"Error loading auras.json from {url}")
             return {}
         
     def check_aura_in_logs(self, log_file_path):
@@ -2050,7 +2166,7 @@ class BiomePresence():
                     self.last_position_merchant = 0
                     self.last_position_eden = 0
 
-                if self.detect_merchant_no_mt_var.get():
+                if self.detect_merchant_no_mt_var.get() or self.mt_var.get():
                     self.check_merchant_in_logs(current_log_file)
                 self.check_eden_in_logs(current_log_file)
                 time.sleep(0.8)
@@ -2060,8 +2176,6 @@ class BiomePresence():
     def check_merchant_in_logs(self, log_file_path):
         try:
             if self.reconnecting_state:
-                return
-            if not self.detect_merchant_no_mt_var.get():
                 return
 
             if not hasattr(self, 'last_merchant_sent'):
@@ -2074,7 +2188,7 @@ class BiomePresence():
             if not log_lines:
                 return
 
-            max_lines = int(self.config.get("merchant_log_tail", 400))
+            max_lines = int(self.config.get("merchant_log_tail", 35))
             recent = log_lines[-max_lines:] if len(log_lines) > max_lines else log_lines
 
             for line in reversed(recent):
@@ -2101,18 +2215,34 @@ class BiomePresence():
                 if (current_time - last_sent_time) < merchant_cooldown_time:
                     return
 
-                try:
-                    self.send_merchant_webhook(merchant_name, None, source='logs')
-                    self.last_merchant_sent[(merchant_name, 'logs')] = current_time
-                    self.append_log(f"[Merchant Detection (no MT)] {merchant_name} detected from logs.")
-                except Exception as e:
-                    self.error_logging(e, "Failed to send merchant webhook from log detection")
+                self.last_merchant_sent[(merchant_name, 'logs')] = current_time
+
+                if self.detect_merchant_no_mt_var.get():
+                    try:
+                        self.send_merchant_webhook(merchant_name, None, source='logs')
+                        self.append_log(f"[Merchant Detection (logs)] {merchant_name} detected from logs.")
+                    except Exception as e:
+                        self.error_logging(e, "Failed to send merchant webhook from log detection")
+
+                if self.mt_var.get():
+                    self._merchant_pending_from_logs = True
+                    self._merchant_pending_name = merchant_name
+                    self.append_log(f"[Merchant Detection] Merchant teleporter pending due to log detection for {merchant_name}.")
+
+                    if not getattr(self, '_br_sc_running', False) and not self.on_auto_merchant_state and not self.auto_pop_state and not self.config.get("enable_auto_craft") and self.current_biome != "GLITCHED":
+                        try:
+                            self.append_log("[Merchant Detection] Using merchant teleporter immediately (logs).")
+                            self.use_merchant_teleporter()
+                            self._merchant_pending_from_logs = False
+                            self._merchant_pending_name = None
+                            self.last_mt_time = datetime.now()
+                        except Exception as e:
+                            self.error_logging(e, "Failed to use merchant teleporter after log detection")
                 return
 
         except Exception as e:
             self.error_logging(e, "Error in check_merchant_in_logs function.")
 
-                
     def handle_biome_detection(self, biome):
         try:
             last_biome = self.current_biome
@@ -2199,133 +2329,7 @@ class BiomePresence():
                     
             except Exception as e:
                 self.error_logging(e, "Error in biome_itemchange_loop function.")
-                
-    def auto_craft_loop(self):
-            try:
-                potion_switch_duration = int(self.config.get("potion_crafting_switch_minute", "5")) * 60
-                switch_time = datetime.now()
-                current_potion = "first"
-                auto_button_flag = False
-                
-                # potion slots & clicks
-                first_potion_slot = self.config.get("first_potion_slot", [0, 0])
-                second_potion_slot = self.config.get("second_potion_slot", [0, 0])
-                third_potion_slot = self.config.get("third_potion_slot", [0, 0])
-                auto_button = self.config.get("auto_button", [716, 572])
-                first_add_button = self.config.get("1st_add_button", [798, 620])
-                second_add_button = self.config.get("2nd_add_button", [796, 673])
-                third_add_button = self.config.get("3rd_add_button", [808, 760])
-                fourth_add_button = self.config.get("4th_add_button", [808, 779])
-                craft_button = self.config.get("craft_button", [576, 565])
-                
-                while self.detection_running:
-                    if not self.config.get("enable_auto_craft", False):
-                        time.sleep(1)
-                        continue
-                
-                    for _ in range(5):
-                        if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.current_biome == "GLITCHED": 
-                            return
-                        self.activate_roblox_window()
-                        time.sleep(0.2)
 
-                    # First potion
-                    if self.first_potion_craft_var.get() and current_potion == "first":
-                        self.Global_MouseClick(first_potion_slot[0], first_potion_slot[1])
-                        time.sleep(0.5)
-                        
-                        if not auto_button_flag:
-                            print("Clicking auto button for the first potion")
-                            self.Global_MouseClick(auto_button[0], auto_button[1])
-                            auto_button_flag = True
-                            time.sleep(0.25)
-
-                        # add buttons
-                        for add_button in [first_add_button, second_add_button, third_add_button, fourth_add_button]:
-                            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.current_biome == "GLITCHED": 
-                                return
-                            self.Global_MouseClick(add_button[0], add_button[1])
-                            time.sleep(0.4)
-                        
-                        # Craft potion
-                        self.Global_MouseClick(craft_button[0], craft_button[1])
-                        time.sleep(0.5)
-
-                        # Check if it's time to switch to next potion
-                        if (datetime.now() - switch_time).total_seconds() >= potion_switch_duration:
-                            current_potion = "second"
-                            switch_time = datetime.now()
-                            auto_button_flag = False
-
-                    # Second potion
-                    elif self.second_potion_craft_var.get() and current_potion == "second":
-                        self.Global_MouseClick(second_potion_slot[0], second_potion_slot[1])
-                        time.sleep(0.5)
-                        
-                        if not auto_button_flag:
-                            print("Clicking auto button for the second potion")
-                            self.Global_MouseClick(auto_button[0], auto_button[1])
-                            auto_button_flag = True
-                            time.sleep(0.25)
-
-                        for add_button in [first_add_button, second_add_button, third_add_button, fourth_add_button]:
-                            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.current_biome == "GLITCHED": 
-                                return
-                            self.Global_MouseClick(add_button[0], add_button[1])
-                            time.sleep(0.4)
-
-                        self.Global_MouseClick(craft_button[0], craft_button[1])
-                        time.sleep(0.5)
-
-                        if (datetime.now() - switch_time).total_seconds() >= potion_switch_duration:
-                            current_potion = "third"
-                            switch_time = datetime.now()
-                            auto_button_flag = False
-
-                    # Third potion
-                    elif self.third_potion_craft_var.get() and current_potion == "third":
-                        self.Global_MouseClick(third_potion_slot[0], third_potion_slot[1])
-                        time.sleep(0.5)
-                        
-                        if not auto_button_flag:
-                            print("Clicking auto button for the third potion")
-                            self.Global_MouseClick(auto_button[0], auto_button[1])
-                            auto_button_flag = True
-                            time.sleep(0.25)
-
-                        for add_button in [first_add_button, second_add_button, third_add_button, fourth_add_button]:
-                            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.current_biome == "GLITCHED": 
-                                return
-                            self.Global_MouseClick(add_button[0], add_button[1])
-                            time.sleep(0.4)
-                            
-                        self.Global_MouseClick(craft_button[0], craft_button[1])
-                        time.sleep(0.5)
-
-                        if (datetime.now() - switch_time).total_seconds() >= potion_switch_duration:
-                            current_potion = "first"
-                            switch_time = datetime.now()
-                            auto_button_flag = False
-
-                    # Disable potions check
-                    if current_potion == "first" and not self.first_potion_craft_var.get():
-                        current_potion = "second" if self.second_potion_craft_var.get() else "third" if self.third_potion_craft_var.get() else None
-                    elif current_potion == "second" and not self.second_potion_craft_var.get():
-                        current_potion = "third" if self.third_potion_craft_var.get() else "first" if self.first_potion_craft_var.get() else None
-                    elif current_potion == "third" and not self.third_potion_craft_var.get():
-                        current_potion = "first" if self.first_potion_craft_var.get() else "second" if self.second_potion_craft_var.get() else None
-
-                    # Exit loop if all potions in need of crafting are disabled 
-                    if current_potion is None:
-                        time.sleep(1)
-                        continue
-
-                    time.sleep(2.55)
-
-            except Exception as e:
-                self.error_logging(e, "Error in auto_craft_loop function.")
-                print(f"Error in auto craft loop oopsie {e}")
-                
     def check_disconnect_loop(self, current_attempt=1):
         if not hasattr(self, 'has_sent_disconnected_message'):
             self.has_sent_disconnected_message = False
@@ -2333,80 +2337,108 @@ class BiomePresence():
         while self.detection_running:
             try:
                 if not self.check_roblox_procs():
-                    print("Roblox instance is closed. Stopping detection.")
-                    
-                    if not self.has_sent_disconnected_message:
-                        self.send_webhook_status("Roblox instance closed!", color=0xff0000)
-                        self.has_sent_disconnected_message = True
-                    
-                    self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Roblox Disconnected :c )""")
-                    self.reconnecting_state = True
-                    
+                    self._pause_timer_for_disconnect("Roblox instance closed!")
                     time.sleep(4.5)
-                    
-                    # Check for auto reconnect
+
                     if self.config.get("auto_reconnect"):
                         private_server_link = self.config.get("private_server_link")
                         if private_server_link:
                             private_server_code = private_server_link.split("privateServerLinkCode=")[-1]
                             roblox_deep_link = f"roblox://placeID=15532962292&linkCode={private_server_code}"
-                            
                             max_retries = 3
-                            self.reconnecting_state = True
                             for attempt in range(current_attempt, max_retries + 1):
-                                print(f"Reconnecting to your server... hold on bro (Attempt #{attempt})")
+                                if not self.detection_running:
+                                    break
                                 self.terminate_roblox_processes()
-                                self.send_webhook_status(f"Reconnecting to your server... hold on bro", color=0xffff00)
-                                self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Reconnecting)""")
-                                
-                                os.startfile(roblox_deep_link)
+                                self.send_webhook_status(f"Reconnecting to your server. hold on bro", color=0xffff00)
+                                self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") by "@criticize.") (Reconnecting)""")
+                                try:
+                                    os.startfile(roblox_deep_link)
+                                except Exception:
+                                    pass
                                 time.sleep(36)
-                                
                                 if self.check_roblox_procs():
-                                    print("Roblox instance is now running.")
                                     self.send_webhook_status("Roblox opened. Loading into the games...", color=0x4aff65)
                                     self.has_sent_disconnected_message = False
                                     if not self.reconnect_check_start_button():
-                                        print("Fallback: Unable to start the game after multiple attempts.")
                                         self.send_webhook_status("Stuck in 'In Main Menu' for too long. I might reconnect bro back to server again", color=0xff0000)
                                         continue
+                                    self._resume_timer_after_reconnect()
                                     break
-                                
                                 time.sleep(1)
-                            
-                            if attempt == max_retries:
-                                print("Max retries reached. Unable to reconnect to Roblox. Reconnecting to public server.")
+                            if attempt == max_retries and not self.check_roblox_procs():
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status("Max retries reached. Reconnecting to public server.", color=0xff0000)
-                                os.startfile("roblox://placeID=15532962292")
-                                time.sleep(36)
-                                
-                                if self.check_roblox_procs():
-                                    print("Roblox instance is now running.")
-                                    self.send_webhook_status("Roblox opened. Loading into the games...", color=0x4aff65)
-                                    self.has_sent_disconnected_message = False 
-                                    if not self.reconnect_check_start_button():
-                                        print("Fallback: Unable to start the game after multiple attempts.")
-                                        self.send_webhook_status("Cannot start after reconnecting to the public server", color=0xff0000)
-
-                        else:
-                            self.send_webhook_status("No correct PS link format found for reconnection (Either your link is shared link not privateServerLinkCode)", color=0xff0000)
-                    
-                    self.detection_running = True
-                    continue
-                
-                # Reset flag if Roblox is running
-                self.has_sent_disconnected_message = False
-                self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Running)""")
-                
-                if self.reconnecting_state:
-                    time.sleep(18)
-                    self.reconnecting_state = False
-                    
-                time.sleep(1)
-                
+                    else:
+                        while self.detection_running and not self.check_roblox_procs():
+                            time.sleep(1)
+                        if self.check_roblox_procs():
+                            self._resume_timer_after_reconnect()
+                else:
+                    time.sleep(0.5)
             except Exception as e:
                 self.error_logging(e, "Error in check_disconnect_loop function.")
+                time.sleep(1)
+
+    def _pause_timer_for_disconnect(self, reason=None):
+        try:
+            if self.start_time:
+                now = datetime.now()
+                elapsed = int((now - self.start_time).total_seconds())
+                self.saved_session += elapsed
+                self.start_time = None
+            self.reconnecting_state = True
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Roblox Disconnected :c )""")
+            if reason and not getattr(self, 'has_sent_disconnected_message', False):
+                try:
+                    self.send_webhook_status(reason, color=0xff0000)
+                except Exception:
+                    pass
+                self.has_sent_disconnected_message = True
+            self.save_config()
+        except Exception as e:
+            self.error_logging(e, "_pause_timer_for_disconnect")
+
+    def _resume_timer_after_reconnect(self):
+        try:
+            if not self.start_time:
+                self.start_time = datetime.now()
+            self.reconnecting_state = False
+            self.has_sent_disconnected_message = False
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Running)""")
+            self.save_config()
+        except Exception as e:
+            self.error_logging(e, "_resume_timer_after_reconnect")
+
+    def register_shutdown_handler(self):
+        try:
+            atexit.register(self._on_exit_handler)
+        except Exception:
+            pass
+        try:
+            import win32api, win32con
+            def _handler(ctrl_type):
+                if ctrl_type in (win32con.CTRL_SHUTDOWN_EVENT, win32con.CTRL_LOGOFF_EVENT):
+                    try:
+                        self._pause_timer_for_disconnect("System Shutdown")
+                    except Exception:
+                        pass
+                return False
+            win32api.SetConsoleCtrlHandler(_handler, True)
+        except Exception:
+            pass
+
+    def _on_exit_handler(self):
+        try:
+            if getattr(self, 'has_started_once', False):
+                if self.start_time:
+                    now = datetime.now()
+                    elapsed = int((now - self.start_time).total_seconds())
+                    self.saved_session += elapsed
+                    self.start_time = None
+                self.save_config()
+        except Exception:
+            pass
 
     def fallback_reconnect(self, current_attempt):
         print(f"Attempting fallback reconnect from attempt {current_attempt}...")
@@ -2415,10 +2447,105 @@ class BiomePresence():
         self.terminate_roblox_processes()
         self.check_disconnect_loop(current_attempt)
         self.reconnecting_state = False
+
+    def _start_player_logger_thread(self):
+        if hasattr(self, "player_logger_thread") and self.player_logger_thread and self.player_logger_thread.is_alive():
+            return
+        self.player_logger_running = True
+        self.player_logger_thread = threading.Thread(target=self._player_logger_loop, daemon=True)
+        self.player_logger_thread.start()
+
+    def _stop_player_logger_thread(self):
+        self.player_logger_running = False
+
+    def _find_latest_log_file(self):
+        try:
+            if not os.path.isdir(self.logs_dir):
+                return None
+            files = [os.path.join(self.logs_dir, f) for f in os.listdir(self.logs_dir) if os.path.isfile(os.path.join(self.logs_dir, f))]
+            if not files:
+                return None
+            return max(files, key=os.path.getmtime)
+        except:
+            return None
+
+    def _parse_iso_ts(self, s):
+        try:
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            return datetime.fromisoformat(s)
+        except:
+            return datetime.now(timezone.utc)
+
+    def _player_logger_loop(self):
+        last_file = None
+        last_pos = 0
+        sessions = {}
+        while getattr(self, "player_logger_running", False):
+            if not getattr(self, "player_logger_var", None) or not self.player_logger_var.get():
+                time.sleep(0.5)
+                continue
+            path = self._find_latest_log_file()
+            if not path:
+                time.sleep(0.5)
+                continue
+            if path != last_file:
+                last_file = path
+                try:
+                    last_pos = os.path.getsize(path)
+                except:
+                    last_pos = 0
+            try:
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                    f.seek(last_pos)
+                    line = f.readline()
+                    if not line:
+                        time.sleep(0.2)
+                        continue
+                    last_pos = f.tell()
+            except:
+                time.sleep(0.5)
+                continue
+            if "[ExpChat/mountClientApp (Trace)]" in line and ("Player added:" in line or "Player removed:" in line):
+                ts_str = line.split(",", 1)[0].strip()
+                ts = self._parse_iso_ts(ts_str)
+                if "Player added:" in line:
+                    m = re.search(r"Player added:\s+(\S+)\s+(\d+)", line)
+                    if m:
+                        name, pid = m.group(1), m.group(2)
+                        sessions[pid] = ts
+                        self.logs.append(f"[Player] Joined {name} ({pid})")
+                        self.save_logs()
+                        ts_iso = ts.astimezone(timezone.utc).isoformat()
+                        embed = self._make_player_embed("join", name, pid, ts_iso)
+                        self._send_embeds_to_all([embed])
+
+                elif "Player removed:" in line:
+                    m = re.search(r"Player removed:\s+(\S+)\s+(\d+)", line)
+                    if m:
+                        name, pid = m.group(1), m.group(2)
+                        joined = sessions.pop(pid, None)
+                        if joined:
+                            secs = int((ts - joined).total_seconds())
+                            h = secs // 3600
+                            m_ = (secs % 3600) // 60
+                            s_ = secs % 60
+                            dur = f"{h:02d}:{m_:02d}:{s_:02d}"
+                            self.logs.append(f"[Player] Left {name} ({pid}) after {dur}")
+                            self.save_logs()
+                            ts_iso = ts.astimezone(timezone.utc).isoformat()
+                            embed = self._make_player_embed("leave", name, pid, ts_iso, dur)
+                            self._send_embeds_to_all([embed])
+                        else:
+                            self.logs.append(f"[Player] Left {name} ({pid})")
+                            self.save_logs()
+                            ts_iso = ts.astimezone(timezone.utc).isoformat()
+                            embed = self._make_player_embed("leave", name, pid, ts_iso)
+                            self._send_embeds_to_all([embed])
     
     def reconnect_check_start_button(self):
         try:
-            self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Reconnecting - In Main Menu)""")
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -2438,7 +2565,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.root.title("""Noteab's Biome Macro (Patch 1.6.2 by "@criticize.") (Running)""")
+                    self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Running)""")
                     return True  # yay joins!!
                 
                 print("Still in Main Menu, clicking again...")
@@ -2532,6 +2659,7 @@ class BiomePresence():
         autoit.mouse_click("left", x, y, click, speed=3)
         
     def use_br_sc(self, item_name):
+        self._br_sc_running = True
         try:
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
             time.sleep(1.3)
@@ -2551,20 +2679,17 @@ class BiomePresence():
 
             print(f"Using {item_name.capitalize()}")
 
-            # Inventory menu
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
             time.sleep(0.2 + inventory_click_delay)
 
-            # Items tab
             self.Global_MouseClick(items_tab[0], items_tab[1])
             time.sleep(0.23)
             self.Global_MouseClick(items_tab[0], items_tab[1])
             time.sleep(0.23)
             self.Global_MouseClick(search_bar[0], search_bar[1])
-            time.sleep(0.2 + inventory_click_delay) 
+            time.sleep(0.2 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
 
-            # Search bar
             self.Global_MouseClick(search_bar[0], search_bar[1])
             time.sleep(0.23)
             self.Global_MouseClick(search_bar[0], search_bar[1])
@@ -2579,30 +2704,41 @@ class BiomePresence():
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
             time.sleep(0.4 + inventory_click_delay)
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
-            time.sleep(0.3 + inventory_click_delay) 
+            time.sleep(0.3 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
-            # Amount
             self.Global_MouseClick(amount_box[0], amount_box[1])
-            time.sleep(0.16 + inventory_click_delay) 
+            time.sleep(0.16 + inventory_click_delay)
             autoit.send("^{a}")
             time.sleep(0.13 + inventory_click_delay)
             autoit.send("{BACKSPACE}")
             time.sleep(0.13 + inventory_click_delay)
             autoit.send('1')
             time.sleep(0.13 + inventory_click_delay)
-            
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
-            # use button
-            self.Global_MouseClick(use_button[0], use_button[1])
-            time.sleep(0.22 + inventory_click_delay) 
 
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
-            # inventory menu
+            if self.config.get("ocr_failsafe_enabled", False):
+                if not self.ocr_wait_for_phrase(item_name):
+                    return
+            self.Global_MouseClick(use_button[0], use_button[1])
+            time.sleep(0.22 + inventory_click_delay)
+
+            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
-            time.sleep(0.22 + inventory_click_delay) 
+            time.sleep(0.22 + inventory_click_delay)
 
         except Exception as e:
             self.error_logging(e, "Error in use_br_sc function.")
+        finally:
+            self._br_sc_running = False
+            if getattr(self, '_merchant_pending_from_logs', False) and self.mt_var.get():
+                try:
+                    self.append_log("[Merchant Detection] Using pending merchant teleporter after BR/SC.")
+                    self.use_merchant_teleporter()
+                    self.last_mt_time = datetime.now()
+                    self._merchant_pending_from_logs = False
+                    self._merchant_pending_name = None
+                except Exception as e:
+                    self.error_logging(e, "Failed to use merchant teleporter after BR/SC")
         
     def use_merchant_teleporter(self):
         try:
@@ -2622,11 +2758,9 @@ class BiomePresence():
                 self.activate_roblox_window()
                 time.sleep(0.3)
 
-            #  inventory menu
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
             time.sleep(0.24 + inventory_click_delay)
 
-            # items tab
             self.Global_MouseClick(items_tab[0], items_tab[1])
             time.sleep(0.23)
             self.Global_MouseClick(items_tab[0], items_tab[1])
@@ -2634,7 +2768,7 @@ class BiomePresence():
             self.Global_MouseClick(items_tab[0], items_tab[1])
             time.sleep(0.24 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
-            # search bar
+
             self.Global_MouseClick(search_bar[0], search_bar[1])
             time.sleep(0.23)
             self.Global_MouseClick(search_bar[0], search_bar[1])
@@ -2642,7 +2776,7 @@ class BiomePresence():
             self.Global_MouseClick(search_bar[0], search_bar[1])
             time.sleep(0.27 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
-            # teleport item
+
             autoit.send("teleport")
             time.sleep(0.4 + inventory_click_delay)
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
@@ -2652,7 +2786,7 @@ class BiomePresence():
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
             time.sleep(0.4 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
-            # amount box
+
             time.sleep(0.17 + inventory_click_delay)
             self.Global_MouseClick(amount_box[0], amount_box[1])
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
@@ -2663,24 +2797,26 @@ class BiomePresence():
             autoit.send('1')
             time.sleep(0.14 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
-            # use
-            self.Global_MouseClick(use_button[0], use_button[1])
+            if self.config.get("ocr_failsafe_enabled", False):
+                if not self.ocr_wait_for_phrase("teleport"):
+                    return
+
+            autoit.mouse_click("left", use_button[0], use_button[1], 3)
             time.sleep(0.23 + inventory_click_delay)
 
-            # inv
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
             time.sleep(0.23 + inventory_click_delay)
             self.Merchant_Handler()
-            
+
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
-            
+
             time.sleep(0.33 + inventory_click_delay)
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
             time.sleep(0.33 + inventory_click_delay)
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
 
         except Exception as e:
-            self.error_logging(e, "Error in use_merchant_teleporter function.")             
+            self.error_logging(e, "Error in use_merchant_teleporter function.")          
 
     def Merchant_Handler(self):
         try:
@@ -2757,7 +2893,7 @@ class BiomePresence():
 
                 x, y = merchant_open_button
                 autoit.mouse_click("left", x, y, 3)
-                time.sleep(0.73)
+                time.sleep(2)
 
                 screenshot_dir = os.path.join(os.getcwd(), "images")
                 os.makedirs(screenshot_dir, exist_ok=True)
@@ -2829,7 +2965,6 @@ class BiomePresence():
             self.error_logging(e, "Error in Merchant_Handler function \n (If it say valueError: not enough values to unpack (expect 3 got 2) then open both mari and jester setting and click save selection again!)")
         finally:
             self.on_auto_merchant_state = False
-    
         
     def send_webhook(self, biome, message_type, event_type):
         urls = self.get_webhook_list()
@@ -2859,7 +2994,7 @@ class BiomePresence():
             "title": title,
             "color": biome_color,
             "footer": {
-                "text": """Noteab's Biome Macro (Patch 1.6.2 by "@criticize.")""",
+                "text": """Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.")""",
                 "icon_url": icon_url
             },
             "fields": fields
@@ -2955,7 +3090,7 @@ class BiomePresence():
             log_lines = self.read_log_file_for_detector(log_file_path, pos_attr='last_position_eden', filter_chat=False)
             if not log_lines:
                 return
-            max_lines = int(self.config.get("eden_log_tail", 400))
+            max_lines = int(self.config.get("eden_log_tail", 35))
             recent = log_lines[-max_lines:] if len(log_lines) > max_lines else log_lines
 
             for line in reversed(recent):
@@ -2986,7 +3121,7 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """Noteab's Biome Macro (Patch 1.6.2 by "@criticize.")""",
+                "text": """Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.")""",
                 "icon_url": icon_url
             }
         }
@@ -3030,7 +3165,7 @@ class BiomePresence():
                     "description": description,
                     "color": color,
                     "footer": {
-                        "text": """Noteab's Biome Macro (Patch 1.6.2 by "@criticize.")""",
+                        "text": """Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.")""",
                         "icon_url": icon_url
                     }
                 }
@@ -3065,7 +3200,7 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {status}",
                 "color": embed_color,
                 "footer": {
-                    "text": """Noteab's Biome Macro (Patch 1.6.2 by "@criticize.")""",
+                    "text": """Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.")""",
                     "icon_url": icon_url
                 }
             }]
@@ -3098,13 +3233,10 @@ class BiomePresence():
         else:
             print("Roblox window not found.")
     
-    def autoit_hold_left_click(self, posX, posY, holdTime=3300):
-        autoit.mouse_click("left", posX, posY, 5, speed=2)
-        time.sleep(0.13)
-        autoit.mouse_click("left", posX, posY, 3, speed=2)
-        autoit.mouse_down("left")
-        time.sleep(holdTime / 1000)
-        autoit.mouse_up("left")
+    def autoit_hold_left_click(self, posX, posY, holdTime=1):
+        for _ in range(5):
+            autoit.mouse_click("left", posX, posY, 2, speed=2)
+            time.sleep(0.1)
         
     def get_scaled_coordinates(self, original_x, original_y):
         original_width = 1920 
@@ -3228,6 +3360,10 @@ class BiomePresence():
 
                 # use??!
                 use_button = self.config.get("use_button", [710, 573])
+                if self.config.get("ocr_failsafe_enabled", False):
+                    if not self.ocr_wait_for_phrase(buff):
+                        return
+
                 self.Global_MouseClick(use_button[0], use_button[1])
                 time.sleep(0.3 + inventory_click_delay)
 
