@@ -317,7 +317,7 @@ class BiomePresence():
         self._merchant_pending_from_logs = False
         self._merchant_pending_name = None
         self._br_sc_running = False
-
+        self._mt_running = False
         
         # Buff variables
         self.auto_pop_state = False
@@ -2229,7 +2229,7 @@ class BiomePresence():
                     self._merchant_pending_name = merchant_name
                     self.append_log(f"[Merchant Detection] Merchant teleporter pending due to log detection for {merchant_name}.")
 
-                    if not getattr(self, '_br_sc_running', False) and not self.on_auto_merchant_state and not self.auto_pop_state and not self.config.get("enable_auto_craft") and self.current_biome != "GLITCHED":
+                    if not getattr(self, '_br_sc_running', False) and not getattr(self, '_mt_running', False) and not self.on_auto_merchant_state and not self.auto_pop_state and not self.config.get("enable_auto_craft") and self.current_biome != "GLITCHED":
                         try:
                             self.append_log("[Merchant Detection] Using merchant teleporter immediately (logs).")
                             self.use_merchant_teleporter()
@@ -2632,7 +2632,7 @@ class BiomePresence():
         except ValueError:
             mt_cooldown = timedelta(minutes=1)
 
-        if self.mt_var.get() and datetime.now() - self.last_mt_time >= mt_cooldown:
+        if self.mt_var.get() and datetime.now() - self.last_mt_time >= mt_cooldown and not getattr(self, '_br_sc_running', False) and not getattr(self, '_mt_running', False):
             self.use_merchant_teleporter()
             self.last_mt_time = datetime.now()
             
@@ -2641,7 +2641,7 @@ class BiomePresence():
         except ValueError:
             sc_cooldown = timedelta(minutes=20)
 
-        if self.sc_var.get() and datetime.now() - self.last_sc_time >= sc_cooldown:
+        if self.sc_var.get() and datetime.now() - self.last_sc_time >= sc_cooldown and not getattr(self, '_merchant_pending_from_logs', False) and not getattr(self, '_mt_running', False) and not self.on_auto_merchant_state:
             self.use_br_sc('strange controller')
             self.last_sc_time = datetime.now()
             
@@ -2650,7 +2650,7 @@ class BiomePresence():
         except ValueError:
             br_cooldown = timedelta(minutes=35)
 
-        if self.br_var.get() and datetime.now() - self.last_br_time >= br_cooldown:
+        if self.br_var.get() and datetime.now() - self.last_br_time >= br_cooldown and not getattr(self, '_merchant_pending_from_logs', False) and not getattr(self, '_mt_running', False) and not self.on_auto_merchant_state:
             self.use_br_sc('biome randomizer')
             self.last_br_time = datetime.now()
     
@@ -2661,7 +2661,7 @@ class BiomePresence():
     def use_br_sc(self, item_name):
         self._br_sc_running = True
         try:
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
+            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED" or getattr(self, '_merchant_pending_from_logs', False) or getattr(self, '_mt_running', False): return
             time.sleep(1.3)
 
             inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
@@ -2741,6 +2741,8 @@ class BiomePresence():
                     self.error_logging(e, "Failed to use merchant teleporter after BR/SC")
         
     def use_merchant_teleporter(self):
+        if getattr(self, '_br_sc_running', False): return
+        self._mt_running = True
         try:
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get("enable_auto_craft") or self.current_biome == "GLITCHED": return
             time.sleep(0.75)
@@ -2816,7 +2818,9 @@ class BiomePresence():
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
 
         except Exception as e:
-            self.error_logging(e, "Error in use_merchant_teleporter function.")          
+            self.error_logging(e, "Error in use_merchant_teleporter function.")
+        finally:
+            self._mt_running = False     
 
     def Merchant_Handler(self):
         try:
