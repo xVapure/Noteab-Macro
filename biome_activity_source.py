@@ -712,7 +712,7 @@ class BiomePresence():
         
 
     def check_for_updates(self):
-        current_version = "v1.6.3-open_beta"
+        current_version = "v1.6.3"
         dont_ask_again = self.config.get("dont_ask_for_update", False)
         
         if dont_ask_again: return
@@ -1986,7 +1986,7 @@ class BiomePresence():
                 thread = threading.Thread(target=thread_func, name=name, daemon=True)
                 thread.start()
 
-            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Running)""")
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3 by "@criticize.") (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             print("Biome detection started.")
 
@@ -2002,7 +2002,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
             self.start_time = None
             self.stop_sent = True
-            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Stopped)""")
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3 by "@criticize.") (Stopped)""")
             total_time_str = self.get_total_session_time()
             self.send_webhook_status(f"Macro stopped! Macroed for: {total_time_str} in the past 24 hours!", color=0xff0000)
             self.save_config()
@@ -2351,7 +2351,7 @@ class BiomePresence():
                                     break
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server. hold on bro", color=0xffff00)
-                                self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") by "@criticize.") (Reconnecting)""")
+                                self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3 by "@criticize.") by "@criticize.") (Reconnecting)""")
                                 try:
                                     os.startfile(roblox_deep_link)
                                 except Exception:
@@ -2388,7 +2388,7 @@ class BiomePresence():
                 self.saved_session += elapsed
                 self.start_time = None
             self.reconnecting_state = True
-            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Roblox Disconnected :c )""")
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3 by "@criticize.") (Roblox Disconnected :c )""")
             if reason and not getattr(self, 'has_sent_disconnected_message', False):
                 try:
                     self.send_webhook_status(reason, color=0xff0000)
@@ -2405,7 +2405,7 @@ class BiomePresence():
                 self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
-            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Running)""")
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3 by "@criticize.") (Running)""")
             self.save_config()
         except Exception as e:
             self.error_logging(e, "_resume_timer_after_reconnect")
@@ -2545,7 +2545,7 @@ class BiomePresence():
     
     def reconnect_check_start_button(self):
         try:
-            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Reconnecting - In Main Menu)""")
+            self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3 by "@criticize.") (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -2565,7 +2565,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.") (Running)""")
+                    self.set_title_threadsafe("""Noteab's Biome Macro (Patch 1.6.3 by "@criticize.") (Running)""")
                     return True  # yay joins!!
                 
                 print("Still in Main Menu, clicking again...")
@@ -2998,7 +2998,7 @@ class BiomePresence():
             "title": title,
             "color": biome_color,
             "footer": {
-                "text": """Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.")""",
+                "text": """Noteab's Biome Macro (Patch 1.6.3 by "@criticize.")""",
                 "icon_url": icon_url
             },
             "fields": fields
@@ -3125,7 +3125,7 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.")""",
+                "text": """Noteab's Biome Macro (Patch 1.6.3 by "@criticize.")""",
                 "icon_url": icon_url
             }
         }
@@ -3169,7 +3169,7 @@ class BiomePresence():
                     "description": description,
                     "color": color,
                     "footer": {
-                        "text": """Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.")""",
+                        "text": """Noteab's Biome Macro (Patch 1.6.3 by "@criticize.")""",
                         "icon_url": icon_url
                     }
                 }
@@ -3204,7 +3204,7 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {status}",
                 "color": embed_color,
                 "footer": {
-                    "text": """Noteab's Biome Macro (Patch 1.6.3-open_beta by "@criticize.")""",
+                    "text": """Noteab's Biome Macro (Patch 1.6.3 by "@criticize.")""",
                     "icon_url": icon_url
                 }
             }]
