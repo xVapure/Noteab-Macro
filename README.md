@@ -26,7 +26,7 @@
 - Noteab have permanently stepped down from the position of the owner and developer for Noteab's macro, that is a really sudden and unfortunate news for not only me but I believe for a lot of people. Since this is one of the biggest Sol's macro, it would be unsuitable if no one continues to maintain it. If you are looking for other alternatives for Noteab's Biome Macro, I suggest checking out [Scope Team](https://discord.gg/vuHAR97FWZ). But for now, I will be trying my absolute best as the lead developer for Noteab's Biome Macro, and I look forward to work with everyone.
 ## IV. FAQs and common fixes
 Q: Macro has virus?<br>
-A: No, it is Window's false positives. You can check out the source code or reverse engineer if you wish. Or put the file into a virtual machine/Virus Total.<br>
+A: No, it is Window's false positives. You can check out the source code or reverse engineer if you wish. Or put the file into a virtual machine/Virus Total. If you couldn't run your macro file due to false positives, try disabling your anti-virus, or refer to these tutorials: https://youtu.be/zGiNGnX5dYg?si=uC-qDKqVoC68txy8 https://youtu.be/_0_A9D0JeVo?si=ahXKpVYbs-HhOwSC<br>
 Q: Some detection features doesn't work?<br>
 A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ryeAMV3fLM).<br>
 ```
