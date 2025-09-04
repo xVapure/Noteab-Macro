@@ -122,5 +122,8 @@
     "PROLOGUE": {"rarity": 666616111, "exclusive_biome": ["None", 1]},
     "dreamscape": {"rarity": 850000000, "exclusive_biome": ["None", 1]},
     "Dreammetric": {"rarity": 520000000, "exclusive_biome": ["DREAMSPACE", 1]},
-    "EQUINOX": {"rarity": 2500000000, "exclusive_biome": ["None", 1]}
+    "EQUINOX": {"rarity": 2500000000, "exclusive_biome": ["None", 1]},
+    "Sophyra": {"rarity": 570000000, "exclusive_biome": ["None", 1]},
+    "Terror": {"rarity": 400000, "exclusive_biome": ["None", 1]}
 }
+
