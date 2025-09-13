@@ -39,7 +39,7 @@ A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ry
 ```
 <br>
 Q: I got this bug "Exception: Unsupported locale setting":<br>
-A: https://i.postimg.cc/ZqBXBFfG/image.png<br>
+A: https://i.postimg.cc/sgTr1jnR/NOTEABREGION.png<br>
 Q: How to calibrate merchants?<br>
 A: https://i.postimg.cc/3NdGYNrF/image.png & https://i.postimg.cc/15VFd8j9/image.png<br>
 Q: Where is Eden detection?<br>
