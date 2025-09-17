@@ -1,5 +1,5 @@
 events = {
-  "april_fools": True,
-  "crimuh": False,
-  "halloween": False
+  "april_fools": true,
+  "crimuh": false,
+  "halloween": false
 }
