@@ -1,0 +1,5 @@
+events = {
+  "april_fools": False,
+  "crimuh": False,
+  "halloween": False
+}
