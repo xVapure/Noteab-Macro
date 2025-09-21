@@ -1,1 +1,21 @@
-- Test.
+1.6.4 Coteab update, what's new?
+- Also MacOS support for Coteab macro coming soon!!! Approx 1-2 days from this release announcements.
+1) New features :money_mouth: 
+- Auto merchant while you're INSIDE LIMBO!!
+- Anti-AFK, prevents you from Roblox disconnection due to being idle in our outside of Roblox. It will send a spacebar signal to Roblox every 6.7 minutes (I'm not joking) and tab back into the tab you're in.
+- Option to enable buff when Glitched biome arrives: great for players who are disabling their buffs to prepare/hunt for a Glitched biome in other servers and they don't want to risk losing a Glitched biome inside their ps.
+- Addition of future events.
+2) Bugs fixes :tools: 
+-  Fixed Eden detection (thank you ethan03228 for the valuable info on how Eden message appears in log).
+- Added a more reliable way to close the inventory.
+- Auto merchant fixes, now whenever a merchant was detected from logs the merchant teleporter will be used immediately or after the pending actions are done.
+    -  Also fixing issues with auto merchant not being able to purchase more than 1 item
+3) Reworks & misc changes :thinking: 
+- Noteab macro will be changed into “Coteab macro” as this is a fork of the original macro so we want to add some of our own originality.
+- Added another timing method to the session timer, reworked the session timer logic also. 
+- Reworked the player logger logics:
+    - Player logger delay changed from 0s -> 5s to prevent webhook rate limit.
+    - Added a biome joined and biome left and which biome did the player initially joined to the player logger.
+- Notice tab overhaul.
+- Credits tab semi overhaul.
+- @finnerichh will be joining the development team alongside with @criticize.
