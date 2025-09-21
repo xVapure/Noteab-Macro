@@ -38,6 +38,8 @@ A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ry
 }
 ```
 <br>
+Q: Auto merchants using my rare potions???!<br>
+A: Simply set a mouse delay to 1000-2000 milisecond.
 Q: I got this bug "Exception: Unsupported locale setting":<br>
 A: https://i.postimg.cc/sgTr1jnR/NOTEABREGION.png<br>
 Q: How to calibrate merchants?<br>
