@@ -709,7 +709,7 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
 
         self.root = ttk.Window(themename=selected_theme)
-        self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4) (Idle)""")
+        self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Idle)""")
         self.root.geometry("800x700")
 
         try:
@@ -2133,6 +2133,7 @@ class BiomePresence():
             ("Search Bar", "search_bar"),
             ("First Item Slot", "first_item_slot"),
             ("Amount Box", "amount_box"),
+            ("Use Button", "use_button"),
             ("Inventory close button \"x\"", "inventory_close_button"),
             ("'START' button (for reconnect feature, \n the one above 'Update Logs' button)", "reconnect_start_button")
         ]
@@ -2296,7 +2297,7 @@ class BiomePresence():
                 thread.start()
             self.perform_anti_afk_action()
 
-            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4) (Running)""")
+            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             print("Biome detection started.")
 
@@ -2326,7 +2327,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
             self.start_time = None
             self.stop_sent = True
-            self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.4) (Stopped)")
+            self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Stopped)")
 
             self.send_macro_summary(last24h_seconds)
             print("closed", self.current_session)
@@ -2688,7 +2689,7 @@ class BiomePresence():
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server. hold on bro", color=0xffff00)
                                 self.set_title_threadsafe(
-                                    """'C'oteab's Biome Macro (Patch 1.6.4) (Reconnecting)""")
+                                    """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Reconnecting)""")
                                 try:
                                     os.startfile(roblox_deep_link)
                                 except Exception:
@@ -2732,7 +2733,7 @@ class BiomePresence():
                 self.pause_reason = reason
             self.reconnecting_state = True
             self.set_title_threadsafe(
-                """'C'oteab's Biome Macro (Patch 1.6.4) (Roblox Disconnected :c )""")
+                """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Roblox Disconnected :c )""")
             if reason and not getattr(self, 'has_sent_disconnected_message', False):
                 try:
                     self.send_webhook_status(reason, color=0xff0000)
@@ -2758,7 +2759,7 @@ class BiomePresence():
                     self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
-            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4) (Running)""")
+            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Running)""")
             self.save_config()
         except Exception as e:
             self.error_logging(e, "_resume_timer_after_reconnect")
@@ -2955,7 +2956,7 @@ class BiomePresence():
     def reconnect_check_start_button(self):
         try:
             self.set_title_threadsafe(
-                """'C'oteab's Biome Macro (Patch 1.6.4) (Reconnecting - In Main Menu)""")
+                """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -2975,7 +2976,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4) (Running)""")
+                    self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Running)""")
                     return True  # yay joins!!
 
                 print("Still in Main Menu, clicking again...")
@@ -3499,7 +3500,7 @@ class BiomePresence():
             "title": title,
             "color": biome_color,
             "footer": {
-                "text": """'C'oteab's Biome Macro (Patch 1.6.4)""",
+                "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)""",
                 "icon_url": icon_url
             },
             "fields": fields
@@ -3632,7 +3633,7 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """'C'oteab's Biome Macro (Patch 1.6.4)""",
+                "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)""",
                 "icon_url": icon_url
             }
         }
@@ -3675,7 +3676,7 @@ class BiomePresence():
                     "description": description,
                     "color": color,
                     "footer": {
-                        "text": """'C'oteab's Biome Macro (Patch 1.6.4)""",
+                        "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)""",
                         "icon_url": icon_url
                     }
                 }
@@ -3710,7 +3711,7 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {status}",
                 "color": embed_color,
                 "footer": {
-                    "text": """'C'oteab's Biome Macro (Patch 1.6.4)""",
+                    "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)""",
                     "icon_url": icon_url
                 }
             }]
@@ -3739,7 +3740,7 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {reason_text} Here is your session summary:",
                 "color": 0xff0000,
                 "footer": {
-                    "text": "'C'oteab's Biome Macro (Patch 1.6.4)",
+                    "text": "'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)",
                     "icon_url": icon_url
                 },
                 "fields": [
@@ -4132,7 +4133,7 @@ finally:
                     bp.start_time = None
                     bp.detection_running = False
                     bp.stop_sent = True
-                    bp.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4) (Stopped)""")
+                    bp.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Stopped)""")
                     bp.send_macro_summary(last24h_seconds)
                     bp.save_config()
 
