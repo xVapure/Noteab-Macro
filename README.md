@@ -50,3 +50,5 @@ Q: What is the first item slot?<br>
 A: https://i.postimg.cc/9X6tt3Wg/image.png<br>
 Q: Why doesn't merchant detection work? I tried calibrating but nothing works.<br>
 A: Install Tesseract OCR: https://github.com/tesseract-ocr/tesseract/releases/tag/5.5.1<br>
+Q: The macro wouldn't do anything it wouldn't start??<br>
+A: There are two fixes: make sure the macro is inside a folder with your config file (and extracted). If that doesn't work run the macro as administrator.
