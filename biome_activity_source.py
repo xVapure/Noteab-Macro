@@ -313,6 +313,8 @@ class BiomePresence():
         self.lock = threading.Lock()
         self.logs = self.load_logs()
         self.player_log_queue = queue.Queue()
+        self.player_log_send_delay = float(self.config.get("player_log_send_delay", 2.0))
+        self.biome_history = []
         self.player_log_sender_running = False
 
         # item use
@@ -709,7 +711,7 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
 
         self.root = ttk.Window(themename=selected_theme)
-        self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Idle)""")
+        self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Idle)""")
         self.root.geometry("800x700")
 
         try:
@@ -2232,7 +2234,7 @@ class BiomePresence():
                 "Please ensure the link is correct and try again.\n\n"
                 "Valid links should look like:\n"
                 "- Share link: https://www.roblox.com/share?code=1234567899abcdefxyz&type=Server\n"
-                "- Private server link: https://www.roblox.com/games/15532962292/Sols-RNG-Eon1-1?privateServerLinkCode=..."
+                "- Private server link: https://www.roblox.com/games/15532962292/"
             )
             return
 
@@ -2240,8 +2242,8 @@ class BiomePresence():
 
     def validate_private_server_link(self, link):
         share_pattern = r"https://www\.roblox\.com/share\?code=\w+&type=Server"
-        private_server_pattern = r"https://www\.roblox\.com/games/\d+/Sols-RNG-Eon1-1\?privateServerLinkCode=\w+"
-        second_ps_pattern = r"https://www\.roblox\.com/games/\d+/Sols-RNG\?privateServerLinkCode=\w+"
+        private_server_pattern = r"^https:\/\/www\.roblox\.com\/games\/(\d+)\/?$"
+        second_ps_pattern = r"^https:\/\/www\.roblox\.com\/games\/(\d+)\/?$\?privateServerLinkCode=\w+$"
 
         return re.match(share_pattern, link) or re.match(private_server_pattern, link) or re.match(second_ps_pattern,
                                                                                                    link)
@@ -2297,7 +2299,7 @@ class BiomePresence():
                 thread.start()
             self.perform_anti_afk_action()
 
-            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Running)""")
+            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             print("Biome detection started.")
 
@@ -2327,7 +2329,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
             self.start_time = None
             self.stop_sent = True
-            self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Stopped)")
+            self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Stopped)")
 
             self.send_macro_summary(last24h_seconds)
             print("closed", self.current_session)
@@ -2587,15 +2589,19 @@ class BiomePresence():
                         self.send_webhook(last_biome, prev_message_type, "end")
 
                 biome_info = self.biome_data[biome]
-                now = datetime.now()
+                now = datetime.now(timezone.utc)    
 
                 print(f"Detected Biome: {biome}, Color: {biome_info['color']}")
                 self.append_log(f"Detected Biome: {biome}")
 
                 self.current_biome = biome
                 self.last_sent[biome] = now
-
-                # Update counter of that biome
+                try:
+                    self.biome_history.append((now, biome))
+                    if len(self.biome_history) > 300:
+                        self.biome_history = self.biome_history[-300:]
+                except Exception:
+                    pass
                 if biome not in self.biome_counts: self.biome_counts[biome] = 0
                 self.biome_counts[biome] += 1
                 self.update_stats()
@@ -2689,7 +2695,7 @@ class BiomePresence():
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server. hold on bro", color=0xffff00)
                                 self.set_title_threadsafe(
-                                    """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Reconnecting)""")
+                                    """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Reconnecting)""")
                                 try:
                                     os.startfile(roblox_deep_link)
                                 except Exception:
@@ -2733,7 +2739,7 @@ class BiomePresence():
                 self.pause_reason = reason
             self.reconnecting_state = True
             self.set_title_threadsafe(
-                """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Roblox Disconnected :c )""")
+                """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Roblox Disconnected :c )""")
             if reason and not getattr(self, 'has_sent_disconnected_message', False):
                 try:
                     self.send_webhook_status(reason, color=0xff0000)
@@ -2759,7 +2765,7 @@ class BiomePresence():
                     self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
-            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Running)""")
+            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Running)""")
             self.save_config()
         except Exception as e:
             self.error_logging(e, "_resume_timer_after_reconnect")
@@ -2860,10 +2866,12 @@ class BiomePresence():
                             pass
                 except Exception:
                     pass
-            for _ in range(5):
+            delay = getattr(self, "player_log_send_delay", 2.0)
+            start = time.time()
+            while (time.time() - start) < delay:
                 if not getattr(self, "player_log_sender_running", False):
                     break
-                time.sleep(1)
+                time.sleep(0.1)
 
     def _find_latest_log_file(self):
         try:
@@ -2884,6 +2892,34 @@ class BiomePresence():
             return datetime.fromisoformat(s)
         except:
             return datetime.now(timezone.utc)
+
+    def _biome_at(self, ts):
+        try:
+            if not hasattr(self, "biome_history") or not self.biome_history:
+                return self.current_biome
+            try:
+                ts_utc = ts.astimezone(timezone.utc)
+            except Exception:
+                try:
+                    ts_utc = ts.replace(tzinfo=timezone.utc)
+                except Exception:
+                    ts_utc = ts
+            last = None
+            for bt, b in self.biome_history:
+                try:
+                    bt_utc = bt.astimezone(timezone.utc)
+                except Exception:
+                    try:
+                        bt_utc = bt.replace(tzinfo=timezone.utc)
+                    except Exception:
+                        bt_utc = bt
+                if bt_utc <= ts_utc:
+                    last = b
+                else:
+                    break
+            return last if last is not None else self.current_biome
+        except Exception:
+            return self.current_biome
 
     def _player_logger_loop(self):
         last_file = None
@@ -2921,21 +2957,22 @@ class BiomePresence():
                     m = re.search(r"Player added:\s+(\S+)\s+(\d+)", line)
                     if m:
                         name, pid = m.group(1), m.group(2)
-                        sessions[pid] = {"ts": ts, "biome": self.current_biome}
+                        join_biome = self._biome_at(ts)
+                        sessions[pid] = {"ts": ts, "biome": join_biome}
                         self.logs.append(f"[Player] Joined {name} ({pid})")
                         self.save_logs()
                         ts_iso = ts.astimezone(timezone.utc).isoformat()
-                        embed = self._make_player_embed("join", name, pid, ts_iso, None, sessions[pid]["biome"])
+                        embed = self._make_player_embed("join", name, pid, ts_iso, None, join_biome)
                         self._enqueue_player_embed(embed)
                 elif "Player removed:" in line:
                     m = re.search(r"Player removed:\s+(\S+)\s+(\d+)", line)
                     if m:
                         name, pid = m.group(1), m.group(2)
                         joined = sessions.pop(pid, None)
+                        left_biome = self._biome_at(ts)
                         if joined and isinstance(joined, dict) and joined.get("ts"):
                             joined_ts = joined.get("ts")
                             joined_biome = joined.get("biome")
-                            left_biome = self.current_biome
                             secs = int((ts - joined_ts).total_seconds())
                             h = secs // 3600
                             m_ = (secs % 3600) // 60
@@ -2950,13 +2987,13 @@ class BiomePresence():
                             self.logs.append(f"[Player] Left {name} ({pid})")
                             self.save_logs()
                             ts_iso = ts.astimezone(timezone.utc).isoformat()
-                            embed = self._make_player_embed("leave", name, pid, ts_iso, None, None)
+                            embed = self._make_player_embed("leave", name, pid, ts_iso, None, None, left_biome)
                             self._enqueue_player_embed(embed)
 
     def reconnect_check_start_button(self):
         try:
             self.set_title_threadsafe(
-                """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Reconnecting - In Main Menu)""")
+                """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -2976,7 +3013,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Running)""")
+                    self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Running)""")
                     return True  # yay joins!!
 
                 print("Still in Main Menu, clicking again...")
@@ -3500,7 +3537,7 @@ class BiomePresence():
             "title": title,
             "color": biome_color,
             "footer": {
-                "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)""",
+                "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)""",
                 "icon_url": icon_url
             },
             "fields": fields
@@ -3633,7 +3670,7 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)""",
+                "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)""",
                 "icon_url": icon_url
             }
         }
@@ -3676,7 +3713,7 @@ class BiomePresence():
                     "description": description,
                     "color": color,
                     "footer": {
-                        "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)""",
+                        "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)""",
                         "icon_url": icon_url
                     }
                 }
@@ -3711,7 +3748,7 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {status}",
                 "color": embed_color,
                 "footer": {
-                    "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)""",
+                    "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)""",
                     "icon_url": icon_url
                 }
             }]
@@ -3740,7 +3777,7 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {reason_text} Here is your session summary:",
                 "color": 0xff0000,
                 "footer": {
-                    "text": "'C'oteab's Biome Macro (Patch 1.6.4-bugfix1)",
+                    "text": "'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)",
                     "icon_url": icon_url
                 },
                 "fields": [
@@ -4133,7 +4170,7 @@ finally:
                     bp.start_time = None
                     bp.detection_running = False
                     bp.stop_sent = True
-                    bp.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix1) (Stopped)""")
+                    bp.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Stopped)""")
                     bp.send_macro_summary(last24h_seconds)
                     bp.save_config()
 
