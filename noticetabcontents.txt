@@ -1,5 +1,5 @@
 IF YOU ARE HAVING ISSUES WITH THE "USE" BUTTON, PLEASE REINSTALL THE MACRO: https://github.com/xVapure/Noteab-Macro/releases/latest
-1.6.4-bugfix1 Coteab update, what's new?
+1.6.4-bugfix2 Coteab update, what's new?
 - Also MacOS support for Coteab macro coming soon!!! Approx 1-2 days from this release announcements.
 1) New features :money_mouth: 
 - Auto merchant while you're INSIDE LIMBO!!
@@ -12,6 +12,8 @@ IF YOU ARE HAVING ISSUES WITH THE "USE" BUTTON, PLEASE REINSTALL THE MACRO: http
 - Auto merchant fixes, now whenever a merchant was detected from logs the merchant teleporter will be used immediately or after the pending actions are done.
     -  Also fixing issues with auto merchant not being able to purchase more than 1 item
 - Missing the calibration button for "use" button thanks to "beluga_colevoy" for spotting the bug (1.6.4-bugfix1).
+- Fixing the issue with player logger.
+- Fixing the issue with validating private server link.
 3) Reworks & misc changes :thinking: 
 - Noteab macro will be changed into “Coteab macro” as this is a fork of the original macro so we want to add some of our own originality.
 - Added another timing method to the session timer, reworked the session timer logic also. 
