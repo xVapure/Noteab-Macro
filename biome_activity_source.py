@@ -786,7 +786,7 @@ class BiomePresence():
         self.save_config()
 
     def check_for_updates(self):
-        current_version = "v1.6.4"
+        current_version = "v1.6.4-bugfix2"
         dont_ask_again = self.config.get("dont_ask_for_update", False)
 
         if dont_ask_again: return
@@ -1194,7 +1194,7 @@ class BiomePresence():
             webbrowser.open_new("https://github.com/xVapure/Noteab-Macro/releases/latest")
 
         def _check_latest():
-            current_version = "v1.6.4"
+            current_version = "v1.6.4-bugfix2"
             try:
                 response = requests.get("https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest", timeout=10)
                 response.raise_for_status()
