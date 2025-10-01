@@ -1,3 +1,4 @@
+Important announcement: No it is not a bug, Roblox has officially pulled the plug for FFlags support. What that means is that certain features will become unavailable, including: player logger, merchants detection (via logs only), Eden detection. What we can do now is to pray that Roblox change their minds and whitelist the flags the macro is using.
 1.6.4-bugfix2 Coteab update, what's new?
 - Fixed the player logger.
 - Fixed the validating private server link bug.
