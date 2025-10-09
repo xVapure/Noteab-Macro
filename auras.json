@@ -126,7 +126,13 @@
     "Sophyra": {"rarity": 570000000, "exclusive_biome": ["None", 1]},
     "Terror": {"rarity": 400000, "exclusive_biome": ["None", 1]},
     "Prowler": {"rarity": 540000, "exclusive_biome": ["None", 1]},
-    "Hyper-Volt": {"rarity": 7500000, "exclusive_biome": ["None", 1]}
+    "Hyper-Volt": {"rarity": 7500000, "exclusive_biome": ["None", 1]},
+    "Virtual_WorldWide": {"rarity": 87500000, "exclusive_biome": ["None", 1]},
+    "Hyper-Volt_Ever-Storm": {"rarity": 225000000, "exclusive_biome": ["None", 1]},
+    "Twilight_Withering Grace": {"rarity": 170000000, "exclusive_biome": ["None", 1]},
+    "CHILLSEAR": {"rarity": 375000000, "exclusive_biome": ["SNOWY", 3]},
+    "Flora_Evergreen": {"rarity": 370073730, "exclusive_biome": ["None", 1]},
+    "Shiftlock": {"rarity": 3325000, "exclusive_biome": ["NULL", 1000]},
 }
 
 
