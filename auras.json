@@ -132,7 +132,8 @@
     "Twilight_Withering Grace": {"rarity": 170000000, "exclusive_biome": ["None", 1]},
     "CHILLSEAR": {"rarity": 375000000, "exclusive_biome": ["SNOWY", 3]},
     "Flora_Evergreen": {"rarity": 370073730, "exclusive_biome": ["None", 1]},
-    "Shiftlock": {"rarity": 3325000, "exclusive_biome": ["NULL", 1000]},
+    "Shiftlock": {"rarity": 3325000, "exclusive_biome": ["NULL", 1000]}
 }
+
 
 
