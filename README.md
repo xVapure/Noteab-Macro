@@ -28,7 +28,7 @@
 Q: Macro has virus?<br>
 A: No, it is Window's false positives. You can check out the source code or reverse engineer if you wish. Or put the file into a virtual machine/Virus Total. If you couldn't run your macro file due to false positives, try disabling your anti-virus, or refer to these tutorials: https://youtu.be/zGiNGnX5dYg?si=uC-qDKqVoC68txy8 https://youtu.be/_0_A9D0JeVo?si=ahXKpVYbs-HhOwSC<br>
 Q: Some detection features doesn't work?<br>
-A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ryeAMV3fLM).<br>
+A: Apply these FFlags. [How to apply FFlags](https://www.youtube.com/watch?v=4ryeAMV3fLM). EDIT: FFLAGS ARE NO LONGER SUPPORTED BY ROBLOX. FEATURES LIKE EDEN DETECTION OR MERCHANTS LOG WILL NO LONGER WORK.<br>
 ```
 {
   "DFFlagDebugPerfMode": "True",
