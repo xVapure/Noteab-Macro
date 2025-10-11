@@ -3,4 +3,5 @@ v1.6.5 release, what's new?
 - Brought back pings for merchants using OCR detection.
 - Fixed the issue with NULL biome spamming due to the new loading inventory system.
 - Fixed a vulnerability to fake ping biomes (thanks to "etcat" for the report).
+- Added customizations tab!! We now allow for further macro customizations for users' preferences!!
 - I initially wanted to save these for Coteab 2.0.0, but it seems like these are critical bugs that needed attention ASAP, so I might as well release the 2.0.0 UI too :) Enjoy!!
