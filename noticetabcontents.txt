@@ -1,3 +1,5 @@
+If you're using an older version, please update!!
+
 v1.6.5 release, what's new?
 - Reworked the UI to be cleaner.
 - Brought back pings for merchants using OCR detection.
