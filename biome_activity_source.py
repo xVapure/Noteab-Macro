@@ -1,6 +1,7 @@
 import traceback
 import pygetwindow as gw
 from tkinter import messagebox, filedialog
+import tkinter as tk
 from PIL import Image, ImageTk
 from datetime import datetime, timedelta, timezone
 import ttkbootstrap as ttk
@@ -433,6 +434,18 @@ class BiomePresence():
                 data[biome]["color"] = glitched.get("color", data[biome]["color"])
                 data[biome]["thumbnail_url"] = glitched.get("thumbnail_url", data[biome]["thumbnail_url"])
 
+        custom_overrides = self.config.get("custom_biome_overrides", {})
+        if isinstance(custom_overrides, dict):
+            for biome_name, overrides in custom_overrides.items():
+                try:
+                    if biome_name in data and isinstance(overrides, dict):
+                        if "color" in overrides and overrides["color"]:
+                            data[biome_name]["color"] = overrides["color"]
+                        if "thumbnail_url" in overrides and overrides["thumbnail_url"]:
+                            data[biome_name]["thumbnail_url"] = overrides["thumbnail_url"]
+                except Exception:
+                    pass
+
         return data
 
     def load_notice_tab(self):
@@ -711,47 +724,107 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
 
         self.root = ttk.Window(themename=selected_theme)
-        self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Idle)""")
-        self.root.geometry("800x700")
-
+        self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.5) (Idle)")
+        self.root.geometry("1000x700")
+        self.root.minsize(900, 600)
         try:
             self.root.iconbitmap(icon_path)
-        except Exception as e:
+        except Exception:
             pass
 
         self.variables = {
             biome: ttk.StringVar(master=self.root, value=self.config.get("biome_notifier", {}).get(biome, "Message"))
-            for biome in self.biome_data}
+            for biome in self.biome_data
+        }
 
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill='both', expand=True, padx=10, pady=10)
+        header = ttk.Frame(self.root)
+        header.pack(side="top", fill="x", padx=10, pady=8)
 
-        webhook_frame = ttk.Frame(notebook)
-        misc_frame = ttk.Frame(notebook)
-        aura_webhook_frame = ttk.Frame(notebook)
-        merchant_frame = ttk.Frame(notebook)
-        credits_frame = ttk.Frame(notebook)
-        donations_frame = ttk.Frame(notebook)
-        stats_frame = ttk.Frame(notebook)
-        other_features_frame = ttk.Frame(notebook)
-        hp_craft_frame = ttk.Frame(notebook)
-        notice_frame = ttk.Frame(notebook)
+        header_left = ttk.Frame(header)
+        header_left.pack(side="left", anchor="w")
 
-        notebook.add(notice_frame, text='Notice')
-        notebook.add(webhook_frame, text='Webhook')
-        notebook.add(misc_frame, text='Misc')
-        notebook.add(merchant_frame, text='Merchant')
-        notebook.add(aura_webhook_frame, text='Auras')
-        notebook.add(hp_craft_frame, text='Potion Crafting (UPDATED)')
-        notebook.add(stats_frame, text='Stats')
-        notebook.add(other_features_frame, text='Other Features')
-        notebook.add(credits_frame, text='Credits')
-        notebook.add(donations_frame, text='Donations <3')
+        def _start_wrapper():
+            try:
+                self.start_detection()
+            finally:
+                try:
+                    self.status_label.config(text="Status: Running")
+                except Exception:
+                    pass
+
+        def _stop_wrapper():
+            try:
+                self.stop_detection()
+            finally:
+                try:
+                    self.status_label.config(text="Status: Idle")
+                except Exception:
+                    pass
+
+        start_btn = ttk.Button(header_left, text="Start (F1)", command=_start_wrapper, bootstyle="success")
+        stop_btn = ttk.Button(header_left, text="Stop (F2)", command=_stop_wrapper, bootstyle="danger")
+        start_btn.pack(side="left", padx=(0, 6))
+        stop_btn.pack(side="left", padx=(0, 6))
+
+        header_center = ttk.Frame(header)
+        header_center.pack(side="left", expand=True)
+        self.status_label = ttk.Label(header_center, text="Status: Idle", anchor="center")
+        self.status_label.pack()
+
+        header_right = ttk.Frame(header)
+        header_right.pack(side="right", anchor="e")
+        theme_label = ttk.Label(header_right, text="Macro Theme:")
+        theme_label.pack(side="left", padx=(0, 6))
+        theme_combobox = ttk.Combobox(header_right, values=ttk.Style().theme_names(), state="readonly", width=18)
+        theme_combobox.set(selected_theme)
+        theme_combobox.pack(side="left")
+        theme_combobox.bind("<<ComboboxSelected>>", lambda e: self.update_theme(theme_combobox.get()))
+
+        body_pane = ttk.PanedWindow(self.root, orient="horizontal")
+        body_pane.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        nav_frame = ttk.Frame(body_pane, width=220)
+        nav_frame.pack_propagate(False)
+        body_pane.add(nav_frame, weight=0)
+
+        content_frame = ttk.Frame(body_pane)
+        body_pane.add(content_frame, weight=1)
+
+        notice_frame = ttk.Frame(content_frame)
+        webhook_frame = ttk.Frame(content_frame)
+        misc_frame = ttk.Frame(content_frame)
+        merchant_frame = ttk.Frame(content_frame)
+        aura_webhook_frame = ttk.Frame(content_frame)
+        hp_craft_frame = ttk.Frame(content_frame)
+        stats_frame = ttk.Frame(content_frame)
+        other_features_frame = ttk.Frame(content_frame)
+        customizations_frame = ttk.Frame(content_frame)
+        credits_frame = ttk.Frame(content_frame)
+        donations_frame = ttk.Frame(content_frame)
+
+        frames = {
+            "Notice": notice_frame,
+            "Webhook": webhook_frame,
+            "Misc": misc_frame,
+            "Merchant": merchant_frame,
+            "Auras": aura_webhook_frame,
+            "Potion Crafting": hp_craft_frame,
+            "Stats": stats_frame,
+            "Other Features": other_features_frame,
+            "Customizations": customizations_frame,
+            "Credits": credits_frame,
+            "Donations <3": donations_frame
+        }
+
+        for f in frames.values():
+            f.pack(fill="both", expand=True)
+            f.pack_forget()
 
         self.create_notice_tab(notice_frame)
         self.create_webhook_tab(webhook_frame)
         self.create_misc_tab(misc_frame)
         self.create_other_features_tab(other_features_frame)
+        self.create_customizations_tab(customizations_frame)
         self.create_auras_tab(aura_webhook_frame)
         self.create_merchant_tab(merchant_frame)
         self.create_stats_tab(stats_frame)
@@ -759,23 +832,51 @@ class BiomePresence():
         self.create_donations_tab(donations_frame)
         self.create_potion_craft_tab(hp_craft_frame)
 
-        button_frame = ttk.Frame(self.root)
-        button_frame.pack(side='top', pady=10)
-        start_button = ttk.Button(button_frame, text="Start (F1)", command=self.start_detection)
-        stop_button = ttk.Button(button_frame, text="Stop (F2)", command=self.stop_detection)
-        start_button.pack(side='left', padx=5)
-        stop_button.pack(side='left', padx=5)
+        nav_buttons = {}
 
-        # Theme
-        theme_label = ttk.Label(button_frame, text="Macro Theme:")
-        theme_label.pack(side='left', padx=15)
-        theme_combobox = ttk.Combobox(button_frame, values=ttk.Style().theme_names(), state="readonly")
-        theme_combobox.set(selected_theme)
-        theme_combobox.pack(side='left', padx=5)
-        theme_combobox.bind("<<ComboboxSelected>>", lambda event: self.update_theme(theme_combobox.get()))
+        def show_frame(name):
+            try:
+                for btn_name, btn in nav_buttons.items():
+                    try:
+                        btn.configure(bootstyle="outline-secondary")
+                    except Exception:
+                        pass
+                nav_buttons[name].configure(bootstyle="primary")
+            except Exception:
+                pass
+            for nm, fr in frames.items():
+                try:
+                    if nm == name:
+                        fr.pack(fill="both", expand=True)
+                        fr.tkraise()
+                    else:
+                        fr.pack_forget()
+                except Exception:
+                    pass
+            try:
+                self.status_label.config(text=f"Status: Viewing — {name}")
+            except Exception:
+                pass
 
-        keyboard.add_hotkey('F1', self.start_detection)
-        keyboard.add_hotkey('F2', self.stop_detection)
+        for i, name in enumerate(frames.keys()):
+            b = ttk.Button(nav_frame, text=name, width=22, command=lambda n=name: show_frame(n))
+            b.pack(pady=6, padx=8)
+            nav_buttons[name] = b
+
+        nav_footer = ttk.Frame(nav_frame)
+        nav_footer.pack(side="bottom", fill="x", padx=6, pady=8)
+        total_biomes = sum(self.biome_counts.values()) if getattr(self, "biome_counts", None) else 0
+        total_label = ttk.Label(nav_footer, text=f"Total Biomes: {total_biomes}")
+        total_label.pack(side="left", padx=(0, 4))
+        sess_label = ttk.Label(nav_footer, text=f"Session: {self.get_total_session_time()}")
+        sess_label.pack(side="right", padx=(4, 0))
+        self.total_biomes_label = total_label
+        self.session_label = sess_label
+
+        show_frame("Notice")
+
+        keyboard.add_hotkey("F1", lambda: (_start_wrapper()))
+        keyboard.add_hotkey("F2", lambda: (_stop_wrapper()))
 
         self.check_for_updates()
         self.root.mainloop()
@@ -786,7 +887,7 @@ class BiomePresence():
         self.save_config()
 
     def check_for_updates(self):
-        current_version = "v1.6.4-bugfix2"
+        current_version = "v1.6.5"
         dont_ask_again = self.config.get("dont_ask_for_update", False)
 
         if dont_ask_again: return
@@ -1004,6 +1105,174 @@ class BiomePresence():
             ttk.Entry(self.glitched_buff_frame, textvariable=x_var, width=8).grid(row=1, column=i, padx=5, pady=2)
             ttk.Entry(self.glitched_buff_frame, textvariable=y_var, width=8).grid(row=2, column=i, padx=5, pady=2)
 
+    def create_customizations_tab(self, frame):
+        btn_frame = ttk.Frame(frame)
+        btn_frame.pack(anchor="w", padx=10, pady=10)
+
+        upload_btn = ttk.Button(btn_frame, text="Upload Background Image", command=self.upload_background_image)
+        upload_btn.pack(side="left", padx=5)
+
+        clear_btn = ttk.Button(btn_frame, text="Clear Background Image", command=self.clear_background_image)
+        clear_btn.pack(side="left", padx=5)
+
+        ttk.Label(frame, text="").pack(pady=(6,0))
+        customize_btn = ttk.Button(frame, text="Customize Biome Embed", command=self.open_customize_biome_embed)
+        customize_btn.pack(anchor="w", padx=10, pady=10)
+
+        current_path = self.config.get("custom_background_image", "")
+        lbl = ttk.Label(frame, text=f"Current background: {current_path or '(none)'}", wraplength=700)
+        lbl.pack(anchor="w", padx=10, pady=(6,0))
+        self._custom_bg_label = lbl
+
+    def upload_background_image(self):
+        path = filedialog.askopenfilename(filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.gif;*.bmp")])
+        if not path:
+            return
+        try:
+            img = Image.open(path).convert("RGBA")
+            w = max(1, self.root.winfo_width())
+            h = max(1, self.root.winfo_height())
+            img = img.resize((max(100, w), max(100, h)), Image.LANCZOS)
+            alpha_val = int(255 * 0.9)
+            r, g, b, a = img.split()
+            new_alpha = a.point(lambda p: alpha_val)
+            img.putalpha(new_alpha)
+            self._bg_tk = ImageTk.PhotoImage(img)
+            if not hasattr(self, "bg_label") or self.bg_label is None:
+                self.bg_label = ttk.Label(self.root, image=self._bg_tk)
+                self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+                try:
+                    self.bg_label.lower()
+                except Exception:
+                    pass
+            else:
+                self.bg_label.config(image=self._bg_tk)
+            cfg = {}
+            try:
+                if os.path.exists("config.json"):
+                    with open("config.json", "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+            except Exception:
+                cfg = {}
+            cfg["custom_background_image"] = path
+            with open("config.json", "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=4)
+            self.config["custom_background_image"] = path
+            if hasattr(self, "_custom_bg_label"):
+                try:
+                    self._custom_bg_label.config(text=f"Current background: {path}")
+                except Exception:
+                    pass
+            messagebox.showinfo("Background", "Background image applied and saved.")
+        except Exception as e:
+            self.error_logging(e, "Error applying background image")
+            messagebox.showerror("Background", f"Failed to apply background: {e}")
+
+    def clear_background_image(self):
+        try:
+            if hasattr(self, "bg_label") and self.bg_label:
+                try:
+                    self.bg_label.destroy()
+                except Exception:
+                    pass
+                self.bg_label = None
+            cfg = {}
+            try:
+                if os.path.exists("config.json"):
+                    with open("config.json", "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+            except Exception:
+                cfg = {}
+            if "custom_background_image" in cfg:
+                try:
+                    del cfg["custom_background_image"]
+                except Exception:
+                    pass
+            with open("config.json", "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=4)
+            self.config.pop("custom_background_image", None)
+            if hasattr(self, "_custom_bg_label"):
+                try:
+                    self._custom_bg_label.config(text="Current background: (none)")
+                except Exception:
+                    pass
+            messagebox.showinfo("Background", "Background image cleared.")
+        except Exception as e:
+            self.error_logging(e, "Error clearing background image")
+            messagebox.showerror("Background", f"Failed to clear background: {e}")
+
+    def open_customize_biome_embed(self):
+        event_url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/main/active_events.json"
+        try:
+            r = requests.get(event_url, timeout=5)
+            r.raise_for_status()
+            events = r.json()
+        except Exception:
+            events = {"april_fools": False}
+        if events.get("april_fools"):
+            messagebox.showinfo("April Fools Active", "Embed customization is disabled while the April Fools event is active.")
+            return
+        win = ttk.Toplevel(self.root)
+        win.title("Customize Biome Embed")
+        win.geometry("760x560")
+        container = ttk.Frame(win)
+        container.pack(fill="both", expand=True, padx=8, pady=8)
+        canvas = ttk.Canvas(container)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        inner = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=inner, anchor="nw")
+        def on_config(e):
+            try:
+                canvas.configure(scrollregion=canvas.bbox("all"))
+            except Exception:
+                pass
+        inner.bind("<Configure>", on_config)
+        vars_map = {}
+        for i, biome in enumerate(self.biome_data.keys()):
+            ttk.Label(inner, text=biome).grid(row=i, column=0, sticky="w", padx=6, pady=6)
+            color_val = self.biome_data.get(biome, {}).get("color", "")
+            thumb_val = self.biome_data.get(biome, {}).get("thumbnail_url", "")
+            cvar = ttk.StringVar(value=color_val)
+            tvar = ttk.StringVar(value=thumb_val)
+            vars_map[biome] = (cvar, tvar)
+            ttk.Entry(inner, textvariable=cvar, width=20).grid(row=i, column=1, padx=6, pady=6)
+            ttk.Entry(inner, textvariable=tvar, width=60).grid(row=i, column=2, padx=6, pady=6)
+        link = "https://www.rapidtables.com/convert/color/index.html"
+        link_label = ttk.Label(win, text="Click here to get colour code", foreground="blue", cursor="hand2")
+        link_label.pack(side="bottom", pady=8)
+        link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link))
+        def save_and_close():
+            overrides = {}
+            for biome, (cvar, tvar) in vars_map.items():
+                color_val = cvar.get().strip()
+                thumb_val = tvar.get().strip()
+                overrides[biome] = {"color": color_val, "thumbnail_url": thumb_val}
+                try:
+                    if biome in self.biome_data:
+                        if color_val:
+                            self.biome_data[biome]["color"] = color_val
+                        if thumb_val:
+                            self.biome_data[biome]["thumbnail_url"] = thumb_val
+                except Exception:
+                    pass
+            cfg = {}
+            try:
+                if os.path.exists("config.json"):
+                    with open("config.json", "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+            except Exception:
+                cfg = {}
+            cfg["custom_biome_overrides"] = overrides
+            with open("config.json", "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=4)
+            self.config["custom_biome_overrides"] = overrides
+            messagebox.showinfo("Saved", "Biome embed customizations saved.")
+            win.destroy()
+        ttk.Button(win, text="Save & Close", command=save_and_close).pack(side="bottom", pady=6)
+
     def toggle_glitched_buff_frame(self):
         if self.enable_buff_glitched_var.get():
             self.glitched_buff_frame.pack(anchor="w", padx=30, pady=5)
@@ -1194,7 +1463,7 @@ class BiomePresence():
             webbrowser.open_new("https://github.com/xVapure/Noteab-Macro/releases/latest")
 
         def _check_latest():
-            current_version = "v1.6.4-bugfix2"
+            current_version = "v1.6.5"
             try:
                 response = requests.get("https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest", timeout=10)
                 response.raise_for_status()
@@ -2299,7 +2568,7 @@ class BiomePresence():
                 thread.start()
             self.perform_anti_afk_action()
 
-            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Running)""")
+            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.5) (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             print("Biome detection started.")
 
@@ -2329,7 +2598,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
             self.start_time = None
             self.stop_sent = True
-            self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Stopped)")
+            self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.5) (Stopped)")
 
             self.send_macro_summary(last24h_seconds)
             print("closed", self.current_session)
@@ -2347,7 +2616,7 @@ class BiomePresence():
             return []
 
         def is_chat_log(line):
-            if "ExpChat" in line or "mountClientApp" in line:
+            if "ExpChat" in line or "mountClientApp" in line or "Time record" in line or "[Server]" in line:
                 excluded_phrases = [
                     "[Merchant]: Mari has arrived on the island...",
                     "[Merchant]: Jester has arrived on the island!!",
@@ -2695,7 +2964,7 @@ class BiomePresence():
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server. hold on bro", color=0xffff00)
                                 self.set_title_threadsafe(
-                                    """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Reconnecting)""")
+                                    """'C'oteab's Biome Macro (Patch 1.6.5) (Reconnecting)""")
                                 try:
                                     os.startfile(roblox_deep_link)
                                 except Exception:
@@ -2739,7 +3008,7 @@ class BiomePresence():
                 self.pause_reason = reason
             self.reconnecting_state = True
             self.set_title_threadsafe(
-                """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Roblox Disconnected :c )""")
+                """'C'oteab's Biome Macro (Patch 1.6.5) (Roblox Disconnected :c )""")
             if reason and not getattr(self, 'has_sent_disconnected_message', False):
                 try:
                     self.send_webhook_status(reason, color=0xff0000)
@@ -2765,7 +3034,7 @@ class BiomePresence():
                     self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
-            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Running)""")
+            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.5) (Running)""")
             self.save_config()
         except Exception as e:
             self.error_logging(e, "_resume_timer_after_reconnect")
@@ -2993,7 +3262,7 @@ class BiomePresence():
     def reconnect_check_start_button(self):
         try:
             self.set_title_threadsafe(
-                """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Reconnecting - In Main Menu)""")
+                """'C'oteab's Biome Macro (Patch 1.6.5) (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -3013,7 +3282,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Running)""")
+                    self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.5) (Running)""")
                     return True  # yay joins!!
 
                 print("Still in Main Menu, clicking again...")
@@ -3537,7 +3806,7 @@ class BiomePresence():
             "title": title,
             "color": biome_color,
             "footer": {
-                "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)""",
+                "text": """'C'oteab's Biome Macro (Patch 1.6.5)""",
                 "icon_url": icon_url
             },
             "fields": fields
@@ -3578,7 +3847,7 @@ class BiomePresence():
         else:
             ping_id = ""
             ping_enabled = False
-        content = f"<@{ping_id}>" if (source == 'logs' and ping_enabled and ping_id) else ""
+        content = f"<@{ping_id}>" if (source == 'logs', 'ocr' and ping_enabled and ping_id) else ""
         ps_link = self.config.get("private_server_link", "")
         embed = {
             "title": f"{merchant_name} Detected!",
@@ -3670,7 +3939,7 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)""",
+                "text": """'C'oteab's Biome Macro (Patch 1.6.5)""",
                 "icon_url": icon_url
             }
         }
@@ -3713,7 +3982,7 @@ class BiomePresence():
                     "description": description,
                     "color": color,
                     "footer": {
-                        "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)""",
+                        "text": """'C'oteab's Biome Macro (Patch 1.6.5)""",
                         "icon_url": icon_url
                     }
                 }
@@ -3748,16 +4017,20 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {status}",
                 "color": embed_color,
                 "footer": {
-                    "text": """'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)""",
+                    "text": "'C'oteab's Biome Macro (Patch 1.6.5)",
                     "icon_url": icon_url
-                }
+                },
+                "fields": [
+                    {
+                        "name": "Join our Discord:",
+                        "value": "https://discord.gg/fw6q274Nrt",
+                        "inline": False
+                    }
+                ]
             }]
             for webhook_url in urls:
                 try:
-                    response = requests.post(
-                        webhook_url,
-                        data={"payload_json": json.dumps({"embeds": embeds})}
-                    )
+                    response = requests.post(webhook_url, json={"embeds": embeds}, timeout=8)
                     response.raise_for_status()
                 except requests.exceptions.RequestException as e:
                     print(f"Failed to send webhook status to {webhook_url}: {e}")
@@ -3777,13 +4050,18 @@ class BiomePresence():
                 "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {reason_text} Here is your session summary:",
                 "color": 0xff0000,
                 "footer": {
-                    "text": "'C'oteab's Biome Macro (Patch 1.6.4-bugfix2)",
+                    "text": "'C'oteab's Biome Macro (Patch 1.6.5)",
                     "icon_url": icon_url
                 },
                 "fields": [
                     {
                         "name": "Session Times",
                         "value": f"- in the last 24 hours: {last24h_str}\n- in this session: {session_str}",
+                        "inline": False
+                    },
+                    {
+                        "name": "Join our Discord:",
+                        "value": "https://discord.gg/fw6q274Nrt",
                         "inline": False
                     }
                 ]
@@ -4170,7 +4448,7 @@ finally:
                     bp.start_time = None
                     bp.detection_running = False
                     bp.stop_sent = True
-                    bp.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.4-bugfix2) (Stopped)""")
+                    bp.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.5) (Stopped)""")
                     bp.send_macro_summary(last24h_seconds)
                     bp.save_config()
 
