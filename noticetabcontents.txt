@@ -7,3 +7,5 @@ v1.6.5 release, what's new?
 - Fixed a vulnerability to fake ping biomes (thanks to "etcat" for the report).
 - Added customizations tab!! We now allow for further macro customizations for users' preferences!!
 - I initially wanted to save these for Coteab 2.0.0, but it seems like these are critical bugs that needed attention ASAP, so I might as well release the 2.0.0 UI too :) Enjoy!!
+
+If you need help with setting up the macro, refer to this tutorial: https://youtu.be/JKsX2elKw6I
