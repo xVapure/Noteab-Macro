@@ -53,6 +53,21 @@
         "color": "0xea9dda",
         "duration": 130,
         "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
+    },
+    "GRAVEYARD": {
+        "color": "0x4B0082",
+        "duration": 240,
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
+    },
+    "PUMPKIN MOON": {
+        "color": "0x4B0082",
+        "duration": 240,
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
+    },
+    "BLOOD RAIN" {
+        "color": "0x4B0082",
+        "duration": 600,
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
     }
-
 }
+
