@@ -60,15 +60,16 @@
         "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
     },
     "PUMPKIN MOON": {
-        "color": "0x4B0082",
+        "color": "0xFF8C00",
         "duration": 240,
         "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
     },
     "BLOOD RAIN": {
-        "color": "0x4B0082",
+        "color": "0x8B0000",
         "duration": 600,
         "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
     }
 }
+
 
 
