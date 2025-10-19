@@ -64,10 +64,11 @@
         "duration": 240,
         "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
     },
-    "BLOOD RAIN" {
+    "BLOOD RAIN": {
         "color": "0x4B0082",
         "duration": 600,
         "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
     }
 }
+
 
