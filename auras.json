@@ -129,7 +129,7 @@
     "Hyper-Volt": {"rarity": 7500000, "exclusive_biome": ["None", 1]},
     "Virtual_WorldWide": {"rarity": 87500000, "exclusive_biome": ["None", 1]},
     "Hyper-Volt_Ever-Storm": {"rarity": 225000000, "exclusive_biome": ["None", 1]},
-    "Twilight_Withering Grace": {"rarity": 170000000, "exclusive_biome": ["None", 1]},
+    "Twilight_Withering Grace": {"rarity": 180000000, "exclusive_biome": ["None", 1]},
     "CHILLSEAR": {"rarity": 375000000, "exclusive_biome": ["SNOWY", 3]},
     "Flora_Evergreen": {"rarity": 370073730, "exclusive_biome": ["None", 1]},
     "Shiftlock": {"rarity": 3325000, "exclusive_biome": ["NULL", 1000]},
@@ -147,4 +147,5 @@
     "Arachnophobia": {"rarity": 940000000, "exclusive_biome": ["PUMPKIN MOON", 1]},
     "Malediction": {"rarity": 730000000, "exclusive_biome": ["BLOOD RAIN", 1]}
 }
+
 
