@@ -62,7 +62,7 @@
     "PUMPKIN MOON": {
         "color": "0xFF8C00",
         "duration": 240,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/pumpkin_moonv2.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/PUMPKIN_MOON.png"
     },
     "BLOOD RAIN": {
         "color": "0x8B0000",
@@ -70,6 +70,7 @@
         "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/blood_rain.png"
     }
 }
+
 
 
 
