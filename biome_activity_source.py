@@ -1,6 +1,6 @@
 import traceback
 import pygetwindow as gw
-from tkinter import messagebox, filedialog, simpledialog
+from tkinter import messagebox, filedialog
 import tkinter as tk
 from PIL import Image, ImageTk
 from datetime import datetime, timedelta, timezone
@@ -10,7 +10,7 @@ import shutil, glob
 import atexit
 import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, \
-    locale, win32gui, win32process, win32con, ctypes, queue, pyperclip, mouse
+    locale, win32gui, win32process, win32con, ctypes, queue
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
@@ -338,20 +338,6 @@ class BiomePresence():
         self.reconnecting_state = False
         self.timer_paused_by_disconnect = False
         self.register_shutdown_handler()
-        screenshot_dir = os.path.join(os.getcwd(), "images")
-        try:
-            if os.path.exists(screenshot_dir):
-                for fname in os.listdir(screenshot_dir):
-                    if fname.startswith(("merchant_", "aura_", "inventory_", "quest")):
-                        try:
-                            os.remove(os.path.join(screenshot_dir, fname))
-                        except Exception:
-                            pass
-        except Exception as e:
-            try:
-                self.error_logging(e, "Error deleting merchant images on startup")
-            except Exception:
-                pass
 
         # start gui
         self.variables = {}
@@ -360,7 +346,6 @@ class BiomePresence():
 
         # aura detection:
         self.last_aura_found = None
-        self.last_aura_screenshot_time = datetime.min
 
         # notice tab
         self.notice_data = self.load_notice_tab()
@@ -623,35 +608,7 @@ class BiomePresence():
             "detect_merchant_no_mt": self.detect_merchant_no_mt_var.get(),
             "player_logger": self.player_logger_var.get(),
             "first_item_slot_ocr_pos": self.config.get("first_item_slot_ocr_pos", [0, 0, 80, 80]),
-            "enable_ocr_failsafe": self.enable_ocr_failsafe_var.get(),
             "anti_afk": self.anti_afk_var.get(),
-            "aura_menu": self.config.get("aura_menu", [1200, 500]),
-            "periodical_aura_screenshot": self.periodical_aura_var.get() if hasattr(self, "periodical_aura_var") else self.config.get("periodical_aura_screenshot", False),
-            "periodical_aura_interval": self.periodical_aura_interval_var.get() if hasattr(self, "periodical_aura_interval_var") else self.config.get("periodical_aura_interval", "5"),
-            "periodical_inventory_screenshot": self.periodical_inventory_var.get() if hasattr(self, "periodical_inventory_var") else self.config.get("periodical_inventory_screenshot", False),
-            "periodical_inventory_interval": self.periodical_inventory_interval_var.get() if hasattr(self, "periodical_inventory_interval_var") else self.config.get("periodical_inventory_interval", "5"),
-            "aura_detection_screenshot": self.aura_screenshot_var.get(),
-            "auto_claim_daily_quests": self.auto_claim_quests_var.get() if hasattr(self, "auto_claim_quests_var") else self.config.get("auto_claim_daily_quests", False),
-            "auto_claim_interval": self.auto_claim_interval_var.get() if hasattr(self, "auto_claim_interval_var") else self.config.get("auto_claim_interval", "30"),
-            "quest_menu": self.config.get("quest_menu", self.config.get("quest_menu", [0, 0])),
-            "quest1_button": self.config.get("quest1_button", self.config.get("quest1_button", [0, 0])),
-            "quest2_button": self.config.get("quest2_button", self.config.get("quest2_button", [0, 0])),
-            "quest3_button": self.config.get("quest3_button", self.config.get("quest3_button", [0, 0])),
-            "claim_quest_button": self.config.get("claim_quest_button", self.config.get("claim_quest_button", [0, 0])),
-            "enable_potion_crafting": self.enable_potion_crafting_var.get(),
-            "potion_button1": [self.potion_button1_x.get(), self.potion_button1_y.get()],
-            "potion_search_bar1": [self.potion_search_x.get(), self.potion_search_y.get()],
-            "potion_button2": [self.potion_button2_x.get(), self.potion_button2_y.get()],
-            "potion_last_file": self.config.get("potion_last_file", ""),
-            "enable_potion_crafting": self.enable_potion_crafting_var.get(),
-            "potion_button1": [self.potion_button1_x.get(), self.potion_button1_y.get()],
-            "potion_search_bar1": [self.potion_search_x.get(), self.potion_search_y.get()],
-            "potion_button2": [self.potion_button2_x.get(), self.potion_button2_y.get()],
-            "potion_last_file": self.config.get("potion_last_file", ""),
-            "enable_potion_switching": self.enable_potion_switching_var.get() if hasattr(self, "enable_potion_switching_var") else self.config.get("enable_potion_switching", False),
-            "potion_switch_interval": self.potion_switch_interval_var.get() if hasattr(self, "potion_switch_interval_var") else self.config.get("potion_switch_interval", "60"),
-            "potion_file2": self.potion2_var.get() if hasattr(self, "potion2_var") else self.config.get("potion_file2", ""),
-            "potion_file3": self.potion3_var.get() if hasattr(self, "potion3_var") else self.config.get("potion_file3", ""),
         })
 
         if not config["auto_buff_glitched"]:
@@ -659,16 +616,6 @@ class BiomePresence():
         with open("config.json", "w") as file:
             json.dump(config, file, indent=4)
         self.config = config
-
-    def is_roblox_focused(self):
-        try:
-            w = gw.getActiveWindow()
-            if not w:
-                return False
-            title = (w.title or "").lower()
-            return "roblox" in title
-        except Exception:
-            return False
 
     def load_config(self):
         try:
@@ -745,13 +692,8 @@ class BiomePresence():
             self.ping_minimum_var.set(config.get("ping_minimum", "100000"))
             self.enable_aura_record_var.set(config.get("enable_aura_record", False))
             self.aura_record_keybind_var.set(config.get("aura_record_keybind", "shift + F8"))
-            if hasattr(self, "periodical_aura_var"): self.periodical_aura_var.set(config.get("periodical_aura_screenshot", False))
-            if hasattr(self, "aura_screenshot_var"): self.aura_screenshot_var.set(config.get("aura_detection_screenshot", False))
-            if hasattr(self, "periodical_aura_interval_var"): self.periodical_aura_interval_var.set(str(config.get("periodical_aura_interval", "5")))
-            if hasattr(self, "periodical_inventory_var"): self.periodical_inventory_var.set(config.get("periodical_inventory_screenshot", False))
-            if hasattr(self, "periodical_inventory_interval_var"): self.periodical_inventory_interval_var.set(str(config.get("periodical_inventory_interval", "5")))
-            if hasattr(self, "auto_claim_quests_var"): self.auto_claim_quests_var.set(config.get("auto_claim_daily_quests", False))
-            if hasattr(self, "auto_claim_interval_var"): self.auto_claim_interval_var.set(str(config.get("auto_claim_interval", "30")))
+            self.aura_record_minimum_var.set(config.get("aura_record_minimum", "500000"))
+
             # merchant
             self.merchant_extra_slot_var.set(config.get("merchant_extra_slot", "0"))
             self.ping_mari_var.set(config.get("ping_mari", False))
@@ -759,36 +701,7 @@ class BiomePresence():
             self.ping_jester_var.set(config.get("ping_jester", False))
             self.jester_user_id_var.set(config.get("jester_user_id", ""))
             self.detect_merchant_no_mt_var.set(config.get("detect_merchant_no_mt", True))
-            try:
-                if "potion_button1" in config:
-                    b1 = config.get("potion_button1", [0, 0])
-                    if hasattr(self, "potion_button1_x"): self.potion_button1_x.set(b1[0])
-                    if hasattr(self, "potion_button1_y"): self.potion_button1_y.set(b1[1])
-                if "potion_search_bar1" in config:
-                    s = config.get("potion_search_bar1", [0, 0])
-                    if hasattr(self, "potion_search_x"): self.potion_search_x.set(s[0])
-                    if hasattr(self, "potion_search_y"): self.potion_search_y.set(s[1])
-                if "potion_button2" in config:
-                    b2 = config.get("potion_button2", [0, 0])
-                    if hasattr(self, "potion_button2_x"): self.potion_button2_x.set(b2[0])
-                    if hasattr(self, "potion_button2_y"): self.potion_button2_y.set(b2[1])
-                if "potion_last_file" in config:
-                    if hasattr(self, "potion_file_var"):
-                        self.potion_file_var.set(config.get("potion_last_file", ""))
-                try:
-                    self._refresh_potion_files("crafting_files_do_not_open")
-                except Exception:
-                    pass
-            except Exception:
-                pass
-                if "potion_file2" in config:
-                    if hasattr(self, "potion2_var"): self.potion2_var.set(config.get("potion_file2", ""))
-                if "potion_file3" in config:
-                    if hasattr(self, "potion3_var"): self.potion3_var.set(config.get("potion_file3", ""))
-                if "enable_potion_switching" in config:
-                    if hasattr(self, "enable_potion_switching_var"): self.enable_potion_switching_var.set(config.get("enable_potion_switching", False))
-                if "potion_switch_interval" in config:
-                    if hasattr(self, "potion_switch_interval_var"): self.potion_switch_interval_var.set(str(config.get("potion_switch_interval", "60")))
+
             # biome count
             self.biome_counts = config.get("biome_counts", {biome: 0 for biome in self.biome_data})
             for biome, count in self.biome_counts.items():
@@ -811,7 +724,7 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
 
         self.root = ttk.Window(themename=selected_theme)
-        self.set_title_threadsafe("Coteab Macro v2.0.0-beta3 (Idle)")
+        self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.5) (Idle)")
         self.root.geometry("1000x700")
         self.root.minsize(900, 600)
         try:
@@ -838,10 +751,6 @@ class BiomePresence():
                     self.status_label.config(text="Status: Running")
                 except Exception:
                     pass
-            try:
-                self.start_potion_crafting()
-            except Exception:
-                pass
 
         def _stop_wrapper():
             try:
@@ -1135,8 +1044,7 @@ class BiomePresence():
         link = "https://www.roblox.com/games/18203398779/Medival-castle#!/store"
         ttk.Label(frame, text=t1, justify="left", wraplength=700).pack(padx=10, pady=(12, 6), anchor="w")
         ttk.Label(frame, text=t2, justify="left", wraplength=700).pack(padx=10, pady=(0, 6), anchor="w")
-        link_label = ttk.Label(frame, text=link, foreground="royalblue", cursor="hand2", wraplength=700)
-        link_label.configure(font=('Segoe UI', 9, 'underline'))
+        link_label = ttk.Label(frame, text=link, foreground="blue", cursor="hand2", wraplength=700)
         link_label.pack(padx=10, pady=(0, 12), anchor="w")
         link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link))
         hall = ttk.LabelFrame(frame, text="Donators hall of fame (it automatically updates)")
@@ -1333,8 +1241,7 @@ class BiomePresence():
             ttk.Entry(inner, textvariable=cvar, width=20).grid(row=i, column=1, padx=6, pady=6)
             ttk.Entry(inner, textvariable=tvar, width=60).grid(row=i, column=2, padx=6, pady=6)
         link = "https://www.rapidtables.com/convert/color/index.html"
-        link_label = ttk.Label(win, text="Click here to get colour code", foreground="royalblue", cursor="hand2")
-        link_label.configure(font=('Segoe UI', 9, 'underline'))
+        link_label = ttk.Label(win, text="Click here to get colour code", foreground="blue", cursor="hand2")
         link_label.pack(side="bottom", pady=8)
         link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link))
         def save_and_close():
@@ -1373,34 +1280,6 @@ class BiomePresence():
             self.glitched_buff_frame.pack_forget()
         self.save_config()
 
-    def toggle_ocr_failsafe(self):
-        try:
-            if getattr(self, "enable_ocr_failsafe_var", None) and self.enable_ocr_failsafe_var.get():
-                if hasattr(self, "ocr_cal_btn"):
-                    try:
-                        self.ocr_cal_btn.grid(row=8, column=0, padx=5, pady=5, sticky="w")
-                    except Exception:
-                        pass
-                if hasattr(self, "first_item_slot_ocr_label"):
-                    try:
-                        self.first_item_slot_ocr_label.grid(row=8, column=1, padx=5, sticky="w")
-                    except Exception:
-                        pass
-            else:
-                if hasattr(self, "ocr_cal_btn"):
-                    try:
-                        self.ocr_cal_btn.grid_forget()
-                    except Exception:
-                        pass
-                if hasattr(self, "first_item_slot_ocr_label"):
-                    try:
-                        self.first_item_slot_ocr_label.grid_forget()
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-        self.save_config()
-
     def capture_single_click(self, config_key):
         win = ttk.Toplevel(self.root)
         win.attributes("-fullscreen", True)
@@ -1414,27 +1293,9 @@ class BiomePresence():
         def on_click(e):
             x, y = e.x_root, e.y_root
             self.config[config_key] = [x, y]
-            try:
-                if config_key == "potion_button1":
-                    if hasattr(self, "potion_button1_x"):
-                        self.potion_button1_x.set(x)
-                    if hasattr(self, "potion_button1_y"):
-                        self.potion_button1_y.set(y)
-                elif config_key == "potion_search_bar1":
-                    if hasattr(self, "potion_search_x"):
-                        self.potion_search_x.set(x)
-                    if hasattr(self, "potion_search_y"):
-                        self.potion_search_y.set(y)
-                elif config_key == "potion_button2":
-                    if hasattr(self, "potion_button2_x"):
-                        self.potion_button2_x.set(x)
-                    if hasattr(self, "potion_button2_y"):
-                        self.potion_button2_y.set(y)
-                if hasattr(self, "glitched_coord_vars") and config_key in self.glitched_coord_vars:
-                    self.glitched_coord_vars[config_key][0].set(x)
-                    self.glitched_coord_vars[config_key][1].set(y)
-            except Exception:
-                pass
+            if hasattr(self, "glitched_coord_vars") and config_key in self.glitched_coord_vars:
+                self.glitched_coord_vars[config_key][0].set(x)
+                self.glitched_coord_vars[config_key][1].set(y)
             self.save_config()
             try:
                 win.grab_release()
@@ -1552,7 +1413,7 @@ class BiomePresence():
             "description": desc,
             "color": color,
             "timestamp": ts_iso,
-            "footer": {"text": "Coteab Macro • Player Logger"},
+            "footer": {"text": "'C'oteab Macro • Player Logger"},
             "fields": fields
         }
         return embed
@@ -1588,11 +1449,10 @@ class BiomePresence():
         discord_label = ttk.Label(
             bottom_frame,
             text="JOIN OUR DEVELOPMENT SERVER TO KEEP IN TOUCH WITH THE LATEST 'C'OTEAB MACRO UPDATES, WE OFFER AN ACTIVE COMMUNITY AND MACRO SUPPORT! (CLICK HERE)",
-            foreground="royalblue",
+            foreground="blue",
             cursor="hand2",
             wraplength=700
         )
-        discord_label.configure(font=('Segoe UI', 9, 'underline'))
         discord_label.pack(side="top", fill="x", anchor="w", padx=(0, 10))
         discord_label.bind("<Button-1>", lambda e: webbrowser.open_new(discord_link))
 
@@ -1761,289 +1621,144 @@ class BiomePresence():
             text="Assign Inventory Click",
             command=self.open_assign_inventory_window
         )
-        assign_inventory_button.grid(row=7, column=2, pady=0, sticky="w")
-
-        self.enable_ocr_failsafe_var = ttk.BooleanVar(value=self.config.get("enable_ocr_failsafe", False))
-        enable_ocr_failsafe_check = ttk.Checkbutton(
+        assign_inventory_button.grid(row=7, column=2, pady=5, sticky="w")
+        ocr_failsafe_button = ttk.Button(
             hp2_frame,
-            text="Click me to prevent wrong item usage",
-            variable=self.enable_ocr_failsafe_var,
-            command=self.toggle_ocr_failsafe
+            text="OCR failsafe (CLICK ME TO PREVENT THE MACRO FROM USING YOUR RARE POTIONS)",
+            command=self.setup_ocr_failsafe
         )
-        enable_ocr_failsafe_check.grid(row=8, column=2, padx=5, pady=5, sticky="w")
+        ocr_failsafe_button.grid(row=8, column=0, columnspan=3, padx=5, pady=8, sticky="w")
 
-        self.ocr_cal_btn = ttk.Button(
-            hp2_frame,
-            text="OCR failsafe calibration (drag ur mouse to first item slot)",
-            command=lambda: SnippingWidget(self.root, config_key='first_item_slot_ocr_pos', callback=self._set_first_item_slot_ocr_pos).start()
-        )
-        self.first_item_slot_ocr_label = ttk.Label(hp2_frame, text=str(self.config.get("first_item_slot_ocr_pos", [0, 0, 80, 80])))
+    def calibrate_ocr_failsafe(self):
+        if not self.check_tesseract_ocr():
+            messagebox.showerror("OCR", "Tesseract OCR not found. Install it in Merchant tab first.")
+            return
+        messagebox.showinfo("OCR failsafe", "please click the first item slot inside your items inventory")
+        win = ttk.Toplevel(self.root)
+        win.attributes("-fullscreen", True)
+        win.attributes("-alpha", 0.01)
+        win.configure(bg="black")
+        win.focus_set()
 
-        if self.enable_ocr_failsafe_var.get():
-            try:
-                self.ocr_cal_btn.grid(row=8, column=0, padx=5, pady=5, sticky="w")
-            except Exception:
-                pass
-            try:
-                self.first_item_slot_ocr_label.grid(row=8, column=1, padx=5, sticky="w")
-            except Exception:
-                pass
-        else:
-            try:
-                self.ocr_cal_btn.grid_forget()
-            except Exception:
-                pass
-            try:
-                self.first_item_slot_ocr_label.grid_forget()
-            except Exception:
-                pass
+        def on_click(e):
+            x, y = e.x_root, e.y_root
+            size = 80
+            left = max(0, x - size // 2)
+            top = max(0, y - size // 2)
+            self.config["first_item_slot"] = [x, y]
+            self.config["first_item_slot_ocr_pos"] = [left, top, size, size]
+            self.save_config()
+            win.destroy()
 
-        self.periodical_aura_var = ttk.BooleanVar(value=self.config.get("periodical_aura_screenshot", False))
-        periodical_aura_check = ttk.Checkbutton(
-            hp2_frame,
-            text="Periodical Aura Screenshot",
-            variable=self.periodical_aura_var,
-            command=self.save_config
-        )
-        periodical_aura_check.grid(row=9, column=0, padx=5, pady=5, sticky="w")
+        win.bind("<Button-1>", on_click)
 
-        ttk.Label(hp2_frame, text="Interval (minutes):").grid(row=9, column=1, sticky="w", padx=4)
-        self.periodical_aura_interval_var = ttk.StringVar(value=str(self.config.get("periodical_aura_interval", "5")))
-        periodical_aura_interval_entry = ttk.Entry(hp2_frame, textvariable=self.periodical_aura_interval_var, width=6)
-        periodical_aura_interval_entry.grid(row=9, column=2, padx=5, pady=5, sticky="w")
-        periodical_aura_interval_entry.bind("<FocusOut>", lambda event: self.save_config())
-
-        self.periodical_inventory_var = ttk.BooleanVar(value=self.config.get("periodical_inventory_screenshot", False))
-        periodical_inventory_check = ttk.Checkbutton(
-            hp2_frame,
-            text="Periodical Inventory Screenshot",
-            variable=self.periodical_inventory_var,
-            command=self.save_config
-        )
-        periodical_inventory_check.grid(row=10, column=0, padx=5, pady=5, sticky="w")
-
-        ttk.Label(hp2_frame, text="Inventory Interval (minutes):").grid(row=10, column=1, sticky="w", padx=4)
-        self.periodical_inventory_interval_var = ttk.StringVar(value=str(self.config.get("periodical_inventory_interval", "5")))
-        periodical_inventory_interval_entry = ttk.Entry(hp2_frame, textvariable=self.periodical_inventory_interval_var, width=6)
-        periodical_inventory_interval_entry.grid(row=10, column=2, padx=5, pady=5, sticky="w")
-        periodical_inventory_interval_entry.bind("<FocusOut>", lambda event: self.save_config())
-        self.auto_claim_quests_var = ttk.BooleanVar(value=self.config.get("auto_claim_daily_quests", False))
-        auto_claim_check = ttk.Checkbutton(
-            hp2_frame,
-            text="Auto claim daily quests",
-            variable=self.auto_claim_quests_var,
-            command=self.save_config
-        )
-        auto_claim_check.grid(row=11, column=0, padx=5, pady=5, sticky="w")
-
-        ttk.Label(hp2_frame, text="Claim Interval (minutes):").grid(row=11, column=1, sticky="w", padx=4)
-        self.auto_claim_interval_var = ttk.StringVar(value=str(self.config.get("auto_claim_interval", "30")))
-        auto_claim_interval_entry = ttk.Entry(hp2_frame, textvariable=self.auto_claim_interval_var, width=6)
-        auto_claim_interval_entry.grid(row=11, column=2, padx=5, pady=5, sticky="w")
-        auto_claim_interval_entry.bind("<FocusOut>", lambda event: self.save_config())
-
-        self.quest_cal_frame = ttk.LabelFrame(hp2_frame, text="Quest Claim Calibration")
-        self.quest_cal_frame.grid(row=12, column=0, columnspan=3, sticky="w", padx=5, pady=6)
-
-        positions = [
-            ("Quest Menu (open quests)", "quest_menu"),
-            ("Quest 1 button", "quest1_button"),
-            ("Quest 2 button", "quest2_button"),
-            ("Quest 3 button", "quest3_button"),
-            ("Claim Quest button", "claim_quest_button"),
-        ]
-
-        self.quest_coord_vars = {}
-        for i, (label_text, config_key) in enumerate(positions):
-            lbl = ttk.Label(self.quest_cal_frame, text=f"{label_text} (X, Y):")
-            lbl.grid(row=i, column=0, padx=5, pady=3, sticky="w")
-            x_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[0])
-            y_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[1])
-            self.quest_coord_vars[config_key] = (x_var, y_var)
-            x_entry = ttk.Entry(self.quest_cal_frame, textvariable=x_var, width=6)
-            x_entry.grid(row=i, column=1, padx=5, pady=3)
-            y_entry = ttk.Entry(self.quest_cal_frame, textvariable=y_var, width=6)
-            y_entry.grid(row=i, column=2, padx=5, pady=3)
-            select_btn = ttk.Button(self.quest_cal_frame, text="Assign Click",
-                                    command=lambda key=config_key: self.capture_single_click(key))
-            select_btn.grid(row=i, column=3, padx=5, pady=3)
-
-        def _update_quest_cal_visibility(*args):
-            if self.auto_claim_quests_var.get():
-                try:
-                    self.quest_cal_frame.grid()
-                except Exception:
-                    pass
+    def _ocr_read_first_slot(self):
+        pos = self.config.get("first_item_slot_ocr_pos")
+        if not pos:
+            fs = self.config.get("first_item_slot", [0, 0])
+            if fs and fs[0] and fs[1]:
+                size = int(self.config.get("first_item_slot_ocr_size", 80))
+                left = max(0, fs[0] - size // 2)
+                top = max(0, fs[1] - size // 2)
+                pos = [left, top, size, size]
             else:
-                try:
-                    self.quest_cal_frame.grid_remove()
-                except Exception:
-                    pass
-        self.auto_claim_quests_var.trace_add('write', _update_quest_cal_visibility)
-        if not self.auto_claim_quests_var.get():
+                return ""
+        img = pyautogui.screenshot(region=tuple(pos))
+        img = img.convert("L")
+        txt = pytesseract.image_to_string(img, lang="eng", config="--psm 6")
+        return txt or ""
+
+    def _normalize_text_for_match(self, s):
+        return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
+
+    def _ocr_phrase_match(self, expected, observed):
+        e = self._normalize_text_for_match(expected)
+        o = self._normalize_text_for_match(observed)
+        toks = [t for t in e.split() if len(t) >= 4] or ([e] if e else [])
+        if any(t in o for t in toks):
+            return True
+        from difflib import SequenceMatcher
+        return SequenceMatcher(None, e, o).ratio() >= 0.72
+
+    def ocr_failsafe_wait(self, expected_phrase, interval=1.2):
+        if not expected_phrase:
+            return
+        while True:
+            t = self._ocr_read_first_slot()
+            if self._ocr_phrase_match(expected_phrase, t):
+                break
+            time.sleep(interval)
+
+    def setup_ocr_failsafe(self):
+        try:
+            if not self.check_tesseract_ocr():
+                messagebox.showerror("OCR", "Tesseract OCR not found. Install it in Merchant tab first.")
+                return
+            messagebox.showinfo("OCR Failsafe", "please click the first item slot inside your items inventory")
+            win = ttk.Toplevel(self.root)
+            win.attributes("-fullscreen", True)
+            win.attributes("-alpha", 0.01)
+            win.attributes("-topmost", True)
+            win.configure(bg="black")
+            win.focus_force()
             try:
-                self.quest_cal_frame.grid_remove()
+                win.grab_set()
             except Exception:
                 pass
 
-    def send_quest_screenshot_webhook(self, screenshot_path):
-        try:
-            urls = self.get_webhook_list()
-            if not urls:
-                return
-            content = ""
-            icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
-            current_utc_time = datetime.now(timezone.utc)
-            current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-            current_utc_time = str(current_utc_time)
-            embed = {
-                "description": f"> ## Daily Quests Screenshot",
-                "color": 0xffffff,
-                "footer": {"text": "Coteab Macro (2.0.0-beta3)", "icon_url": icon_url},
-                "timestamp": current_utc_time
-            }
-            for webhook_url in urls:
+            def on_click(e):
+                x, y = e.x_root, e.y_root
+                size = 80
+                left = max(0, x - size // 2)
+                top = max(0, y - size // 2)
+                self.config["first_item_slot"] = [x, y]
+                self.config["first_item_slot_ocr_pos"] = [left, top, size, size]
+                self.config["ocr_failsafe_enabled"] = True
+                self.save_config()
                 try:
-                    embed_copy = dict(embed)
-                    embed_copy["image"] = {"url": f"attachment://{os.path.basename(screenshot_path)}"}
-                    with open(screenshot_path, "rb") as image_file:
-                        files = {"file": (os.path.basename(screenshot_path), image_file, "image/png")}
-                        data = {"payload_json": json.dumps({"content": content, "embeds": [embed_copy]})}
-                        requests.post(webhook_url, data=data, files=files, timeout=10)
-                except Exception as e:
-                    try:
-                        print(f"Failed to send quest screenshot to {webhook_url}: {e}")
-                    except Exception:
-                        pass
+                    win.grab_release()
+                except Exception:
+                    pass
+                win.destroy()
+                messagebox.showinfo("OCR Failsafe", f"Saved OCR region: {self.config['first_item_slot_ocr_pos']}")
+
+            win.bind("<Button-1>", on_click)
         except Exception as e:
-            self.error_logging(e, "Error in send_quest_screenshot_webhook")
-
-    def perform_quest_claim_sequence_sync(self):
-        try:
-            if not getattr(self, "auto_claim_quests_var", None) or not self.auto_claim_quests_var.get():
-                return
-            if not self.check_roblox_procs():
-                return
-            self.activate_roblox_window()
-            quest_menu = self.config.get("quest_menu", [0, 0])
-            quest1 = self.config.get("quest1_button", [0, 0])
-            quest2 = self.config.get("quest2_button", [0, 0])
-            quest3 = self.config.get("quest3_button", [0, 0])
-            claim_btn = self.config.get("claim_quest_button", [0, 0])
-
-            for _ in range(4):
-                if not self.detection_running:
-                    return
-                self.activate_roblox_window()
-                time.sleep(0.15)
-
-            if quest_menu and quest_menu[0]:
-                try:
-                    autoit.mouse_click("left", quest_menu[0], quest_menu[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(quest_menu[0], quest_menu[1])
-                    except Exception:
-                        pass
-                time.sleep(0.5)
-
             try:
-                os.makedirs("images", exist_ok=True)
-                filename = os.path.join("images", f"quest_screenshot_{int(time.time())}.png")
-                img = pyautogui.screenshot()
-                img.save(filename)
-                self.send_quest_screenshot_webhook(filename)
-            except Exception as e:
-                self.error_logging(e, "Error taking/sending quest screenshot")
+                self.error_logging(e, "Error in setup_ocr_failsafe")
+            except Exception:
+                pass
 
-            time.sleep(0.5)
-
-            if quest1 and quest1[0]:
-                try:
-                    autoit.mouse_click("left", quest1[0], quest1[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(quest1[0], quest1[1])
-                    except Exception:
-                        pass
-                time.sleep(0.5)
-            if claim_btn and claim_btn[0]:
-                try:
-                    autoit.mouse_click("left", claim_btn[0], claim_btn[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(claim_btn[0], claim_btn[1])
-                    except Exception:
-                        pass
-                time.sleep(0.5)
-
-            if quest2 and quest2[0]:
-                try:
-                    autoit.mouse_click("left", quest2[0], quest2[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(quest2[0], quest2[1])
-                    except Exception:
-                        pass
-                time.sleep(0.5)
-            if claim_btn and claim_btn[0]:
-                try:
-                    autoit.mouse_click("left", claim_btn[0], claim_btn[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(claim_btn[0], claim_btn[1])
-                    except Exception:
-                        pass
-                time.sleep(0.5)
-
-            if quest3 and quest3[0]:
-                try:
-                    autoit.mouse_click("left", quest3[0], quest3[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(quest3[0], quest3[1])
-                    except Exception:
-                        pass
-                time.sleep(0.5)
-            if claim_btn and claim_btn[0]:
-                try:
-                    autoit.mouse_click("left", claim_btn[0], claim_btn[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(claim_btn[0], claim_btn[1])
-                    except Exception:
-                        pass
-                time.sleep(0.5)
-
-        except Exception as e:
-            self.error_logging(e, "Error in perform_quest_claim_sequence_sync")
-
-    def quest_claim_loop(self):
-        last_claim_time = datetime.min
-        while self.detection_running:
+    def ocr_wait_for_phrase(self, phrase, max_attempts=None):
+        region = self.config.get("first_item_slot_ocr_pos")
+        if not region:
+            messagebox.showwarning("OCR Failsafe", "No OCR region saved. Click the OCR Failsafe button first.")
+            return False
+        attempts = 0
+        expected = "".join(ch for ch in str(phrase).lower() if ch.isalnum() or ch.isspace()).strip()
+        while True:
             try:
-                if not getattr(self, "auto_claim_quests_var", None) or not self.auto_claim_quests_var.get():
-                    time.sleep(2)
-                    continue
-                try:
-                    interval_min = float(self.auto_claim_interval_var.get())
-                except Exception:
-                    interval_min = 30.0
-                if (datetime.now() - last_claim_time) < timedelta(minutes=interval_min):
-                    time.sleep(2)
-                    continue
-                with self.lock:
-                    if not self.detection_running:
-                        break
-                    self.perform_periodic_aura_screenshot_sync()
-                    time.sleep(0.5)
-                    self.perform_periodic_inventory_screenshot_sync()
-                    time.sleep(0.5)
-                    self.perform_quest_claim_sequence_sync()
-                    last_claim_time = datetime.now()
+                x, y, w, h = region
+                screenshot = pyautogui.screenshot(region=(x, y, w, h))
+                text = pytesseract.image_to_string(screenshot, config='--psm 6')
+                norm = "".join(ch for ch in str(text).lower() if ch.isalnum() or ch.isspace()).strip()
+                if expected and expected in norm:
+                    return True
+                if expected:
+                    ratio = difflib.SequenceMatcher(None, expected, norm).ratio()
+                    if ratio >= 0.55:
+                        return True
             except Exception as e:
-                self.error_logging(e, "Error in quest_claim_loop")
-            time.sleep(1)
+                try:
+                    self.error_logging(e, "OCR read error")
+                except Exception:
+                    pass
+            attempts += 1
+            if max_attempts and attempts >= max_attempts:
+                return False
+            if not getattr(self, "detection_running", True):
+                return False
+            time.sleep(1.5)
 
     def create_auras_tab(self, frame):
         self.enable_aura_detection_var = ttk.BooleanVar(value=self.config.get("enable_aura_detection", False))
@@ -2095,470 +1810,19 @@ class BiomePresence():
         aura_record_minimum_entry.grid(row=5, column=1, padx=5, pady=5)
         aura_record_minimum_entry.bind("<FocusOut>", lambda event: self.save_config())
 
-        self.aura_screenshot_var = ttk.BooleanVar(value=self.config.get("aura_detection_screenshot", False))
-        enable_aura_screenshot_check = ttk.Checkbutton(
-            aura_frame,
-            text="Screenshot for aura detections (only works when Roblox is focused)",
-            variable=self.aura_screenshot_var,
-            command=self.save_config
-        )
-        enable_aura_screenshot_check.grid(row=6, column=0, columnspan=2, sticky="w", padx=5, pady=5)
-
     def create_potion_craft_tab(self, frame):
-        potions_directory = "crafting_files_do_not_open"
-        os.makedirs(potions_directory, exist_ok=True)
         frame_label = ttk.LabelFrame(frame, text="Auto Potion Crafting")
         frame_label.pack(fill='both', expand=True, padx=5, pady=5)
-        top_row = ttk.Frame(frame_label)
-        top_row.pack(fill="x", pady=(6, 8), padx=6)
-        self.enable_potion_crafting_var = ttk.BooleanVar(value=self.config.get("enable_potion_crafting", False))
-        enable_cb = ttk.Checkbutton(top_row, text="Enable potion crafting", variable=self.enable_potion_crafting_var,
-                                    command=self.save_config)
-        enable_cb.pack(side="left", padx=(0, 12))
-        calib_frame = ttk.Frame(frame_label)
-        calib_frame.pack(fill="x", padx=6, pady=(0, 8))
+        ttk.Label(frame_label, text="Potion crafting has been discontinued inside 'C'oteab's Macro.", justify="left",
+                  wraplength=700).pack(padx=10, pady=(12, 6), anchor="w")
+        ttk.Label(frame_label,
+                  text="""However, you can download the best potion crafting macro here, made by "@criticize." (aka me):""",
+                  justify="left", wraplength=700).pack(padx=10, pady=(0, 6), anchor="w")
+        link = "https://github.com/xVapure/solsrngpotioncrafter/releases/latest"
+        link_label = ttk.Label(frame_label, text=link, foreground="blue", cursor="hand2", wraplength=700)
+        link_label.pack(padx=10, pady=(0, 12), anchor="w")
+        link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link))
 
-        ttk.Label(calib_frame, text="Calibrate:").grid(row=0, column=0, padx=4, pady=4, sticky="w")
-        ttk.Label(calib_frame, text="Calibrate:").grid(row=0, column=0, padx=4, pady=4, sticky="w")
-        ttk.Label(calib_frame, text="Potion menu search bar(X,Y):").grid(row=0, column=1, padx=4, pady=4, sticky="e")
-        self.potion_search_x = ttk.IntVar(value=self.config.get("potion_search_bar1", [0, 0])[0])
-        self.potion_search_y = ttk.IntVar(value=self.config.get("potion_search_bar1", [0, 0])[1])
-        ttk.Entry(calib_frame, textvariable=self.potion_search_x, width=6).grid(row=0, column=2, padx=4, pady=4)
-        ttk.Entry(calib_frame, textvariable=self.potion_search_y, width=6).grid(row=0, column=3, padx=4, pady=4)
-        ttk.Button(calib_frame, text="Assign", command=lambda k="potion_search_bar1": self.capture_single_click(k)).grid(row=0, column=4, padx=6)
-
-        btn1_text = ttk.Label(calib_frame, text="Potion first slot (X,Y):")
-        btn1_text.grid(row=1, column=1, padx=4, pady=4, sticky="e")
-        self.potion_button1_x = ttk.IntVar(value=self.config.get("potion_button1", [0, 0])[0])
-        self.potion_button1_y = ttk.IntVar(value=self.config.get("potion_button1", [0, 0])[1])
-        ttk.Entry(calib_frame, textvariable=self.potion_button1_x, width=6).grid(row=1, column=2, padx=4, pady=4)
-        ttk.Entry(calib_frame, textvariable=self.potion_button1_y, width=6).grid(row=1, column=3, padx=4, pady=4)
-        ttk.Button(calib_frame, text="Assign", command=lambda k="potion_button1": self.capture_single_click(k)).grid(row=1, column=4, padx=6)
-
-        ttk.Label(calib_frame, text="Auto add button (X,Y):").grid(row=2, column=1, padx=4, pady=4, sticky="e")
-        self.potion_button2_x = ttk.IntVar(value=self.config.get("potion_button2", [0, 0])[0])
-        self.potion_button2_y = ttk.IntVar(value=self.config.get("potion_button2", [0, 0])[1])
-        ttk.Entry(calib_frame, textvariable=self.potion_button2_x, width=6).grid(row=2, column=2, padx=4, pady=4)
-        ttk.Entry(calib_frame, textvariable=self.potion_button2_y, width=6).grid(row=2, column=3, padx=4, pady=4)
-        ttk.Button(calib_frame, text="Assign", command=lambda k="potion_button2": self.capture_single_click(k)).grid(row=2, column=4, padx=6)
-        ttk.Button(calib_frame, text="Assign", command=lambda k="potion_button2": self.capture_single_click(k)).grid(row=2, column=4, padx=6)
-
-        file_frame = ttk.Frame(frame_label)
-        file_frame.pack(fill="x", padx=6, pady=(6, 8))
-        ttk.Label(file_frame, text="Select potion macro file:").pack(side="left")
-        self.potion_file_var = ttk.StringVar(value=self.config.get("potion_last_file", ""))
-        self.potion_combo = ttk.Combobox(file_frame, textvariable=self.potion_file_var, state="readonly", width=40)
-        self.potion_combo.pack(side="left", padx=(6, 6))
-        ttk.Button(file_frame, text="Refresh", command=lambda: self._refresh_potion_files(potions_directory)).pack(side="left", padx=(0,6))
-
-        rec_frame = ttk.Frame(frame_label)
-        rec_frame.pack(fill="x", padx=6, pady=(0, 8))
-        self.potion_mode_var = ttk.StringVar(value="Idle")
-        self.potion_rec_status = ttk.StringVar(value="Ready")
-        ttk.Label(rec_frame, textvariable=self.potion_rec_status).pack(side="left", padx=(0,12))
-
-        self.potion_start_rec_btn = ttk.Button(rec_frame, text="Start Recording (F3)", command=self._potion_handle_f1)
-        self.potion_stop_rec_btn  = ttk.Button(rec_frame, text="Stop Recording & Save (F4)", command=self._potion_handle_f3)
-        self.potion_start_rec_btn.pack(side="left", padx=(0,6))
-        self.potion_stop_rec_btn.pack(side="left")
-        self._refresh_potion_files(potions_directory)
-        keyboard.add_hotkey('f3', lambda: self._potion_handle_f1(), suppress=False)
-        keyboard.add_hotkey('f4', lambda: self._potion_handle_f3(), suppress=False)
-        switch_frame = ttk.Frame(frame_label)
-        switch_frame.pack(fill="x", padx=6, pady=(4,8))
-
-        self.enable_potion_switching_var = ttk.BooleanVar(value=self.config.get("enable_potion_switching", False))
-        enable_switch_cb = ttk.Checkbutton(switch_frame, text="Enable potion switching", variable=self.enable_potion_switching_var, command=self.save_config)
-        enable_switch_cb.grid(row=0, column=0, sticky="w", padx=(0,6))
-
-        ttk.Label(switch_frame, text="Switch interval (seconds):").grid(row=0, column=1, sticky="e", padx=6)
-        self.potion_switch_interval_var = ttk.StringVar(value=str(self.config.get("potion_switch_interval", "60")))
-        interval_entry = ttk.Entry(switch_frame, textvariable=self.potion_switch_interval_var, width=8)
-        interval_entry.grid(row=0, column=2, padx=4)
-        interval_entry.bind("<FocusOut>", lambda e: self.save_config())
-
-        ttk.Label(switch_frame, text="Select potion #2:").grid(row=1, column=0, sticky="w", padx=4, pady=(6,0))
-        self.potion2_var = ttk.StringVar(value=self.config.get("potion_file2", ""))
-        self.potion2_combo = ttk.Combobox(switch_frame, textvariable=self.potion2_var, state="readonly", width=36)
-        self.potion2_combo.grid(row=1, column=1, columnspan=2, sticky="w", padx=6, pady=(6,0))
-        self.potion2_combo.bind("<<ComboboxSelected>>", lambda e: self.save_config())
-
-        ttk.Label(switch_frame, text="Select potion #3:").grid(row=2, column=0, sticky="w", padx=4, pady=(6,0))
-        self.potion3_var = ttk.StringVar(value=self.config.get("potion_file3", ""))
-        self.potion3_combo = ttk.Combobox(switch_frame, textvariable=self.potion3_var, state="readonly", width=36)
-        self.potion3_combo.grid(row=2, column=1, columnspan=2, sticky="w", padx=6, pady=(6,0))
-        self.potion3_combo.bind("<<ComboboxSelected>>", lambda e: self.save_config())
-        self._refresh_potion_files(potions_directory)
-
-    def _refresh_potion_files(self, potions_directory="crafting_files_do_not_open"):
-        try:
-            os.makedirs(potions_directory, exist_ok=True)
-            files = sorted([f for f in os.listdir(potions_directory) if f.lower().endswith(".json")])
-            try:
-                self.potion_combo["values"] = files
-                if files and (not self.potion_file_var.get() or self.potion_file_var.get() not in files):
-                    self.potion_file_var.set(files[0])
-                if hasattr(self, "potion2_combo"):
-                    self.potion2_combo["values"] = files
-                    if files and (not self.potion2_var.get() or self.potion2_var.get() not in files):
-                        self.potion2_var.set(self.config.get("potion_file2", "") if self.config.get("potion_file2", "") in files else (files[0] if len(files) > 1 else (files[0] if files else "")))
-                if hasattr(self, "potion3_combo"):
-                    self.potion3_combo["values"] = files
-                    if files and (not self.potion3_var.get() or self.potion3_var.get() not in files):
-                        self.potion3_var.set(self.config.get("potion_file3", "") if self.config.get("potion_file3", "") in files else (" " if len(files) < 3 else files[2]))
-            except Exception:
-                pass
-            if self.potion_file_var.get():
-                self.config["potion_last_file"] = self.potion_file_var.get()
-                self.save_config()
-        except Exception as e:
-            self.error_logging(e, "Error refreshing potion files")
-
-    def _potion_handle_f1(self):
-        if getattr(self, "potion_mode_var", None) and self.potion_mode_var.get() == "Idle":
-            self._potion_start_recording()
-        else:
-            pass
-
-    def _potion_handle_f3(self):
-        if getattr(self, "potion_mode_var", None) and self.potion_mode_var.get() == "Recording":
-            self._potion_stop_recording()
-
-    def _potion_start_recording(self):
-        try:
-            if getattr(self, "potion_mode_var", None) and self.potion_mode_var.get() != "Idle":
-                return
-            self.potion_mode_var.set("Recording")
-            self.potion_rec_status.set("Recording.")
-            self.potion_rec_events = []
-            self.potion_rec_start = time.perf_counter()
-            self.potion_last_move_time = 0.0
-            self.potion_last_move_pos = (None, None)
-
-            def kcb(e):
-                if e.name in ("f3", "f4"):
-                    return
-                et = time.perf_counter() - self.potion_rec_start
-                typ = "key_down" if e.event_type == "down" else "key_up"
-                self.potion_rec_events.append({"t": et, "type": typ, "key": e.name})
-
-            def mcb(e):
-                et = time.perf_counter() - self.potion_rec_start
-                if isinstance(e, mouse.MoveEvent):
-                    x, y = int(e.x), int(e.y)
-                    lt = self.potion_last_move_time
-                    lx, ly = self.potion_last_move_pos
-                    record = False
-                    if lx is None:
-                        record = True
-                    elif et - lt >= 0.008:
-                        record = True
-                    else:
-                        dx = x - lx
-                        dy = y - ly
-                        if dx*dx + dy*dy >= 4:
-                            record = True
-                    if record:
-                        self.potion_rec_events.append({"t": et, "type": "mouse_move", "x": x, "y": y})
-                        self.potion_last_move_time = et
-                        self.potion_last_move_pos = (x, y)
-                elif isinstance(e, mouse.ButtonEvent):
-                    pos = mouse.get_position()
-                    typ = "mouse_down" if e.event_type == "down" else "mouse_up"
-                    self.potion_rec_events.append({"t": et, "type": typ, "button": e.button, "x": int(pos[0]), "y": int(pos[1])})
-                elif isinstance(e, mouse.WheelEvent):
-                    self.potion_rec_events.append({"t": et, "type": "mouse_wheel", "delta": int(e.delta)})
-
-            self._potion_kbd_hook = kcb
-            self._potion_mouse_hook = mcb
-            keyboard.hook(self._potion_kbd_hook)
-            mouse.hook(self._potion_mouse_hook)
-        except Exception as e:
-            self.error_logging(e, "Error starting potion recording")
-
-    def _potion_stop_recording(self):
-        try:
-            if getattr(self, "_potion_kbd_hook", None):
-                try:
-                    keyboard.unhook(self._potion_kbd_hook)
-                except Exception:
-                    pass
-            if getattr(self, "_potion_mouse_hook", None):
-                try:
-                    mouse.unhook(self._potion_mouse_hook)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-        self._potion_kbd_hook = None
-        self._potion_mouse_hook = None
-        try:
-            self.potion_mode_var.set("Idle")
-        except Exception:
-            pass
-        try:
-            self.potion_rec_status.set("Stopped. Saving.")
-        except Exception:
-            pass
-
-        pot_dir = "crafting_files_do_not_open"
-        try:
-            os.makedirs(pot_dir, exist_ok=True)
-        except Exception:
-            pass
-        pot_dir = "crafting_files_do_not_open"
-        os.makedirs(pot_dir, exist_ok=True)
-
-        try:
-            initialfile = self.config.get("potion_last_file", "")
-            if not initialfile:
-                initialfile = "potion_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".json"
-
-            save_path = filedialog.asksaveasfilename(
-                title="Save Potion Macro",
-                defaultextension=".json",
-                filetypes=[("JSON files", "*.json")],
-                initialdir=os.path.abspath(pot_dir),
-                initialfile=initialfile
-            )
-        except Exception:
-            save_path = ""
-        if not save_path:
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"potion_{ts}.json"
-            final_path = os.path.join(pot_dir, filename)
-        else:
-            if os.path.isdir(save_path) or os.path.basename(save_path) == "":
-                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"potion_{ts}.json"
-                final_path = os.path.join(pot_dir, filename)
-            else:
-                final_path = save_path
-                filename = os.path.basename(final_path)
-
-        try:
-            if os.path.exists(final_path):
-                i = 1
-                while True:
-                    candidate = f"{base}({i}).json"
-                    candidate_path = os.path.join(pot_dir, candidate)
-                    if not os.path.exists(candidate_path):
-                        final_path = candidate_path
-                        filename = candidate
-                        break
-                    i += 1
-        except Exception:
-            pass
-
-        data = {
-            "created": time.time(),
-            "screen": {"w": getattr(self.root, "winfo_screenwidth", lambda: 0)(), "h": getattr(self.root, "winfo_screenheight", lambda: 0)()},
-            "events": sorted(getattr(self, "potion_rec_events", []), key=lambda ev: ev.get("t", 0.0))
-        }
-
-        try:
-            tmp = final_path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False)
-                f.write("\n")
-            os.replace(tmp, final_path)
-            try:
-                self._refresh_potion_files(pot_dir)
-            except Exception:
-                pass
-            try:
-                if hasattr(self, "potion_file_var"):
-                    self.potion_file_var.set(os.path.basename(final_path))
-            except Exception:
-                pass
-            try:
-                self.config["potion_last_file"] = os.path.basename(final_path)
-                self.save_config()
-            except Exception:
-                pass
-            try:
-                messagebox.showinfo("Potion Recorder", f"Saved: {os.path.basename(final_path)}")
-            except Exception:
-                pass
-        except Exception as e:
-            try:
-                messagebox.showerror("Potion Recorder", f"Failed to save:\n{e}")
-            except Exception:
-                pass
-
-        try:
-            self.potion_rec_events = []
-        except Exception:
-            self.potion_rec_events = []
-        try:
-            self.potion_rec_status.set("Ready")
-        except Exception:
-            pass
-
-    def _potion_thread_launcher(self, file_name, potions_directory="crafting_files_do_not_open", stop_after=None):
-        try:
-            path = os.path.join(potions_directory, file_name)
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as e:
-            self.error_logging(e, "Failed to start potion loop")
-            return
-
-        events = data.get("events", [])
-        if not events:
-            return
-        events.sort(key=lambda ev: ev.get("t", 0.0))
-
-        potion_b1 = self.config.get("potion_button1", [0, 0])
-        potion_search = self.config.get("potion_search_bar1", [0, 0])
-        potion_b2 = self.config.get("potion_button2", [0, 0])
-        potion_name = os.path.splitext(file_name)[0]
-
-        try:
-            def _click(xy, label="click", tries=3, pause_after=0.12):
-                if not xy or not xy[0]:
-                    return False
-                x, y = xy[0], xy[1]
-                last_exc = None
-                for _ in range(tries):
-                    try:
-                        self.Global_MouseClick(x, y)
-                        time.sleep(pause_after)
-                        return True
-                    except Exception as exc:
-                        last_exc = exc
-                        time.sleep(0.05)
-                raise last_exc or RuntimeError(f"{label} failed at {x},{y}")
-
-            pname = (potion_name or "").strip()
-            if pname == "":
-                self.error_logging(ValueError("Empty potion name"), "Potion setup: empty potion_name")
-                return
-
-            if potion_search and potion_search[0]:
-                _click(potion_search, label="search_bar", tries=3, pause_after=0.18)
-                time.sleep(0.08)
-                pyperclip.copy(pname)
-                keyboard.press_and_release("ctrl+v")
-                time.sleep(0.18)
-            else:
-                self.error_logging(RuntimeError("Missing potion_search coordinates"), "Potion setup warning")
-
-            if potion_b1 and potion_b1[0]:
-                _click(potion_b1, label="button1", tries=3, pause_after=0.28)
-            else:
-                self.error_logging(RuntimeError("Missing potion_b1 coordinates"), "Potion setup warning")
-
-            if potion_b2 and potion_b2[0]:
-                _click(potion_b2, label="button2", tries=3, pause_after=0.36)
-            else:
-                self.error_logging(RuntimeError("Missing potion_b2 coordinates"), "Potion setup warning")
-
-        except Exception as e:
-            self.error_logging(e, "Potion setup clicks failed")
-            return
-
-        start_time = time.perf_counter()
-        while self.detection_running and self.enable_potion_crafting_var.get():
-            if stop_after is not None:
-                if time.perf_counter() - start_time >= float(stop_after):
-                    break
-            last_t = 0.0
-            for ev in events:
-                if not self.detection_running or not self.enable_potion_crafting_var.get():
-                    break
-                if stop_after is not None:
-                    if time.perf_counter() - start_time >= float(stop_after):
-                        break
-                t = float(ev.get("t", 0.0))
-                dt = t - last_t
-                if dt > 0:
-                    end = time.perf_counter() + dt
-                    while True:
-                        if not self.detection_running or not self.enable_potion_crafting_var.get():
-                            break
-                        if stop_after is not None and time.perf_counter() - start_time >= float(stop_after):
-                            break
-                        rem = end - time.perf_counter()
-                        if rem <= 0:
-                            break
-                        time.sleep(min(rem, 0.01))
-                typ = ev.get("type")
-                try:
-                    if typ == "mouse_move":
-                        autoit.mouse_move(int(ev["x"]), int(ev["y"]), 0)
-                    elif typ == "mouse_down":
-                        b = ev.get("button", "left")
-                        autoit.mouse_down(b)
-                    elif typ == "mouse_up":
-                        b = ev.get("button", "left")
-                        autoit.mouse_up(b)
-                    elif typ == "mouse_wheel":
-                        delta = int(ev.get("delta", 0))
-                        if delta != 0:
-                            mouse.wheel(delta)
-                    elif typ == "key_down":
-                        k = ev.get("key")
-                        if k not in ("f3", "f4"):
-                            keyboard.press(k)
-                    elif typ == "key_up":
-                        k = ev.get("key")
-                        if k not in ("f3", "f4"):
-                            keyboard.release(k)
-                except Exception:
-                    pass
-                last_t = t
-            if stop_after is not None:
-                if time.perf_counter() - start_time >= float(stop_after):
-                    break
-            time.sleep(0.25)
-
-    def start_potion_crafting(self):
-        try:
-            if not getattr(self, "detection_running", False):
-                return
-            if not getattr(self, "enable_potion_crafting_var", None) or not self.enable_potion_crafting_var.get():
-                return
-            if getattr(self, "enable_potion_switching_var", None) and self.enable_potion_switching_var.get():
-                def switcher():
-                    try:
-                        while self.detection_running and self.enable_potion_crafting_var.get() and self.enable_potion_switching_var.get():
-                            interval = float(self.potion_switch_interval_var.get() or "60")
-                            f1 = (self.potion_file_var.get().strip() or self.config.get("potion_last_file", ""))
-                            f2 = (self.potion2_var.get().strip() or self.config.get("potion_file2", ""))
-                            f3 = (self.potion3_var.get().strip() or self.config.get("potion_file3", ""))
-                            order = [f1]
-                            if f2:
-                                order.append(f2)
-                            if f3:
-                                order.append(f3)
-                            idx = 0
-                            while self.detection_running and self.enable_potion_crafting_var.get() and self.enable_potion_switching_var.get():
-                                current_file = order[idx % len(order)]
-                                if not current_file:
-                                    break
-                                t = threading.Thread(target=self._potion_thread_launcher, args=(current_file, "crafting_files_do_not_open", interval), daemon=True)
-                                t.start()
-                                t.join()
-                                idx += 1
-                    except Exception as e:
-                        self.error_logging(e, "Error in potion switcher")
-                t = threading.Thread(target=switcher, daemon=True)
-                t.start()
-                self.potion_run_status.set(f"Switching mode enabled")
-            else:
-                file_name = self.potion_file_var.get().strip() or self.config.get("potion_last_file", "")
-                if not file_name:
-                    return
-                t = threading.Thread(target=self._potion_thread_launcher, args=(file_name,), daemon=True)
-                t.start()
-                self.potion_run_status.set(f"Looping: {file_name}")
-                self.config["potion_last_file"] = file_name
-                self.save_config()
-        except Exception as e:
-            self.error_logging(e, "Error launching potion loop")
-    
     def create_merchant_tab(self, frame):
         mari_frame = ttk.LabelFrame(frame, text="Mari")
         mari_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
@@ -2991,21 +2255,19 @@ class BiomePresence():
         dev_finn = ttk.Label(devs_frame, text='- Finnerich', foreground="#03cafc", cursor="hand2")
         dev_finn.grid(row=1, column=1, sticky='w')
         dev_finn.bind("<Button-1>", lambda e: webbrowser.open_new("https://www.youtube.com/@Finnerich"))
-        discord_label = ttk.Label(noteab_frame, text="""Join the Coteab Discord server!!!""", foreground="royalblue", cursor="hand2")
-        discord_label.configure(font=('Segoe UI', 9, 'underline'))
+        discord_label = ttk.Label(noteab_frame, text="""Join the 'C'oteab support server!!!""", foreground="#03cafc", cursor="hand2")
         discord_label.pack()
         discord_label.bind("<Button-1>", lambda e: webbrowser.open_new("https://discord.gg/fw6q274Nrt"))
 
-        github_label = ttk.Label(noteab_frame, text="""GitHub: Coteab Macro!""", foreground="#03cafc", cursor="hand2")
+        github_label = ttk.Label(noteab_frame, text="""GitHub: 'C'oteab Biome Macro!""", foreground="#03cafc", cursor="hand2")
         github_label.pack()
         github_label.bind("<Button-1>", lambda e: webbrowser.open_new("https://github.com/xVapure/Noteab-Macro"))
 
         if maxstellar_image:
             ttk.Label(maxstellar_frame, image=maxstellar_image).pack(pady=5)
             maxstellar_frame._img = maxstellar_image
-        ttk.Label(maxstellar_frame, text="Inspired Biome Macro Creator: maxstellar").pack()
-        yt_label = ttk.Label(maxstellar_frame, text="Their YT channel", foreground="royalblue", cursor="hand2")
-        yt_label.configure(font=('Segoe UI', 9, 'underline'))
+        ttk.Label(maxstellar_frame, text="Inspired Biome Macro Creator: Maxstellar").pack()
+        yt_label = ttk.Label(maxstellar_frame, text="Their YT channel", foreground="#03cafc", cursor="hand2")
         yt_label.pack()
         yt_label.bind("<Button-1>", lambda e: webbrowser.open_new("https://www.youtube.com/"))
 
@@ -3023,9 +2285,9 @@ class BiomePresence():
 
         extra_credits = [
             "Noteab - The original developer of the macro, this project is a fork of his.",
-            "maxstellar - Inspiration and I used some of his logic.",
+            "Maxstellar - Inspiration and I used some of his logics.",
             "Vexthecoder - Thank you for the icons <3",
-            "Cresqnt, Baz & the Scope Team - Anti-AFK inspiration.",
+            "Cresqnt & Scope Team - Anti-AFK inspiration.",
             "ManasAarohi - For teaching me how FFlag works",
             "rnd.xy (or Randy) - For doing external works that I was too lazy to do tysm.",
             """All the testers that made the update possible with as less flaws as possible. Notably: "ethan03228', "rnd.xy", "tilesdrop", "alonexii", "_bread.0", "lordelmothewise", "someone75", "ka_leb123", "cheshington", "urmyboooo", "kurugurui"."""
@@ -3134,7 +2396,7 @@ class BiomePresence():
     def open_assign_inventory_window(self):
         assign_window = ttk.Toplevel(self.root)
         assign_window.title("Inventory Coordinates")
-        assign_window.geometry("650x500")
+        assign_window.geometry("550x340")
 
         positions = [
             ("Inventory Menu", "inventory_menu"),
@@ -3143,7 +2405,6 @@ class BiomePresence():
             ("First Item Slot", "first_item_slot"),
             ("Amount Box", "amount_box"),
             ("Use Button", "use_button"),
-            ("Aura Menu", "aura_menu"),
             ("Inventory close button \"x\"", "inventory_close_button"),
             ("'START' button (for reconnect feature, \n the one above 'Update Logs' button)", "reconnect_start_button")
         ]
@@ -3299,8 +2560,7 @@ class BiomePresence():
                 (self.biome_itemchange_loop, "Item Change"),
                 (self.aura_loop_check, "Aura Check"),
                 (self.merchant_log_check, "Merchant Check"),
-                (self.anti_afk_loop, "Anti-AFK"),
-                (self.quest_claim_loop, "Quest Claim")
+                (self.anti_afk_loop, "Anti-AFK")
             ]
 
             for thread_func, name in threads:
@@ -3308,7 +2568,7 @@ class BiomePresence():
                 thread.start()
             self.perform_anti_afk_action()
 
-            self.set_title_threadsafe("""Coteab Macro v2.0.0-beta3 (Running)""")
+            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.5) (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             print("Biome detection started.")
 
@@ -3338,7 +2598,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
             self.start_time = None
             self.stop_sent = True
-            self.set_title_threadsafe("Coteab Macro v2.0.0-beta3 (Stopped)")
+            self.set_title_threadsafe("'C'oteab's Biome Macro (Patch 1.6.5) (Stopped)")
 
             self.send_macro_summary(last24h_seconds)
             print("closed", self.current_session)
@@ -3460,39 +2720,16 @@ class BiomePresence():
                             formatted_rarity = f"{int(rarity):,}"
 
                             if aura != self.last_aura_found:
-                                screenshot_path = None
-                                try:
-                                    if getattr(self, "aura_screenshot_var", None) and self.aura_screenshot_var.get():
-                                        if self.is_roblox_focused():
-                                            os.makedirs("images", exist_ok=True)
-                                            filename = os.path.join("images", f"aura_{int(time.time())}.png")
-                                            img = pyautogui.screenshot()
-                                            img.save(filename)
-                                            screenshot_path = filename
-                                except Exception as e:
-                                    self.error_logging(e, "Error taking aura screenshot")
-
-                                self.send_aura_webhook(aura, formatted_rarity, biome_message, screenshot_path=screenshot_path)
+                                self.send_aura_webhook(aura, formatted_rarity, biome_message)
                                 self.last_aura_found = aura
 
-                                if self.enable_aura_record_var.get() and rarity >= int(self.aura_record_minimum_var.get()):
+                                if self.enable_aura_record_var.get() and rarity >= int(
+                                        self.aura_record_minimum_var.get()):
                                     self.trigger_aura_record()
                         else:
                             # Aura not found in auras_data (biomes_data.json)
                             if aura != self.last_aura_found:
-                                screenshot_path = None
-                                try:
-                                    if getattr(self, "aura_screenshot_var", None) and self.aura_screenshot_var.get():
-                                        if self.is_roblox_focused():
-                                            os.makedirs("images", exist_ok=True)
-                                            filename = os.path.join("images", f"aura_{int(time.time())}.png")
-                                            img = pyautogui.screenshot()
-                                            img.save(filename)
-                                            screenshot_path = filename
-                                except Exception as e:
-                                    self.error_logging(e, "Error taking aura screenshot")
-
-                                self.send_aura_webhook(aura, None, "", screenshot_path=screenshot_path)
+                                self.send_aura_webhook(aura, None, "")
                                 self.last_aura_found = aura
                         return
 
@@ -3509,7 +2746,7 @@ class BiomePresence():
 
             for line in reversed(log_lines):
                 for biome in self.biome_data:
-                    if biome in line and "[BloxstrapRPC]" in line:
+                    if biome in line:
                         threading.Thread(target=self.handle_biome_detection, args=(biome,)).start()
                         return
 
@@ -3727,7 +2964,7 @@ class BiomePresence():
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server. hold on bro", color=0xffff00)
                                 self.set_title_threadsafe(
-                                    """Coteab Macro v2.0.0-beta3 (Reconnecting)""")
+                                    """'C'oteab's Biome Macro (Patch 1.6.5) (Reconnecting)""")
                                 try:
                                     os.startfile(roblox_deep_link)
                                 except Exception:
@@ -3771,7 +3008,7 @@ class BiomePresence():
                 self.pause_reason = reason
             self.reconnecting_state = True
             self.set_title_threadsafe(
-                """Coteab Macro v2.0.0-beta3 (Roblox Disconnected :c )""")
+                """'C'oteab's Biome Macro (Patch 1.6.5) (Roblox Disconnected :c )""")
             if reason and not getattr(self, 'has_sent_disconnected_message', False):
                 try:
                     self.send_webhook_status(reason, color=0xff0000)
@@ -3797,7 +3034,7 @@ class BiomePresence():
                     self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
-            self.set_title_threadsafe("""Coteab Macro v2.0.0-beta3 (Running)""")
+            self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.5) (Running)""")
             self.save_config()
         except Exception as e:
             self.error_logging(e, "_resume_timer_after_reconnect")
@@ -4025,7 +3262,7 @@ class BiomePresence():
     def reconnect_check_start_button(self):
         try:
             self.set_title_threadsafe(
-                """Coteab Macro v2.0.0-beta3 (Reconnecting - In Main Menu)""")
+                """'C'oteab's Biome Macro (Patch 1.6.5) (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -4045,7 +3282,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.set_title_threadsafe("""Coteab Macro v2.0.0-beta3 (Running)""")
+                    self.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.5) (Running)""")
                     return True  # yay joins!!
 
                 print("Still in Main Menu, clicking again...")
@@ -4113,21 +3350,11 @@ class BiomePresence():
         except ValueError:
             mt_cooldown = timedelta(minutes=1)
 
-        try:
-            self.perform_periodic_aura_screenshot_sync()
-        except Exception:
-            pass
-
-        try:
-            self.perform_periodic_inventory_screenshot_sync()
-        except Exception:
-            pass
-
         if self.mt_var.get() and datetime.now() - self.last_mt_time >= mt_cooldown and not getattr(self,
-                                                                                                '_br_sc_running',
-                                                                                                False) and not getattr(
+                                                                                                   '_br_sc_running',
+                                                                                                   False) and not getattr(
                 self, '_mt_running', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
-                                                                        datetime.min):
+                                                                          datetime.min):
             self.use_merchant_teleporter()
             self.last_mt_time = datetime.now()
 
@@ -4159,166 +3386,6 @@ class BiomePresence():
             self.use_br_sc('biome randomizer')
             self.last_br_time = datetime.now()
 
-    def perform_periodic_aura_screenshot_sync(self):
-        try:
-            if not getattr(self, "periodical_aura_var", None) or not self.periodical_aura_var.get():
-                return
-            try:
-                interval_min = float(self.periodical_aura_interval_var.get())
-            except Exception:
-                interval_min = 5.0
-            if (datetime.now() - getattr(self, "last_aura_screenshot_time", datetime.min)) < timedelta(minutes=interval_min):
-                return
-            if not self.check_roblox_procs():
-                return
-            self.activate_roblox_window()
-            aura_menu = self.config.get("aura_menu", [0, 0])
-            if aura_menu and aura_menu[0]:
-                try:
-                    autoit.mouse_click("left", aura_menu[0], aura_menu[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(aura_menu[0], aura_menu[1])
-                    except Exception:
-                        pass
-                time.sleep(0.67)
-                try:
-                    os.makedirs("images", exist_ok=True)
-                    filename = os.path.join("images", f"aura_screenshot_{int(time.time())}.png")
-                    img = pyautogui.screenshot()
-                    img.save(filename)
-                    self.send_aura_screenshot_webhook(filename)
-                    self.last_aura_screenshot_time = datetime.now()
-                except Exception as e:
-                    self.error_logging(e, "Error taking/sending aura screenshot")
-        except Exception as e:
-            self.error_logging(e, "Error in perform_periodic_aura_screenshot_sync")
-
-    def perform_periodic_inventory_screenshot_sync(self):
-        try:
-            if not getattr(self, "periodical_inventory_var", None) or not self.periodical_inventory_var.get():
-                return
-            try:
-                interval_min = float(self.periodical_inventory_interval_var.get())
-            except Exception:
-                interval_min = 5.0
-            if (datetime.now() - getattr(self, "last_inventory_screenshot_time", datetime.min)) < timedelta(minutes=interval_min):
-                return
-            if not self.check_roblox_procs():
-                return
-            self.activate_roblox_window()
-            search_bar = self.config.get("search_bar", [855, 358])
-            inventory_menu = self.config.get("inventory_menu", [36, 535])
-            items_tab = self.config.get("items_tab", [1272, 329])
-            inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
-            if inventory_menu and inventory_menu[0]:
-                try:
-                    autoit.mouse_click("left", inventory_menu[0], inventory_menu[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
-                    except Exception:
-                        pass
-                time.sleep(0.35)
-            if items_tab and items_tab[0]:
-                try:
-                    autoit.mouse_click("left", items_tab[0], items_tab[1], 1, speed=3)
-                    time.sleep(1)
-                    autoit.mouse_click("left", search_bar[0], search_bar[1], 1, speed=3)
-                except Exception:
-                    try:
-                        self.Global_MouseClick(items_tab[0], items_tab[1])
-                    except Exception:
-                        pass
-                time.sleep(0.35)
-            try:
-                os.makedirs("images", exist_ok=True)
-                filename = os.path.join("images", f"inventory_screenshot_{int(time.time())}.png")
-                img = pyautogui.screenshot()
-                img.save(filename)
-                self.send_inventory_screenshot_webhook(filename)
-                self.last_inventory_screenshot_time = datetime.now()
-            except Exception as e:
-                self.error_logging(e, "Error taking/sending inventory screenshot")
-            try:
-                if inventory_close_button and inventory_close_button[0]:
-                    try:
-                        autoit.mouse_click("left", inventory_close_button[0], inventory_close_button[1], 1, speed=3)
-                    except Exception:
-                        try:
-                            self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
-                        except Exception:
-                            pass
-                    time.sleep(0.22)
-            except Exception as e:
-                self.error_logging(e, "Error while closing inventory after screenshot")
-        except Exception as e:
-            self.error_logging(e, "Error in perform_periodic_inventory_screenshot_sync")
-
-    def send_inventory_screenshot_webhook(self, screenshot_path):
-        try:
-            urls = self.get_webhook_list()
-            if not urls:
-                return
-            content = ""
-            icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
-            current_utc_time = datetime.now(timezone.utc)
-            current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-            current_utc_time = str(current_utc_time)
-            embed = {
-                "description": f"> ## Periodical Inventory Screenshot",
-                "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.0-beta3", "icon_url": icon_url},
-                "timestamp": current_utc_time
-            }
-            for webhook_url in urls:
-                try:
-                    embed_copy = dict(embed)
-                    embed_copy["image"] = {"url": f"attachment://{os.path.basename(screenshot_path)}"}
-                    with open(screenshot_path, "rb") as image_file:
-                        files = {"file": (os.path.basename(screenshot_path), image_file, "image/png")}
-                        data = {"payload_json": json.dumps({"content": content, "embeds": [embed_copy]})}
-                        requests.post(webhook_url, data=data, files=files, timeout=10)
-                except Exception as e:
-                    try:
-                        print(f"Failed to send inventory screenshot to {webhook_url}: {e}")
-                    except Exception:
-                        pass
-        except Exception as e:
-            self.error_logging(e, "Error in send_inventory_screenshot_webhook")
-
-    def send_aura_screenshot_webhook(self, screenshot_path):
-        try:
-            urls = self.get_webhook_list()
-            if not urls:
-                return
-            content = ""
-            icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
-            current_utc_time = datetime.now(timezone.utc)
-            current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-            current_utc_time = str(current_utc_time)
-            embed = {
-                "description": f"> ## Periodical Aura Screenshot",
-                "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.0-beta3", "icon_url": icon_url},
-                "timestamp": current_utc_time
-            }
-            for webhook_url in urls:
-                try:
-                    embed_copy = dict(embed)
-                    embed_copy["image"] = {"url": f"attachment://{os.path.basename(screenshot_path)}"}
-                    with open(screenshot_path, "rb") as image_file:
-                        files = {"file": (os.path.basename(screenshot_path), image_file, "image/png")}
-                        data = {"payload_json": json.dumps({"content": content, "embeds": [embed_copy]})}
-                        requests.post(webhook_url, data=data, files=files, timeout=10)
-                except Exception as e:
-                    try:
-                        print(f"Failed to send aura screenshot to {webhook_url}: {e}")
-                    except Exception:
-                        pass
-        except Exception as e:
-            self.error_logging(e, "Error in send_aura_screenshot_webhook")
-
     def Global_MouseClick(self, x, y, click=1):
         time.sleep(0.335)
         autoit.mouse_click("left", x, y, click, speed=3)
@@ -4340,7 +3407,6 @@ class BiomePresence():
             first_item_slot = self.config.get("first_item_slot", [839, 434])
             amount_box = self.config.get("amount_box", [594, 570])
             use_button = self.config.get("use_button", [710, 573])
-            aura_menu = self.config.get("aura_menu", [1200, 500])
             inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
 
             for _ in range(5):
@@ -4370,20 +3436,10 @@ class BiomePresence():
             time.sleep(0.2 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
                 "enable_auto_craft") or self.current_biome == "GLITCHED": return
-            pyperclip.copy(item_name)
-            time.sleep(0.15 + inventory_click_delay)
-            autoit.send("^v")
+            autoit.send(item_name)
             time.sleep(0.4 + inventory_click_delay)
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
             time.sleep(0.4 + inventory_click_delay)
-            try:
-                if not self._ocr_first_slot_matches(item_name):
-                    inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
-                    self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
-                    time.sleep(0.15 + inventory_click_delay)
-                    return
-            except Exception:
-                pass
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
             time.sleep(0.4 + inventory_click_delay)
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
@@ -4401,6 +3457,9 @@ class BiomePresence():
 
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
                 "enable_auto_craft") or self.current_biome == "GLITCHED": return
+            if self.config.get("ocr_failsafe_enabled", False):
+                if not self.ocr_wait_for_phrase(item_name):
+                    return
             self.Global_MouseClick(use_button[0], use_button[1])
             time.sleep(0.22 + inventory_click_delay)
 
@@ -4466,25 +3525,15 @@ class BiomePresence():
             time.sleep(0.27 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
                 "enable_auto_craft") or self.current_biome == "GLITCHED": return
-            pyperclip.copy("teleport")
-            time.sleep(0.15 + inventory_click_delay)
-            autoit.send("^v")
-            time.sleep(0.4 + inventory_click_delay)
-            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
-            time.sleep(0.4 + inventory_click_delay)
-            try:
-                if not self._ocr_first_slot_matches("teleport"):
-                    inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
-                    self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
-                    time.sleep(0.15 + inventory_click_delay)
-                    return
-            except Exception:
-                pass
-            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
-            time.sleep(0.4 + inventory_click_delay)
-            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
-            time.sleep(0.4 + inventory_click_delay)
 
+            autoit.send("teleport")
+            time.sleep(0.4 + inventory_click_delay)
+            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
+            time.sleep(0.4 + inventory_click_delay)
+            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
+            time.sleep(0.4 + inventory_click_delay)
+            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
+            time.sleep(0.4 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
                 "enable_auto_craft") or self.current_biome == "GLITCHED": return
 
@@ -4500,6 +3549,10 @@ class BiomePresence():
             time.sleep(0.14 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
                 "enable_auto_craft") or self.current_biome == "GLITCHED": return
+            if self.config.get("ocr_failsafe_enabled", False):
+                if not self.ocr_wait_for_phrase("teleport"):
+                    return
+
             autoit.mouse_click("left", use_button[0], use_button[1], 3)
             time.sleep(0.23 + inventory_click_delay)
 
@@ -4527,9 +3580,7 @@ class BiomePresence():
                     time.sleep(0.15 + inventory_click_delay)
                     self.Global_MouseClick(search_bar[0], search_bar[1])
                     time.sleep(0.15 + inventory_click_delay)
-                    pyperclip.copy("crack")
-                    time.sleep(0.15 + inventory_click_delay)
-                    autoit.send("^v")
+                    autoit.send("crack")
                     time.sleep(0.4 + inventory_click_delay)
                     self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
                     time.sleep(0.4 + inventory_click_delay)
@@ -4545,10 +3596,20 @@ class BiomePresence():
                     time.sleep(0.13 + inventory_click_delay)
                     autoit.send('1')
                     time.sleep(0.13 + inventory_click_delay)
-                    self.Global_MouseClick(use_button[0], use_button[1])
-                    time.sleep(0.22 + inventory_click_delay)
-                    self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
-                    time.sleep(0.22 + inventory_click_delay)
+                    if self.config.get("ocr_failsafe_enabled", False):
+                        if not self.ocr_wait_for_phrase("crack"):
+                            self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
+                            time.sleep(0.22 + inventory_click_delay)
+                        else:
+                            self.Global_MouseClick(use_button[0], use_button[1])
+                            time.sleep(0.22 + inventory_click_delay)
+                            self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
+                            time.sleep(0.22 + inventory_click_delay)
+                    else:
+                        self.Global_MouseClick(use_button[0], use_button[1])
+                        time.sleep(0.22 + inventory_click_delay)
+                        self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
+                        time.sleep(0.22 + inventory_click_delay)
                 except Exception as e:
                     self.error_logging(e, "Error using portable Crack after merchant teleporter")
 
@@ -4698,7 +3759,7 @@ class BiomePresence():
                                 time.sleep(0.23)
 
                                 autoit.mouse_click("left", *purchase_button, 3)
-                                time.sleep(3.67)  # 6 7 TUFF
+                                time.sleep(1.067)  # 6 7 TUFF
 
                                 if merchant_name == "Jester" and item_name.lower() == "oblivion potion": hold_time = 8300
                                 self.autoit_hold_left_click(merchant_dialogue_box[0], merchant_dialogue_box[1],
@@ -4725,26 +3786,30 @@ class BiomePresence():
         if message_type == "None": return
         biome_info = self.biome_data[biome]
         biome_color = int(biome_info["color"], 16)
-        current_utc_time = datetime.now(timezone.utc)
-        current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-        current_utc_time = str(current_utc_time)
+        timestamp = time.strftime("[%H:%M:%S]")
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
         content = ""
         if event_type == "start" and biome in ["GLITCHED", "DREAMSPACE"]:
             content = "@everyone"
-        private_server_link = self.config.get("private_server_link")
-        if private_server_link == "":
-            description = f"> ## Biome Started - {biome} \nNo link provided (ManasAarohi ate the link blame him)" if event_type == "start" else f"> ### Biome Ended - {biome}"
-        else:
-            description = f"> ## Biome Started - {biome} \n> ### **[Join Server]({private_server_link})**" if event_type == "start" else f"> ### Biome Ended - {biome}"
+        title = f"{timestamp} Biome Started - {biome}" if event_type == "start" else f"{timestamp} Biome Ended - {biome}"
+        fields = []
+        if event_type == "start":
+            private_server_link = self.config.get("private_server_link")
+            if private_server_link == "":
+                private_server_link = "No link provided (ManasAarohi ate the link blame him)"
+            fields.append({
+                "name": "Private Server Link",
+                "value": private_server_link,
+                "inline": False
+            })
         embed = {
-            "description": description,
+            "title": title,
             "color": biome_color,
             "footer": {
-                "text": """Coteab Macro v2.0.0-beta3""",
+                "text": """'C'oteab's Biome Macro (Patch 1.6.5)""",
                 "icon_url": icon_url
             },
-            "timestamp": current_utc_time
+            "fields": fields
         }
         if event_type == "start":
             embed["thumbnail"] = {"url": biome_info["thumbnail_url"]}
@@ -4784,22 +3849,14 @@ class BiomePresence():
             ping_enabled = False
         content = f"<@{ping_id}>" if (source == 'logs', 'ocr' and ping_enabled and ping_id) else ""
         ps_link = self.config.get("private_server_link", "")
-        icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
-        current_utc_time = datetime.now(timezone.utc)
-        current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-        current_utc_time = str(current_utc_time)
         embed = {
-            "description": f"> ## {merchant_name} has arrived!\n> ### [Join Server]({ps_link})",
+            "title": f"{merchant_name} Detected!",
+            "description": f"{merchant_name} has been detected.\n\nMerchant PS Link: {ps_link}",
             "color": 11753 if merchant_name == "Mari" else 8595632,
             "thumbnail": {"url": merchant_thumbnails.get(merchant_name, "")},
-            "timestamp": current_utc_time,
             "fields": [
-                {"name": "Detection Source", "value": source.upper()}
-            ],
-            "footer": {
-                "text": """Coteab Macro v2.0.0-beta3""",
-                "icon_url": icon_url
-            }
+                {"name": "Detection Source", "value": source.upper(), "inline": True}
+            ]
         }
         try:
             if screenshot_path and os.path.exists(screenshot_path):
@@ -4882,7 +3939,7 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """Coteab Macro v2.0.0-beta3""",
+                "text": """'C'oteab's Biome Macro (Patch 1.6.5)""",
                 "icon_url": icon_url
             }
         }
@@ -4895,7 +3952,7 @@ class BiomePresence():
             except requests.exceptions.RequestException as e:
                 print(f"Failed to send eden webhook to {webhook_url}: {e}")
 
-    def send_aura_webhook(self, aura_name, rarity, biome_message, screenshot_path=None):
+    def send_aura_webhook(self, aura_name, rarity, biome_message):
         urls = self.get_webhook_list()
         if not urls:
             print("Webhook URL is missing/not included in the config.json")
@@ -4915,52 +3972,33 @@ class BiomePresence():
                 color = 0xed2f59
             else:
                 color = 0xff9447
-            description = f"> ## Aura equipped: {aura_name} | 1 in {rarity} {biome_message}"
+            description = f"## {time.strftime('[%H:%M:%S]')} \n ## > Aura found/last equipped: {aura_name} | 1 in {rarity} {biome_message}"
         else:
-            description = f"> ## Aura equipped: {aura_name}"
-        current_utc_time = datetime.now(timezone.utc)
-        current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-        current_utc_time = str(current_utc_time)
-        embed = {
-            "title": "⭐ Aura Detection ⭐",
-            "description": description,
-            "color": color,
-            "footer": {
-                "text": """Coteab Macro v2.0.0-beta3""",
-                "icon_url": icon_url
-            },
-            "timestamp": current_utc_time
+            description = f"## {time.strftime('[%H:%M:%S]')} \n ## > Aura found/last equipped: {aura_name}"
+        payload = {
+            "embeds": [
+                {
+                    "title": "⭐ Aura Detection ⭐",
+                    "description": description,
+                    "color": color,
+                    "footer": {
+                        "text": """'C'oteab's Biome Macro (Patch 1.6.5)""",
+                        "icon_url": icon_url
+                    }
+                }
+            ]
         }
-        content = ""
         if rarity is not None and 'rarity_value' in locals() and rarity_value >= ping_minimum:
             aura_user_id = self.config.get("aura_user_id", "")
             if aura_user_id:
-                content = f"<@{aura_user_id}>"
-        try:
-            if screenshot_path and os.path.exists(screenshot_path):
-                for webhook_url in urls:
-                    embed_copy = dict(embed)
-                    embed_copy["image"] = {"url": f"attachment://{os.path.basename(screenshot_path)}"}
-                    with open(screenshot_path, "rb") as image_file:
-                        files = {"file": (os.path.basename(screenshot_path), image_file, "image/png")}
-                        data = {"payload_json": json.dumps({"content": content, "embeds": [embed_copy]})}
-                        try:
-                            response = requests.post(webhook_url, data=data, files=files, timeout=10)
-                            response.raise_for_status()
-                            print(f"Aura webhook with screenshot sent for {aura_name} to {webhook_url}")
-                        except requests.exceptions.RequestException as e:
-                            print(f"Failed to send aura webhook with screenshot to {webhook_url}: {e}")
-            else:
-                payload = {"content": content, "embeds": [embed]}
-                for webhook_url in urls:
-                    try:
-                        response = requests.post(webhook_url, json=payload, timeout=10)
-                        response.raise_for_status()
-                        print(f"Aura webhook sent for {aura_name} to {webhook_url}")
-                    except requests.exceptions.RequestException as e:
-                        print(f"Failed to send aura webhook to {webhook_url}: {e}")
-        except Exception as e:
-            self.error_logging(e, "Error in send_aura_webhook")
+                payload["content"] = f"<@{aura_user_id}>"
+        for webhook_url in urls:
+            try:
+                response = requests.post(webhook_url, json=payload)
+                response.raise_for_status()
+                print(f"Aura webhook sent for {aura_name} to {webhook_url}")
+            except requests.exceptions.RequestException as e:
+                print(f"Failed to send aura webhook to {webhook_url}: {e}")
 
     def send_webhook_status(self, status, color=None):
         try:
@@ -4974,16 +4012,12 @@ class BiomePresence():
             if "started" in status.lower():
                 n = len(urls)
                 status = f"{status} ({n} webhook{'s' if n != 1 else ''} active)"
-            current_utc_time = datetime.now(timezone.utc)
-            current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-            current_utc_time = str(current_utc_time)
             embeds = [{
                 "title": "== 🌟 Macro Status 🌟 ==",
-                "description": f"> ## {status}",
+                "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {status}",
                 "color": embed_color,
-                "timestamp": current_utc_time,
                 "footer": {
-                    "text": "Coteab Macro v2.0.0-beta3",
+                    "text": "'C'oteab's Biome Macro (Patch 1.6.5)",
                     "icon_url": icon_url
                 },
                 "fields": [
@@ -5011,16 +4045,12 @@ class BiomePresence():
             if not urls:
                 return
             icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
-            current_utc_time = datetime.now(timezone.utc)
-            current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-            current_utc_time = str(current_utc_time)
             embed = {
                 "title": "== 🌟 Macro Status 🌟 ==",
-                "description": f"> ## {reason_text} Here is your session summary:",
+                "description": f"## [{time.strftime('%H:%M:%S')}] \n ## > {reason_text} Here is your session summary:",
                 "color": 0xff0000,
-                "timestamp": current_utc_time,
                 "footer": {
-                    "text": "Coteab Macro v2.0.0-beta3",
+                    "text": "'C'oteab's Biome Macro (Patch 1.6.5)",
                     "icon_url": icon_url
                 },
                 "fields": [
@@ -5044,33 +4074,6 @@ class BiomePresence():
                     pass
         except Exception as e:
             self.error_logging(e, "Error in send_macro_summary")
-
-    def _set_first_item_slot_ocr_pos(self, region):
-        self.config["first_item_slot_ocr_pos"] = region
-        try:
-            self.first_item_slot_ocr_label.config(text=str(region))
-        except Exception:
-            pass
-        self.save_config()
-
-    def _ocr_first_slot_matches(self, expected):
-        if not self.config.get("enable_ocr_failsafe", False):
-            return True
-        ocr_pos = self.config.get("first_item_slot_ocr_pos", [0, 0, 80, 80])
-        try:
-            x, y, w, h = int(ocr_pos[0]), int(ocr_pos[1]), int(ocr_pos[2]), int(ocr_pos[3])
-            img = pyautogui.screenshot(region=(x, y, w, h))
-            text = pytesseract.image_to_string(img).strip().lower()
-        except Exception:
-            text = ""
-        expected_lower = (expected or "").lower()
-        if expected_lower and expected_lower in text:
-            return True
-        tokens = re.findall(r'\w{4,}', expected_lower)
-        for t in tokens:
-            if t in text:
-                return True
-        return False
 
     def activate_roblox_window(self):
         windows = gw.getAllTitles()
@@ -5377,21 +4380,15 @@ class BiomePresence():
                 keyboard.write(buff.lower())
                 time.sleep(0.22 + inventory_click_delay)
 
+                # first buff item slot
                 first_item_slot = self.config.get("first_item_slot", [839, 434])
                 self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
                 time.sleep(0.22 + inventory_click_delay)
-                try:
-                    if not self._ocr_first_slot_matches(buff):
-                        inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
-                        self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
-                        time.sleep(0.15 + inventory_click_delay)
-                        continue
-                except Exception:
-                    pass
+
+                # amountaaaa
                 amount_box = self.config.get("amount_box", [594, 570])
                 self.Global_MouseClick(amount_box[0], amount_box[1])
                 time.sleep(0.22 + inventory_click_delay)
-
 
                 if not self.detection_running or self.reconnecting_state: return
 
@@ -5405,6 +4402,10 @@ class BiomePresence():
 
                 # use??!
                 use_button = self.config.get("use_button", [710, 573])
+                if self.config.get("ocr_failsafe_enabled", False):
+                    if not self.ocr_wait_for_phrase(buff):
+                        return
+
                 self.Global_MouseClick(use_button[0], use_button[1])
                 time.sleep(0.3 + inventory_click_delay)
 
@@ -5447,7 +4448,7 @@ finally:
                     bp.start_time = None
                     bp.detection_running = False
                     bp.stop_sent = True
-                    bp.set_title_threadsafe("""Coteab Macro v2.0.0-beta3 (Stopped)""")
+                    bp.set_title_threadsafe("""'C'oteab's Biome Macro (Patch 1.6.5) (Stopped)""")
                     bp.send_macro_summary(last24h_seconds)
                     bp.save_config()
 
