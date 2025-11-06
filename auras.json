@@ -129,7 +129,7 @@
     "Hyper-Volt": {"rarity": 7500000, "exclusive_biome": ["None", 1]},
     "Virtual_WorldWide": {"rarity": 87500000, "exclusive_biome": ["None", 1]},
     "Hyper-Volt_Ever-Storm": {"rarity": 225000000, "exclusive_biome": ["None", 1]},
-    "Twilight_Withering Grace": {"rarity": 180000000, "exclusive_biome": ["None", 1]},
+    "Twilight_Withering Grace": {"rarity": 170000000, "exclusive_biome": ["None", 1]},
     "CHILLSEAR": {"rarity": 375000000, "exclusive_biome": ["SNOWY", 3]},
     "Flora_Evergreen": {"rarity": 370073730, "exclusive_biome": ["None", 1]},
     "Shiftlock": {"rarity": 3325000, "exclusive_biome": ["NULL", 1000]},
@@ -140,14 +140,20 @@
     "Ravage": {"rarity": 930000000, "exclusive_biome": ["GRAVEYARD", 1]},
     "Phantasma": {"rarity": 462600000, "exclusive_biome": ["PUMPKIN MOON", 1]},
     "Oni": {"rarity": 6666666, "exclusive_biome": ["BLOOD RAIN", 1]},
-    "Accursed": {"rarity": 82000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "ACCURSED": {"rarity": 82000000, "exclusive_biome": ["BLOOD RAIN", 1]},
     "Lamenthyr": {"rarity": 1000000000, "exclusive_biome": ["BLOOD RAIN", 1]},
     "EREBUS": {"rarity": 1200000000, "exclusive_biome": ["BLOOD RAIN", 1]},
     "Sinister": {"rarity": 15000000, "exclusive_biome": ["PUMPKIN MOON", 1]},
-    "Arachnophobia": {"rarity": 940000000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "ARACHNOPHOBIA": {"rarity": 940000000, "exclusive_biome": ["PUMPKIN MOON", 1]},
     "Malediction": {"rarity": 730000000, "exclusive_biome": ["BLOOD RAIN", 1]},
-    "PUMP_Trickster": {"rarity": 600000, "exclusive_biome": ["PUMPKIN MOON", 1]}
+    "Celestial_Wicked": {"rarity": 1500000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "AFTERPARTY": {"rarity": 440000000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Graveborn": {"rarity": 290000000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Grief": {"rarity": 88250000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Werewolf": {"rarity": 3600000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Lunar_Cultist": {"rarity": 2000000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Crimson": {"rarity": 120000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Bloodgarden": {"rarity": 88000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Reaper": {"rarity": 66000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Shucks": {"rarity": 4460000, "exclusive_biome": ["BLOOD RAIN", 1]}
 }
-
-
-
