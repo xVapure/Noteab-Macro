@@ -1,79 +1,72 @@
 {
     "NORMAL": {
         "color": "0xffffff",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NORMAL.png"
     },
 
     "WINDY": {
         "color": "0x9ae5ff",
         "duration": 120,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/WINDY.png"
     },
     "RAINY": {
         "color": "0x027cbd",
         "duration": 120,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/RAINY.png"
     },
     "SNOWY": {
         "color": "0xDceff9",
         "duration": 120,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SNOWY.png"
     },
     "SAND STORM": {
         "color": "0x8F7057",
         "duration": 600,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SAND%20STORM.png"
     },
     "HELL": {
         "color": "0xff4719",
         "duration": 660,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/HELL.png"
     },
     "STARFALL": {
         "color": "0x011ab7",
         "duration": 600,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/STARFALL.png"
     },
     "CORRUPTION": {
         "color": "0x6d32a8",
         "duration": 660,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/CORRUPTION.png"
     },
     "NULL": {
         "color": "0x838383",
         "duration": 90,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NULL.png"
     },
     "GLITCHED": {
         "color": "0xbfff00",
         "duration": 164,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png"
     },
     "DREAMSPACE": {
         "color": "0xea9dda",
         "duration": 130,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
     },
     "GRAVEYARD": {
         "color": "0x4B0082",
         "duration": 240,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GRAVEYARD.png"
     },
     "PUMPKIN MOON": {
         "color": "0xFF8C00",
         "duration": 240,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/PUMPKIN_MOON.png"
     },
     "BLOOD RAIN": {
         "color": "0x8B0000",
         "duration": 600,
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/emo_tiecat.png"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/blood_rain.png"
     }
 }
-
-
-
-
-
-
-
