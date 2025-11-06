@@ -155,5 +155,7 @@
     "Crimson": {"rarity": 120000000, "exclusive_biome": ["BLOOD RAIN", 1]},
     "Bloodgarden": {"rarity": 88000000, "exclusive_biome": ["BLOOD RAIN", 1]},
     "Reaper": {"rarity": 66000000, "exclusive_biome": ["BLOOD RAIN", 1]},
-    "Shucks": {"rarity": 4460000, "exclusive_biome": ["BLOOD RAIN", 1]}
+    "Shucks": {"rarity": 4460000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Wraithlight": {"rarity": 695000000, "exclusive_biome": ["BLOOD RAIN", 1]}
 }
+
