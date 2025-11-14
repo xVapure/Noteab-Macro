@@ -35,7 +35,7 @@
     "Gravitational": {"rarity": 2000000, "exclusive_biome": ["None", 1]},
     "BOUNDED_UNBOUND": {"rarity": 2000000, "exclusive_biome": ["None", 1]},
     "Virtual": {"rarity": 2500000, "exclusive_biome": ["None", 1]},
-    "Parasite": {"rarity": 30000000, "exclusive_biome": ["CORRUPTION", 5]},
+    "Parasite": {"rarity": 3000000, "exclusive_biome": ["CORRUPTION", 5]},
     "Savior": {"rarity": 3200000, "exclusive_biome": ["None", 1]},
     "Aquatic_Flame": {"rarity": 4000000, "exclusive_biome": ["None", 1]},
     "Poseidon": {"rarity": 4000000, "exclusive_biome": ["RAINY", 4]},
@@ -158,4 +158,5 @@
     "Shucks": {"rarity": 4460000, "exclusive_biome": ["BLOOD RAIN", 1]},
     "Wraithlight": {"rarity": 695000000, "exclusive_biome": ["BLOOD RAIN", 1]}
 }
+
 
