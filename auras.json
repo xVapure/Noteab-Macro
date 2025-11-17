@@ -156,7 +156,11 @@
     "Bloodgarden": {"rarity": 88000000, "exclusive_biome": ["BLOOD RAIN", 1]},
     "Reaper": {"rarity": 66000000, "exclusive_biome": ["BLOOD RAIN", 1]},
     "Shucks": {"rarity": 4460000, "exclusive_biome": ["BLOOD RAIN", 1]},
-    "Wraithlight": {"rarity": 695000000, "exclusive_biome": ["BLOOD RAIN", 1]}
+    "Lumenpool": {"rarity": 220000000, "exclusive_biome": ["RAINY", 4]},
+    "Felled": {"rarity": 180000000, "exclusive_biome": ["HELL", 6]},
+    "NYCTOPHOBIA": {"rarity": 1011111010, "exclusive_biome": ["None", 1]},
+    "Antivirus": {"rarity": 62500000, "exclusive_biome": ["None", 1]}
 }
+
 
 
