@@ -80,12 +80,9 @@
     "WinterFantasy": {"rarity": 72000000, "exclusive_biome": ["SNOWY", 3]},
     "Sailor_Flying Dutchman": {"rarity": 80000000, "exclusive_biome": ["RAINY", 4]},
     "HARNESSED_Elements": {"rarity": 85000000, "exclusive_biome": ["None", 1]},
-    "Express": {"rarity": 90000000, "exclusive_biome": ["SNOWY", 3]},
     "Chromatic_Genesis": {"rarity": 99999999, "exclusive_biome": ["None", 1]},
     "Starscourge_Radiant": {"rarity": 100000000, "exclusive_biome": ["STARFALL", 5]},
-    "ABOMITABLE": {"rarity": 120000000, "exclusive_biome": ["SNOWY", 3]},
     "Overture": {"rarity": 150000000, "exclusive_biome": ["None", 1]},
-    "Glock_shieldofthesky": {"rarity": 170000000, "exclusive_biome": ["None", 1]},
     "Symphony": {"rarity": 175000000, "exclusive_biome": ["None", 1]},
     "Impeached": {"rarity": 200000000, "exclusive_biome": ["CORRUPTION", 5]},
     "Archangel": {"rarity": 250000000, "exclusive_biome": ["None", 1]},
@@ -97,7 +94,6 @@
     "GARGANTUA": {"rarity": 430000000, "exclusive_biome": ["STARFALL", 5]},
     "APOSTOLOS": {"rarity": 444000000, "exclusive_biome": ["None", 1]},
     "Ruins": {"rarity": 500000000, "exclusive_biome": ["None", 1]},
-    "Atlas_Yuletide": {"rarity": 510000000, "exclusive_biome": ["SNOWY", 3]},
     "Matrix_Overdrive": {"rarity": 503000000, "exclusive_biome": ["None", 1]},
     "Matrix_Reality": {"rarity": 601020102, "exclusive_biome": ["None", 1]},
     "Sovereign": {"rarity": 750000000, "exclusive_biome": ["None", 1]},
@@ -108,8 +104,6 @@
     "Fault": {"rarity": 3000, "exclusive_biome": ["GLITCHED", 1]},
     "Glitch": {"rarity": 12210110, "exclusive_biome": ["GLITCHED", 1]},
     "Oppression": {"rarity": 220000000, "exclusive_biome": ["GLITCHED", 1]},
-    "Manta": {"rarity": 300000000, "exclusive_biome": ["BLAZING SUN", 2]},
-    "Aegis_Watergun": {"rarity": 825000000, "exclusive_biome": ["BLAZING SUN", 2]},
     "Cosmos_Alice": {"rarity": 3500000, "exclusive_biome": ["None", 1]},
     "Maelstrom": {"rarity": 309999999, "exclusive_biome": ["WINDY", 3]},
     "Jazz_Orchestra": {"rarity": 336870912, "exclusive_biome": ["None", 1]},
@@ -161,6 +155,7 @@
     "NYCTOPHOBIA": {"rarity": 1011111010, "exclusive_biome": ["None", 1]},
     "Antivirus": {"rarity": 62500000, "exclusive_biome": ["None", 1]}
 }
+
 
 
 
