@@ -1,12 +1,21 @@
 If you're using an older version, please update!!
 
-v1.6.5 release, what's new?
-- Reworked the UI to be cleaner.
-- Brought back pings for merchants using OCR detection.
-- Fixed the issue with NULL biome spamming due to the new loading inventory system.
-- Fixed a vulnerability to fake ping biomes (thanks to "etcat" for the report).
-- Added customizations tab!! We now allow for further macro customizations for users' preferences!!
-- I initially wanted to save these for Coteab 2.0.0, but it seems like these are critical bugs that needed attention ASAP, so I might as well release the 2.0.0 UI too :) Enjoy!!
-- Also halloween auras & biomes have been added! No need to update or re-download your macro if you're using 1.6.3+. Thanks "callmehelv" for blood rain & pumpking moon icons.
+# Coteab Macro v2.0.0, what's new?
+## New features 
+- Potion crafter is back!!! But is 100x better now <:aga:1425644212350746625> 
+- Periodical aura, quest, inventory screenshot. 📸 
+- Screenshot for aura detection in auras tab <:67tuff:1427603622417530963> 
+- Auto claim daily quests 📋 
+- OCR failsafe full implementation!! The macro will now NEVER use your potions on accident if you have this setting on 🔐 
+- REMOTE ACCESS CONTROL! REMOTELY CONTROL YOUR SOL'S RNG EXPERIENCE WITHOUT HAVING TO BE AT HOME AT ALL 🎉 use `/help` to begin.
+## Misc/reworks
+- Reworked the way the macro types stuff into the search bar to be more reliable. ⌨️ 
+- Introduced new biomes, merchants embed, since the link is now masked biomes cannot be unintentionally leaked anymore ☀️ 
+- Making the macro delete the screenshots in the "images" folder after a session to reduce size 😏 
+- Reworked a tiny bit of biomes detection ⛈️ 
+# Bug fixes
+- Attempted to fix not being able to detect Jester bug 🎭
+- Fixed the bug where you cannot buy 2 items next to each other in a merchant 🛍️ 
+- Removed Herobrine <:67mason:1427603671407005766>
 
-If you need help with setting up the macro, refer to this tutorial: https://youtu.be/JKsX2elKw6I
+If you need help with setting up the macro, refer to this tutorial: https://youtu.be/y3gocH9Hd18
