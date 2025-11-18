@@ -3,6 +3,7 @@ If you're using an older version, please update!!
 # Coteab Macro v2.0.0, what's new?
 ## New features 
 - Potion crafter is back!!! But is 100x better now <:aga:1425644212350746625> 
+  - Don't use potion crafter with other features that requires mouse actions please 🙏
 - Periodical aura, quest, inventory screenshot. 📸 
 - Screenshot for aura detection in auras tab <:67tuff:1427603622417530963> 
 - Auto claim daily quests 📋 
