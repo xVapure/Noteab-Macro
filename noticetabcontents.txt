@@ -1,5 +1,6 @@
 If you're using an older version, please update!!
 
+PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
 # Coteab Macro v2.0.0, what's new?
 ## New features 
 - Potion crafter is back!!! But is 100x better now <:aga:1425644212350746625> 
@@ -18,4 +19,3 @@ If you're using an older version, please update!!
 - Fixed the bug where you cannot buy 2 items next to each other in a merchant 🛍️ 
 - Removed Herobrine <:67mason:1427603671407005766>
 
-If you need help with setting up the macro, refer to this tutorial: https://youtu.be/y3gocH9Hd18
