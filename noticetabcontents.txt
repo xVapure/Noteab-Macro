@@ -1,6 +1,13 @@
 If you're using an older version, please update!!
 
 PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
+
+# Coteab Macro v2.0.1, what's new?
+## New features:
+- CYBERSPACE biome will force @ everyone ping from now on.
+## Bug fixes:
+- Reverted to the old typing method because some reports saying it's less stable.
+
 # Coteab Macro v2.0.0, what's new?
 ## New features 
 - Potion crafter is back!!! But is 100x better now <:aga:1425644212350746625> 
