@@ -10,7 +10,7 @@ import shutil, glob
 import atexit
 import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, \
-    locale, win32gui, win32process, win32con, ctypes, queue, pyperclip, mouse, sys
+    locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
@@ -492,6 +492,10 @@ class BiomePresence():
             "DREAMSPACE": {
                 "color": "0xea9dda",
                 "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
+            },
+            "CYBERSPACE": {
+                "color": "0x0A1A3D",
+                "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/CYBERSPACE.png"
             }
         }
 
@@ -887,7 +891,7 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
 
         self.root = ttk.Window(themename=selected_theme)
-        self.set_title_threadsafe("Coteab Macro v2.0.0 (Idle)")
+        self.set_title_threadsafe("Coteab Macro v2.0.1 (Idle)")
         self.root.geometry("1000x700")
         self.root.minsize(900, 600)
         try:
@@ -1057,7 +1061,7 @@ class BiomePresence():
         self.save_config()
 
     def check_for_updates(self):
-        current_version = "v2.0.0"
+        current_version = "v2.0.1"
         dont_ask_again = self.config.get("dont_ask_for_update", False)
 
         if dont_ask_again: return
@@ -1106,11 +1110,11 @@ class BiomePresence():
         settings_window.title("Biome Settings")
 
         silly_note_label = ttk.Label(settings_window,
-                                     text="GLITCHED and DREAMSPACE are both forced 'everyone' ping grrr >:((",
+                                     text="GLITCHED, DREAMSPACE & CYBERSPACE are both forced 'everyone' ping grrr >:((",
                                      foreground="red")
         silly_note_label.grid(row=0, columnspan=2, padx=(10, 0), pady=(10, 0))
 
-        biomes = [biome for biome in self.biome_data.keys() if biome not in ["GLITCHED", "DREAMSPACE", "NORMAL"]]
+        biomes = [biome for biome in self.biome_data.keys() if biome not in ["GLITCHED", "DREAMSPACE", "CYBERSPACE", "NORMAL"]]
         window_height = max(475, len(biomes) * 43)
         settings_window.geometry(f"465x{window_height}")
 
@@ -1234,7 +1238,7 @@ class BiomePresence():
         self.remote_command_queue = queue.Queue()
         self._remote_check_merchant_results = {}
         self._help_command_list = [
-            ("screenshot", "", "Take current ingame screenshot and send to webhooks. For inventory/aura screenshot, you'll need periodical inventory screenshot/aura enabled. For full screenshot yoy need neither of them."),
+            ("screenshot", "", "Take current ingame screenshot and send to webhooks. For inventory/aura screenshot, you'll need periodical inventory screenshot/aura enabled. For full screenshot you need neither of them."),
             ("reroll_quest", "{quest name}", "Reroll a daily quest. Quest 1 is the first quest on the list and so on."),
             ("check_merchant", "", "Use merchant teleporter immediately and check whether if a merchant has spawned or not."),
             ("use", "{item_name} {amount}", "Use item remotely."),
@@ -1479,7 +1483,7 @@ class BiomePresence():
                 except Exception:
                     pass
             try:
-                self.set_title_threadsafe("Coteab Macro v2.0.0 (Remote bot starting)")
+                self.set_title_threadsafe("Coteab Macro v2.0.1 (Remote bot starting)")
             except Exception:
                 pass
             try:
@@ -2009,9 +2013,7 @@ class BiomePresence():
         self.Global_MouseClick(search_bar[0], search_bar[1], click=2)
         time.sleep(0.23 + inventory_click_delay)
         try:
-            pyperclip.copy(item_name)
-            time.sleep(0.07)
-            keyboard.send("ctrl+v")
+            autoit.send(item_name)
         except Exception:
             try:
                 keyboard.write(item_name.lower())
@@ -2036,9 +2038,7 @@ class BiomePresence():
             except Exception:
                 pass
         try:
-            pyperclip.copy(str(amount))
-            time.sleep(0.06 + inventory_click_delay)
-            keyboard.send("ctrl+v")
+            autoit.send(str(amount))
         except Exception:
             try:
                 keyboard.write(str(amount))
@@ -2064,7 +2064,7 @@ class BiomePresence():
             embed = {
                 "description": f"> ## Remote Screenshot",
                 "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.0", "icon_url": icon_url},
+                "footer": {"text": "Coteab Macro v2.0.1", "icon_url": icon_url},
                 "timestamp": current_utc_time
             }
             for webhook_url in urls:
@@ -2578,7 +2578,7 @@ class BiomePresence():
             webbrowser.open_new("https://github.com/xVapure/Noteab-Macro/releases/latest")
 
         def _check_latest():
-            current_version = "v2.0.0"
+            current_version = "v2.0.1"
             try:
                 response = requests.get("https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest", timeout=10)
                 response.raise_for_status()
@@ -2875,7 +2875,7 @@ class BiomePresence():
             embed = {
                 "description": f"> ## Daily Quests Screenshot",
                 "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.0", "icon_url": icon_url},
+                "footer": {"text": "Coteab Macro v2.0.1", "icon_url": icon_url},
                 "timestamp": current_utc_time
             }
             for webhook_url in urls:
@@ -3524,8 +3524,7 @@ class BiomePresence():
             if potion_search and potion_search[0]:
                 _click(potion_search, label="search_bar", tries=3, pause_after=0.18)
                 time.sleep(0.08)
-                pyperclip.copy(pname)
-                keyboard.press_and_release("ctrl+v")
+                autoit.send(pname)
                 time.sleep(0.18)
             else:
                 self.error_logging(RuntimeError("Missing potion_search coordinates"), "Potion setup warning")
@@ -4406,7 +4405,7 @@ class BiomePresence():
                 thread.start()
             self.perform_anti_afk_action()
 
-            self.set_title_threadsafe("""Coteab Macro v2.0.0 (Running)""")
+            self.set_title_threadsafe("""Coteab Macro v2.0.1 (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             try:
                 if getattr(self, "remote_access_var", None) and self.remote_access_var.get():
@@ -4443,7 +4442,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
             self.start_time = None
             self.stop_sent = True
-            self.set_title_threadsafe("Coteab Macro v2.0.0 (Stopped)")
+            self.set_title_threadsafe("Coteab Macro v2.0.1 (Stopped)")
             try:
                 self.stop_remote_bot()
             except Exception:
@@ -4748,7 +4747,7 @@ class BiomePresence():
 
                 message_type = self.config["biome_notifier"].get(biome, "None")
 
-                if biome in ["GLITCHED", "DREAMSPACE"]:
+                if biome in ["GLITCHED", "DREAMSPACE", "CYBERSPACE"]:
                     message_type = "Ping"
                     if self.config.get("record_rare_biome", False):
                         self.trigger_biome_record()
@@ -4835,7 +4834,7 @@ class BiomePresence():
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server. hold on bro", color=0xffff00)
                                 self.set_title_threadsafe(
-                                    """Coteab Macro v2.0.0 (Reconnecting)""")
+                                    """Coteab Macro v2.0.1 (Reconnecting)""")
                                 try:
                                     os.startfile(roblox_deep_link)
                                 except Exception:
@@ -4879,7 +4878,7 @@ class BiomePresence():
                 self.pause_reason = reason
             self.reconnecting_state = True
             self.set_title_threadsafe(
-                """Coteab Macro v2.0.0 (Roblox Disconnected :c )""")
+                """Coteab Macro v2.0.1 (Roblox Disconnected :c )""")
             if reason and not getattr(self, 'has_sent_disconnected_message', False):
                 try:
                     self.send_webhook_status(reason, color=0xff0000)
@@ -4905,7 +4904,7 @@ class BiomePresence():
                     self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
-            self.set_title_threadsafe("""Coteab Macro v2.0.0 (Running)""")
+            self.set_title_threadsafe("""Coteab Macro v2.0.1 (Running)""")
             self.save_config()
         except Exception as e:
             self.error_logging(e, "_resume_timer_after_reconnect")
@@ -5133,7 +5132,7 @@ class BiomePresence():
     def reconnect_check_start_button(self):
         try:
             self.set_title_threadsafe(
-                """Coteab Macro v2.0.0 (Reconnecting - In Main Menu)""")
+                """Coteab Macro v2.0.1 (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -5153,7 +5152,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.set_title_threadsafe("""Coteab Macro v2.0.0 (Running)""")
+                    self.set_title_threadsafe("""Coteab Macro v2.0.1 (Running)""")
                     return True  # yay joins!!
 
                 print("Still in Main Menu, clicking again...")
@@ -5381,7 +5380,7 @@ class BiomePresence():
             embed = {
                 "description": f"> ## Periodical Inventory Screenshot",
                 "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.0", "icon_url": icon_url},
+                "footer": {"text": "Coteab Macro v2.0.1", "icon_url": icon_url},
                 "timestamp": current_utc_time
             }
             for webhook_url in urls:
@@ -5413,7 +5412,7 @@ class BiomePresence():
             embed = {
                 "description": f"> ## Periodical Aura Screenshot",
                 "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.0", "icon_url": icon_url},
+                "footer": {"text": "Coteab Macro v2.0.1", "icon_url": icon_url},
                 "timestamp": current_utc_time
             }
             for webhook_url in urls:
@@ -5492,9 +5491,7 @@ class BiomePresence():
             time.sleep(0.2 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
                 "enable_auto_craft") or self.current_biome == "GLITCHED": return
-            pyperclip.copy(item_name)
-            time.sleep(0.15 + inventory_click_delay)
-            autoit.send("^v")
+            autoit.send(item_name)
             time.sleep(0.4 + inventory_click_delay)
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
             time.sleep(0.4 + inventory_click_delay)
@@ -5597,9 +5594,7 @@ class BiomePresence():
             time.sleep(0.27 + inventory_click_delay)
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
                 "enable_auto_craft") or self.current_biome == "GLITCHED": return
-            pyperclip.copy("teleport")
-            time.sleep(0.15 + inventory_click_delay)
-            autoit.send("^v")
+            autoit.send("teleport")
             time.sleep(0.4 + inventory_click_delay)
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
             time.sleep(0.4 + inventory_click_delay)
@@ -5658,9 +5653,7 @@ class BiomePresence():
                     time.sleep(0.15 + inventory_click_delay)
                     self.Global_MouseClick(search_bar[0], search_bar[1])
                     time.sleep(0.15 + inventory_click_delay)
-                    pyperclip.copy("crack")
-                    time.sleep(0.15 + inventory_click_delay)
-                    autoit.send("^v")
+                    autoit.send("crack")
                     time.sleep(0.4 + inventory_click_delay)
                     self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
                     time.sleep(0.4 + inventory_click_delay)
@@ -5862,7 +5855,7 @@ class BiomePresence():
         current_utc_time = str(current_utc_time)
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
         content = ""
-        if event_type == "start" and biome in ["GLITCHED", "DREAMSPACE"]:
+        if event_type == "start" and biome in ["GLITCHED", "DREAMSPACE", "CYBERSPACE"]:
             content = "@everyone"
         private_server_link = self.config.get("private_server_link").replace("\n", "")
         if private_server_link == "":
@@ -5873,7 +5866,7 @@ class BiomePresence():
             "description": description,
             "color": biome_color,
             "footer": {
-                "text": """Coteab Macro v2.0.0""",
+                "text": """Coteab Macro v2.0.1""",
                 "icon_url": icon_url
             },
             "timestamp": current_utc_time
@@ -5929,7 +5922,7 @@ class BiomePresence():
                 {"name": "Detection Source", "value": source.upper()}
             ],
             "footer": {
-                "text": """Coteab Macro v2.0.0""",
+                "text": """Coteab Macro v2.0.1""",
                 "icon_url": icon_url
             }
         }
@@ -6014,7 +6007,7 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """Coteab Macro v2.0.0""",
+                "text": """Coteab Macro v2.0.1""",
                 "icon_url": icon_url
             }
         }
@@ -6058,7 +6051,7 @@ class BiomePresence():
             "description": description,
             "color": color,
             "footer": {
-                "text": """Coteab Macro v2.0.0""",
+                "text": """Coteab Macro v2.0.1""",
                 "icon_url": icon_url
             },
             "timestamp": current_utc_time
@@ -6115,7 +6108,7 @@ class BiomePresence():
                 "color": embed_color,
                 "timestamp": current_utc_time,
                 "footer": {
-                    "text": "Coteab Macro v2.0.0",
+                    "text": "Coteab Macro v2.0.1",
                     "icon_url": icon_url
                 },
                 "fields": [
@@ -6152,7 +6145,7 @@ class BiomePresence():
                 "color": 0xff0000,
                 "timestamp": current_utc_time,
                 "footer": {
-                    "text": "Coteab Macro v2.0.0",
+                    "text": "Coteab Macro v2.0.1",
                     "icon_url": icon_url
                 },
                 "fields": [
@@ -6588,7 +6581,7 @@ finally:
                     bp.start_time = None
                     bp.detection_running = False
                     bp.stop_sent = True
-                    bp.set_title_threadsafe("""Coteab Macro v2.0.0 (Stopped)""")
+                    bp.set_title_threadsafe("""Coteab Macro v2.0.1 (Stopped)""")
                     bp.send_macro_summary(last24h_seconds)
                     bp.save_config()
 
