@@ -1,54 +1,55 @@
 {
     "NORMAL": {
         "color": "0xffffff",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NORMAL.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
 
     "WINDY": {
         "color": "0x9ae5ff",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/WINDY.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "RAINY": {
         "color": "0x027cbd",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/RAINY.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "SNOWY": {
         "color": "0xDceff9",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SNOWY.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "SAND STORM": {
         "color": "0x8F7057",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SAND%20STORM.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "HELL": {
         "color": "0xff4719",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/HELL.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "STARFALL": {
         "color": "0x011ab7",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/STARFALL.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "CORRUPTION": {
         "color": "0x6d32a8",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/CORRUPTION.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "NULL": {
         "color": "0x838383",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NULL.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "GLITCHED": {
         "color": "0xbfff00",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "DREAMSPACE": {
         "color": "0xea9dda",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     },
     "CYBERSPACE": {
         "color": "0x0A1A3D",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/CYBERSPACE.png"
+        "thumbnail_url": "https://postimg.cc/vxrr6S04"
     }
 }
+
 
 
 
