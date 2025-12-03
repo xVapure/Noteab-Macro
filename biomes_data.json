@@ -1,54 +1,55 @@
 {
     "NORMAL": {
         "color": "0xffffff",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
 
     "WINDY": {
         "color": "0x9ae5ff",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "RAINY": {
         "color": "0x027cbd",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "SNOWY": {
         "color": "0xDceff9",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "SAND STORM": {
         "color": "0x8F7057",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "HELL": {
         "color": "0xff4719",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "STARFALL": {
         "color": "0x011ab7",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "CORRUPTION": {
         "color": "0x6d32a8",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "NULL": {
         "color": "0x838383",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "GLITCHED": {
         "color": "0xbfff00",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "DREAMSPACE": {
         "color": "0xea9dda",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
     "CYBERSPACE": {
         "color": "0x0A1A3D",
-        "thumbnail_url": "https://postimg.cc/vxrr6S04"
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     }
 }
+
 
 
 
