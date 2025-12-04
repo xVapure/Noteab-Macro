@@ -1,54 +1,54 @@
 {
     "NORMAL": {
-        "color": "0xffffff",
+        "color": "0xd40028",
         "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
     },
-
     "WINDY": {
-        "color": "0x9ae5ff",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0x13cc4e",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/WINDY.png"
     },
     "RAINY": {
-        "color": "0x027cbd",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0xd40028",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/RAINY.png"
     },
     "SNOWY": {
-        "color": "0xDceff9",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0x13cc4e",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/SNOWY.png"
     },
     "SAND STORM": {
-        "color": "0x8F7057",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0xd40028",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/SAND%20STORM.png"
     },
     "HELL": {
-        "color": "0xff4719",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0x13cc4e",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/HELL.png"
     },
     "STARFALL": {
-        "color": "0x011ab7",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0xd40028",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/STARFALL.png"
     },
     "CORRUPTION": {
-        "color": "0x6d32a8",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0x13cc4e",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/CORRUPTION.png"
     },
     "NULL": {
-        "color": "0x838383",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0xd40028",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/NULL.png"
     },
     "GLITCHED": {
-        "color": "0xbfff00",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0x13cc4e",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/GLITCHED.png"
     },
     "DREAMSPACE": {
-        "color": "0xea9dda",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0xd40028",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/DREAMSPACE.png"
     },
     "CYBERSPACE": {
-        "color": "0x0A1A3D",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0x13cc4e",
+        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/CYBERSPACE.png"
     }
 }
+
 
 
 
