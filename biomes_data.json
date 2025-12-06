@@ -46,8 +46,13 @@
     "CYBERSPACE": {
         "color": "0xff0000",
         "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/CYBERSPACE.png"
+    },
+    "HEAVEN": {
+        "color": "0x00cc00",
+        "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Merry_Old_Santa_Claus_by_Thomas_Nast.jpg/500px-Merry_Old_Santa_Claus_by_Thomas_Nast.jpg"
     }
 }
+
 
 
 
