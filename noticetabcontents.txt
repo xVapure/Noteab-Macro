@@ -1,6 +1,9 @@
-If you're using an older version, please update!!
+If you're using an older version, please update!! Current version: v2.0.2
 
 PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
+
+# Coteab Macro v2.0.2, what's new?
+- Added auto updater, from now on you'll never have to update your macro manually again.
 
 # Coteab Macro v2.0.1, what's new?
 ## New features:
