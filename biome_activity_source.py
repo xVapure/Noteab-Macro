@@ -12,6 +12,8 @@ import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, \
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
+current_ver = "v2.0.2"
+
 def apply_fast_flags(version=None, force=False):
     config_paths = [
         "config.json",
@@ -891,7 +893,7 @@ class BiomePresence():
         icon_path = os.path.join(abslt_path, "NoteabBiomeTracker.ico")
 
         self.root = ttk.Window(themename=selected_theme)
-        self.set_title_threadsafe("Coteab Macro v2.0.1 (Idle)")
+        self.set_title_threadsafe(f"Coteab Macro {current_ver} (Idle)")
         self.root.geometry("1000x700")
         self.root.minsize(900, 600)
         try:
@@ -1061,7 +1063,7 @@ class BiomePresence():
         self.save_config()
 
     def check_for_updates(self):
-        current_version = "v2.0.1"
+        current_version = current_ver
         dont_ask_again = self.config.get("dont_ask_for_update", False)
 
         if dont_ask_again: return
@@ -1483,7 +1485,7 @@ class BiomePresence():
                 except Exception:
                     pass
             try:
-                self.set_title_threadsafe("Coteab Macro v2.0.1 (Remote bot starting)")
+                self.set_title_threadsafe(f"Coteab Macro {current_ver} (Remote bot starting)")
             except Exception:
                 pass
             try:
@@ -2064,7 +2066,7 @@ class BiomePresence():
             embed = {
                 "description": f"> ## Remote Screenshot",
                 "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.1", "icon_url": icon_url},
+                "footer": {"text": f"Coteab Macro {current_ver}", "icon_url": icon_url},
                 "timestamp": current_utc_time
             }
             for webhook_url in urls:
@@ -2578,7 +2580,7 @@ class BiomePresence():
             webbrowser.open_new("https://github.com/xVapure/Noteab-Macro/releases/latest")
 
         def _check_latest():
-            current_version = "v2.0.1"
+            current_version = current_ver
             try:
                 response = requests.get("https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest", timeout=10)
                 response.raise_for_status()
@@ -2875,7 +2877,7 @@ class BiomePresence():
             embed = {
                 "description": f"> ## Daily Quests Screenshot",
                 "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.1", "icon_url": icon_url},
+                "footer": {"text": f"Coteab Macro {current_ver}", "icon_url": icon_url},
                 "timestamp": current_utc_time
             }
             for webhook_url in urls:
@@ -4405,7 +4407,7 @@ class BiomePresence():
                 thread.start()
             self.perform_anti_afk_action()
 
-            self.set_title_threadsafe("""Coteab Macro v2.0.1 (Running)""")
+            self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
             self.send_webhook_status("Macro started!", color=0x64ff5e)
             try:
                 if getattr(self, "remote_access_var", None) and self.remote_access_var.get():
@@ -4442,7 +4444,7 @@ class BiomePresence():
             self.saved_session += elapsed_time
             self.start_time = None
             self.stop_sent = True
-            self.set_title_threadsafe("Coteab Macro v2.0.1 (Stopped)")
+            self.set_title_threadsafe(f"Coteab Macro {current_ver} (Stopped)")
             try:
                 self.stop_remote_bot()
             except Exception:
@@ -4834,7 +4836,7 @@ class BiomePresence():
                                 self.terminate_roblox_processes()
                                 self.send_webhook_status(f"Reconnecting to your server. hold on bro", color=0xffff00)
                                 self.set_title_threadsafe(
-                                    """Coteab Macro v2.0.1 (Reconnecting)""")
+                                    f"""Coteab Macro {current_ver} (Reconnecting)""")
                                 try:
                                     os.startfile(roblox_deep_link)
                                 except Exception:
@@ -4878,7 +4880,7 @@ class BiomePresence():
                 self.pause_reason = reason
             self.reconnecting_state = True
             self.set_title_threadsafe(
-                """Coteab Macro v2.0.1 (Roblox Disconnected :c )""")
+                f"""Coteab Macro {current_ver} (Roblox Disconnected :c )""")
             if reason and not getattr(self, 'has_sent_disconnected_message', False):
                 try:
                     self.send_webhook_status(reason, color=0xff0000)
@@ -4904,7 +4906,7 @@ class BiomePresence():
                     self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
-            self.set_title_threadsafe("""Coteab Macro v2.0.1 (Running)""")
+            self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
             self.save_config()
         except Exception as e:
             self.error_logging(e, "_resume_timer_after_reconnect")
@@ -5132,7 +5134,7 @@ class BiomePresence():
     def reconnect_check_start_button(self):
         try:
             self.set_title_threadsafe(
-                """Coteab Macro v2.0.1 (Reconnecting - In Main Menu)""")
+                f"""Coteab Macro {current_ver} (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
             max_clicks = 25
             failed_clicks = 0
@@ -5152,7 +5154,7 @@ class BiomePresence():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
-                    self.set_title_threadsafe("""Coteab Macro v2.0.1 (Running)""")
+                    self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
                     return True  # yay joins!!
 
                 print("Still in Main Menu, clicking again...")
@@ -5380,7 +5382,7 @@ class BiomePresence():
             embed = {
                 "description": f"> ## Periodical Inventory Screenshot",
                 "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.1", "icon_url": icon_url},
+                "footer": {"text": f"Coteab Macro {current_ver}", "icon_url": icon_url},
                 "timestamp": current_utc_time
             }
             for webhook_url in urls:
@@ -5412,7 +5414,7 @@ class BiomePresence():
             embed = {
                 "description": f"> ## Periodical Aura Screenshot",
                 "color": 0xffffff,
-                "footer": {"text": "Coteab Macro v2.0.1", "icon_url": icon_url},
+                "footer": {"text": f"Coteab Macro {current_ver}", "icon_url": icon_url},
                 "timestamp": current_utc_time
             }
             for webhook_url in urls:
@@ -5866,7 +5868,7 @@ class BiomePresence():
             "description": description,
             "color": biome_color,
             "footer": {
-                "text": """Coteab Macro v2.0.1""",
+                "text": f"""Coteab Macro {current_ver}""",
                 "icon_url": icon_url
             },
             "timestamp": current_utc_time
@@ -5922,7 +5924,7 @@ class BiomePresence():
                 {"name": "Detection Source", "value": source.upper()}
             ],
             "footer": {
-                "text": """Coteab Macro v2.0.1""",
+                "text": f"""Coteab Macro {current_ver}""",
                 "icon_url": icon_url
             }
         }
@@ -6007,7 +6009,7 @@ class BiomePresence():
             "color": 000000,
             "thumbnail": {"url": eden_image},
             "footer": {
-                "text": """Coteab Macro v2.0.1""",
+                "text": f"""Coteab Macro {current_ver}""",
                 "icon_url": icon_url
             }
         }
@@ -6051,7 +6053,7 @@ class BiomePresence():
             "description": description,
             "color": color,
             "footer": {
-                "text": """Coteab Macro v2.0.1""",
+                "text": f"""Coteab Macro {current_ver}""",
                 "icon_url": icon_url
             },
             "timestamp": current_utc_time
@@ -6108,7 +6110,7 @@ class BiomePresence():
                 "color": embed_color,
                 "timestamp": current_utc_time,
                 "footer": {
-                    "text": "Coteab Macro v2.0.1",
+                    "text": f"Coteab Macro {current_ver}",
                     "icon_url": icon_url
                 },
                 "fields": [
@@ -6145,7 +6147,7 @@ class BiomePresence():
                 "color": 0xff0000,
                 "timestamp": current_utc_time,
                 "footer": {
-                    "text": "Coteab Macro v2.0.1",
+                    "text": f"Coteab Macro {current_ver}",
                     "icon_url": icon_url
                 },
                 "fields": [
@@ -6581,7 +6583,7 @@ finally:
                     bp.start_time = None
                     bp.detection_running = False
                     bp.stop_sent = True
-                    bp.set_title_threadsafe("""Coteab Macro v2.0.1 (Stopped)""")
+                    bp.set_title_threadsafe(f"""Coteab Macro {current_ver} (Stopped)""")
                     bp.send_macro_summary(last24h_seconds)
                     bp.save_config()
 
