@@ -1,31 +1,22 @@
-If you're using an older version, please update!! Current version: v2.0.2
-
-PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
-
-# Coteab Macro v2.0.2, what's new?
-- Added auto updater, from now on you'll never have to update your macro manually again.
-
-# Coteab Macro v2.0.1, what's new?
-## New features:
-- CYBERSPACE biome will force @ everyone ping from now on.
-## Bug fixes:
-- Reverted to the old typing method because some reports saying it's less stable.
-
-# Coteab Macro v2.0.0, what's new?
-## New features 
-- Potion crafter is back!!! But is 100x better now <:aga:1425644212350746625> 
-- Periodical aura, quest, inventory screenshot. 📸 
-- Screenshot for aura detection in auras tab <:67tuff:1427603622417530963> 
-- Auto claim daily quests 📋 
-- OCR failsafe full implementation!! The macro will now NEVER use your potions on accident if you have this setting on 🔐 
-- REMOTE ACCESS CONTROL! REMOTELY CONTROL YOUR SOL'S RNG EXPERIENCE WITHOUT HAVING TO BE AT HOME AT ALL 🎉 use `/help` to begin.
-## Misc/reworks
-- Reworked the way the macro types stuff into the search bar to be more reliable. ⌨️ 
-- Introduced new biomes, merchants embed, since the link is now masked biomes cannot be unintentionally leaked anymore ☀️ 
-- Making the macro delete the screenshots in the "images" folder after a session to reduce size 😏 
-- Reworked a tiny bit of biomes detection ⛈️ 
-## Bug fixes
-- Attempted to fix not being able to detect Jester bug 🎭
-- Fixed the bug where you cannot buy 2 items next to each other in a merchant 🛍️ 
-- Removed Herobrine <:67mason:1427603671407005766>
-
+THE MACRO VERSION YOU'RE USING WILL NO LONGER DETECT BIOMES AND NO LONGER RECEIVE ANY FUTURE UPDATES, THESE CHANGE WILL OCCUR AROUND DECEMBER 20 2025. PLEASE UPDATE TO A NEWER VERSION AS SOON AS POSSIBLE!!
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
+https://github.com/xVapure/Noteab-Macro/releases/tag/v2.0.3
