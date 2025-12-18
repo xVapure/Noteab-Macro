@@ -2,6 +2,11 @@ If you're using an older version, please update!! Current version: v2.0.2
 
 PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
 
+# v2.0.3, what's new?
+- Fixed the chronical issue where the macro still misuses your potions despite having OCR failsafe on.
+- Moved "Auto Merchants" from "Misc" to "Merchants".
+- Credits to "erlking.heathcliff." for reporting a serious bug and helped me in the process of testing.
+
 # Coteab Macro v2.0.2, what's new?
 - Added auto updater, from now on you'll never have to update your macro manually again.
 
@@ -27,4 +32,5 @@ PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/
 ## Bug fixes
 - Attempted to fix not being able to detect Jester bug 🎭
 - Fixed the bug where you cannot buy 2 items next to each other in a merchant 🛍️ 
+
 - Removed Herobrine <:67mason:1427603671407005766>
