@@ -2,56 +2,9 @@
     "NORMAL": {
         "color": "0xd40028",
         "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "WINDY": {
-        "color": "0xff0000",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "RAINY": {
-        "color": "0x00cc00",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "SNOWY": {
-        "color": "0xff0000",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "SAND STORM": {
-        "color": "0x00cc00",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "HELL": {
-        "color": "0xff0000",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "STARFALL": {
-        "color": "0x00cc00",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "CORRUPTION": {
-        "color": "0xff0000",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "NULL": {
-        "color": "0x00cc00",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "GLITCHED": {
-        "color": "0xff0000",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "DREAMSPACE": {
-        "color": "0x00cc00",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "CYBERSPACE": {
-        "color": "0xff0000",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
-    },
-    "HEAVEN": {
-        "color": "0x00cc00",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7BE575BFDF-1FE2-4922-A600-E1BCA0D1C967%7D.png"
     }
 }
+
 
 
 
