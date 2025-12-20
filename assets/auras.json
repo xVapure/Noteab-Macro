@@ -132,5 +132,15 @@
     "NYCTOPHOBIA": {"rarity": 1011111010, "exclusive_biome": ["None", 1]},
     "Antivirus": {"rarity": 62500000, "exclusive_biome": ["CYBERSPACE", 2]},
     "Illusionary": {"rarity": 10000000, "exclusive_biome": ["CYBERSPACE", 2]},
+    "ENCASE": {"rarity": 230000000, "exclusive_biome": ["AURORA", 2]},
+    "CyroFang": {"rarity": 380000000, "exclusive_biome": ["AURORA", 2]},
+    "NORTHERN": {"rarity": 405000000, "exclusive_biome": ["AURORA", 2]},
+    "Sovereign_Frostveil": {"rarity": 1000000000, "exclusive_biome": ["AURORA", 2]},
+    "NorthPole": {"rarity": 45000000, "exclusive_biome": ["AURORA", 2]},
+    "Gingerbread": {"rarity": 3750000, "exclusive_biome": ["AURORA", 2]},
+    "Jackfrost": {"rarity": 4700000, "exclusive_biome": ["AURORA", 2]},
+    "Frostwood": {"rarity": 24500000, "exclusive_biome": ["AURORA", 2]},
+    "LostSoul_Wander": {"rarity": 9400000, "exclusive_biome": ["AURORA", 2]},
+    "SkyBurst": {"rarity": 60000000, "exclusive_biome": ["AURORA", 2]},
     "Diddy": {"rarity": 67, "exclusive_biome": ["DIDDY BIOME", 676767]}
 }
