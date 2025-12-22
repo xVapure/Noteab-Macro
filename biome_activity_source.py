@@ -12,7 +12,7 @@ import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, \
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
-current_ver = "v2.0.3"
+current_ver = "v2.0.3-Hotfix2"
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
@@ -5751,6 +5751,7 @@ class BiomePresence():
             time.sleep(0.65)
 
             self.autoit_hold_left_click(merchant_dialogue_box[0], merchant_dialogue_box[1], holdTime=4250)
+            self.Global_MouseClick(merchant_open_button[0], merchant_open_button[1], click=3)
 
             for _ in range(6):
                 if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.config.get(
