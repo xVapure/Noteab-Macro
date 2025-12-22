@@ -1,5 +1,8 @@
 PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
 
+# v2.0.3-Hotfix2 for Christmas update and stupid Lime's box
+- Self explanatory it's just a fix for the Lime message box blocking (literally a 1 line of code fix I was just too lazy to release a fix :pray:)
+
 # v2.0.3, what's new?
 - Fixed the chronical issue where the macro still misuses your potions despite having OCR failsafe on.
 - Moved "Auto Merchants" from "Misc" to "Merchants".
@@ -31,3 +34,4 @@ PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/
 - Attempted to fix not being able to detect Jester bug 🎭
 - Fixed the bug where you cannot buy 2 items next to each other in a merchant 🛍️ 
 - Removed Herobrine <:67mason:1427603671407005766>
+
