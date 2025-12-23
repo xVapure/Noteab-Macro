@@ -2725,7 +2725,7 @@ class BiomePresence():
         self.record_rarest_biome_var = ttk.BooleanVar(value=self.config.get("record_rare_biome", False))
         record_rarest_biome_check = ttk.Checkbutton(
             hp2_frame,
-            text="Glitched/Dreamspace Biome clip keybind\n(require 1 of 2 recorders: Medal, Xbox Gaming Bar)",
+            text="Glitched/Dreamspace Biome clip keybind\n(require 1 of 3 recorders: Medal, Xbox Gaming Bar, Radeon Instant Replay)",
             variable=self.record_rarest_biome_var,
             command=self.save_config
         )
@@ -3365,7 +3365,7 @@ class BiomePresence():
         self.enable_aura_record_var = ttk.BooleanVar(value=self.config.get("enable_aura_record", False))
         enable_aura_record_check = ttk.Checkbutton(
             aura_frame,
-            text="Aura Clipping Keybind\n(require 1 of 2 recorders: Medal, Xbox Gaming Bar)",
+            text="Aura Clipping Keybind\n(require 1 of 3 recorders: Medal, Xbox Gaming Bar, Radeon Instant Replay)",
             variable=self.enable_aura_record_var,
             command=self.save_config
         )
