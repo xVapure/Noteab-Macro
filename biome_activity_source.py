@@ -12,7 +12,7 @@ import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, \
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
-current_ver = "v2.0.3-Hotfix2"
+current_ver = "v2.0.4"
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
@@ -413,6 +413,9 @@ class BiomePresence():
         self.reconnecting_state = False
         self.timer_paused_by_disconnect = False
         self.register_shutdown_handler()
+        self._snowman_running = False
+        self.initialize_paths_and_files()
+        self.last_snowman_claim = datetime.min
         screenshot_dir = os.path.join(os.getcwd(), "images")
         try:
             if os.path.exists(screenshot_dir):
@@ -547,6 +550,36 @@ class BiomePresence():
 
         return data
 
+    def initialize_paths_and_files(self):
+        try:
+            paths_folder = os.path.join(os.getcwd(), "paths")
+            if not os.path.exists(paths_folder):
+                os.makedirs(paths_folder, exist_ok=True)
+                print(f"Created paths folder: {paths_folder}")
+            
+            snowman_file = os.path.join(paths_folder, "snowman.json")
+            if not os.path.exists(snowman_file):
+                print("Downloading snowman.json file...")
+                try:
+                    response = requests.get(
+                        "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/paths/snowman.json",
+                        timeout=15
+                    )
+                    response.raise_for_status()
+                    
+                    with open(snowman_file, "w", encoding="utf-8") as f:
+                        f.write(response.text)
+                    
+                    print(f"Downloaded snowman.json to: {snowman_file}")
+                except Exception as e:
+                    self.error_logging(e, "Failed to download snowman.json file")
+                    print(f"Warning: Could not download snowman.json: {e}")
+            else:
+                print(f"snowman.json already exists at: {snowman_file}")
+                
+        except Exception as e:
+            self.error_logging(e, "Error in initialize_paths_and_files")
+            
     def load_notice_tab(self):
         url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/assets/noticetabcontents.txt"
         data = ""
@@ -740,6 +773,10 @@ class BiomePresence():
             "remote_access_enabled": self.remote_access_var.get() if hasattr(self, "remote_access_var") else self.config.get("remote_access_enabled", False),
             "remote_bot_token": self.remote_bot_token_var.get() if hasattr(self, "remote_bot_token_var") else self.config.get("remote_bot_token", ""),
             "remote_allowed_user_id": self.remote_allowed_user_id_var.get() if hasattr(self, "remote_allowed_user_id_var") else self.config.get("remote_allowed_user_id", ""),
+            "collections_button": self.config.get("collections_button", [30, 455]),
+            "exit_collections_button": self.config.get("exit_collections_button", [375, 124]),
+            "enable_snowman_path": self.enable_snowman_var.get() if hasattr(self, "enable_snowman_var") else self.config.get("enable_snowman_path", False),
+            "snowman_claim_interval": self.snowman_claim_interval_var.get() if hasattr(self, "snowman_claim_interval_var") else self.config.get("snowman_claim_interval", "15"),
         })
 
         if not config["auto_buff_glitched"]:
@@ -971,6 +1008,7 @@ class BiomePresence():
 
         notice_frame = ttk.Frame(content_frame)
         webhook_frame = ttk.Frame(content_frame)
+        pathing_frame = ttk.Frame(content_frame)
         misc_frame = ttk.Frame(content_frame)
         merchant_frame = ttk.Frame(content_frame)
         aura_webhook_frame = ttk.Frame(content_frame)
@@ -986,6 +1024,7 @@ class BiomePresence():
             "Notice": notice_frame,
             "Webhook": webhook_frame,
             "Remote Access": remote_access_frame,
+            "Pathing": pathing_frame,
             "Misc": misc_frame,
             "Merchant": merchant_frame,
             "Auras": aura_webhook_frame,
@@ -1003,6 +1042,7 @@ class BiomePresence():
 
         self.create_notice_tab(notice_frame)
         self.create_webhook_tab(webhook_frame)
+        self.create_pathing_tab(pathing_frame)
         self.create_misc_tab(misc_frame)
         self.create_other_features_tab(other_features_frame)
         self.create_customizations_tab(customizations_frame)
@@ -2609,6 +2649,64 @@ class BiomePresence():
 
         threading.Thread(target=_check_latest, daemon=True).start()
 
+    def create_pathing_tab(self, frame):
+        path_frame = ttk.LabelFrame(frame, text="Pathing")
+        path_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        open_btn = ttk.Button(path_frame, text="Open Pathing Calibration", command=self.open_pathing_calibration_window)
+        open_btn.pack(padx=3, pady=3, anchor="w")
+
+        self.enable_snowman_var = ttk.BooleanVar(value=self.config.get("enable_snowman_path", False))
+        snowman_row = ttk.Frame(path_frame)
+        snowman_row.pack(fill="x", padx=3, pady=3)
+
+        snowman_check = ttk.Checkbutton(
+            snowman_row,
+            text="Enable snowman path",
+            variable=self.enable_snowman_var,
+            command=self.save_config
+        )
+        snowman_check.pack(side="left", padx=(0,200))
+        ttk.Label(snowman_row, text="Claiming interval (minutes):").pack(side="left")
+        self.snowman_claim_interval_var = ttk.StringVar(value=str(self.config.get("snowman_claim_interval", "15")))
+        interval_entry = ttk.Entry(snowman_row, textvariable=self.snowman_claim_interval_var, width=6)
+        interval_entry.pack(side="left", padx=3)
+        interval_entry.bind("<FocusOut>", lambda event: self.save_config())
+
+        self.pathing_coord_vars = {}
+
+    def open_pathing_calibration_window(self):
+        win = ttk.Toplevel(self.root)
+        win.title("Pathing Calibration")
+        win.geometry("420x160")
+        positions = [
+            ("Collection Menu", "collections_button"),
+            ("Exit Collection", "exit_collections_button")
+        ]
+        self.pathing_coord_vars = {}
+        for i, (label_text, config_key) in enumerate(positions):
+            ttk.Label(win, text=f"{label_text} (X, Y):").grid(row=i, column=0, padx=5, pady=8, sticky="w")
+            x_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[0])
+            y_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[1])
+            self.pathing_coord_vars[config_key] = (x_var, y_var)
+            ttk.Entry(win, textvariable=x_var, width=8).grid(row=i, column=1, padx=5, pady=8)
+            ttk.Entry(win, textvariable=y_var, width=8).grid(row=i, column=2, padx=5, pady=8)
+            ttk.Button(win, text="Select Pos", command=lambda key=config_key: self.start_capture_thread(key, self.pathing_coord_vars)).grid(row=i, column=3, padx=5, pady=8)
+        save_btn = ttk.Button(win, text="Save Calibration", command=lambda: self.save_pathing_coordinates(win))
+        save_btn.grid(row=len(positions), column=0, columnspan=4, pady=10)
+
+    def save_pathing_coordinates(self, win):
+        for config_key, vars in self.pathing_coord_vars.items():
+            self.config[config_key] = [vars[0].get(), vars[1].get()]
+        self.save_config()
+        try:
+            win.destroy()
+        except Exception:
+            pass
+        try:
+            messagebox.showinfo("Calibration Saved", f"Saved pathing coordinates.")
+        except Exception:
+            pass
+
     def create_misc_tab(self, frame):
         hp2_frame = ttk.Frame(frame)
         hp2_frame.pack(pady=10)
@@ -2989,6 +3087,154 @@ class BiomePresence():
 
         except Exception as e:
             self.error_logging(e, "Error in perform_quest_claim_sequence_sync")
+
+    def snowman_path_loop(self):
+        while self.detection_running:
+            try:
+                if not getattr(self, "enable_snowman_var", None) or not self.enable_snowman_var.get():
+                    time.sleep(2)
+                    continue
+                
+                try:
+                    interval_min = float(self.snowman_claim_interval_var.get())
+                except Exception:
+                    interval_min = 15.0
+                
+                if (datetime.now() - self.last_snowman_claim) < timedelta(minutes=interval_min):
+                    time.sleep(2)
+                    continue
+                if (getattr(self, "_br_sc_running", False) or 
+                    getattr(self, "_mt_running", False) or 
+                    getattr(self, "auto_pop_state", False) or 
+                    getattr(self, "on_auto_merchant_state", False) or
+                    getattr(self, "config", {}).get("enable_auto_craft", False)):
+                    time.sleep(2)
+                    continue
+                self._action_scheduler.enqueue_action(
+                    self._perform_snowman_path_sequence_impl,
+                    name="snowman_path",
+                    priority=0
+                )
+                
+                self.last_snowman_claim = datetime.now()
+                
+            except Exception as e:
+                self.error_logging(e, "Error in snowman_path_loop")
+            time.sleep(1)
+
+    def _perform_snowman_path_sequence_impl(self):
+        try:
+            if not getattr(self, "enable_snowman_var", None) or not self.enable_snowman_var.get():
+                return
+            if not self.check_roblox_procs():
+                return
+            
+            self._snowman_running = True
+            
+            for _ in range(4):
+                if not self.detection_running:
+                    self._snowman_running = False
+                    return
+                self.activate_roblox_window()
+                time.sleep(0.15)
+            keyboard.press_and_release('esc')
+            time.sleep(0.3)
+            keyboard.press_and_release('r')
+            time.sleep(0.3)
+            keyboard.press_and_release('enter')
+            time.sleep(2)
+            collections_button = self.config.get("collections_button", [0, 0])
+            if collections_button and collections_button[0]:
+                try:
+                    autoit.mouse_click("left", collections_button[0], collections_button[1], 1, speed=3)
+                except Exception:
+                    try:
+                        self.Global_MouseClick(collections_button[0], collections_button[1])
+                    except Exception:
+                        pass
+                time.sleep(0.3)
+            exit_collections_button = self.config.get("exit_collections_button", [0, 0])
+            if exit_collections_button and exit_collections_button[0]:
+                try:
+                    autoit.mouse_click("left", exit_collections_button[0], exit_collections_button[1], 1, speed=3)
+                except Exception:
+                    try:
+                        self.Global_MouseClick(exit_collections_button[0], exit_collections_button[1])
+                    except Exception:
+                        pass
+                time.sleep(0.3)
+            current_x, current_y = autoit.mouse_get_pos()
+            autoit.mouse_down("right")
+            time.sleep(0.1)
+            autoit.mouse_move(current_x, current_y + 75, 0) 
+            time.sleep(0.1)
+            autoit.mouse_up("right")
+            time.sleep(0.2)
+            snowman_file = os.path.join("paths", "snowman.json")
+            if os.path.exists(snowman_file):
+                self._run_snowman_macro(snowman_file)
+            
+        except Exception as e:
+            self.error_logging(e, "Error in _perform_snowman_path_sequence_impl")
+        finally:
+            self._snowman_running = False
+
+    def _run_snowman_macro(self, json_file_path):
+        try:
+            with open(json_file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            self.error_logging(e, f"Failed to load snowman macro from {json_file_path}")
+            return
+        
+        events = data.get("events", [])
+        if not events:
+            return
+        events.sort(key=lambda ev: ev.get("t", 0.0))
+        
+        start_time = time.perf_counter()
+        last_t = 0.0
+        for ev in events:
+            if not self.detection_running or not getattr(self, "enable_snowman_var", None) or not self.enable_snowman_var.get():
+                break
+            
+            t = float(ev.get("t", 0.0))
+            dt = t - last_t
+            if dt > 0:
+                end = time.perf_counter() + dt
+                while True:
+                    if not self.detection_running or not getattr(self, "enable_snowman_var", None) or not self.enable_snowman_var.get():
+                        break
+                    rem = end - time.perf_counter()
+                    if rem <= 0:
+                        break
+                    time.sleep(min(rem, 0.01))
+            
+            typ = ev.get("type")
+            try:
+                if typ == "mouse_move":
+                    autoit.mouse_move(int(ev["x"]), int(ev["y"]), 0)
+                elif typ == "mouse_down":
+                    b = ev.get("button", "left")
+                    autoit.mouse_down(b)
+                elif typ == "mouse_up":
+                    b = ev.get("button", "left")
+                    autoit.mouse_up(b)
+                elif typ == "mouse_wheel":
+                    delta = int(ev.get("delta", 0))
+                    if delta != 0:
+                        mouse.wheel(delta)
+                elif typ == "key_down":
+                    k = ev.get("key")
+                    if k not in ("f3", "f4"):
+                        keyboard.press(k)
+                elif typ == "key_up":
+                    k = ev.get("key")
+                    if k not in ("f3", "f4"):
+                        keyboard.release(k)
+            except Exception:
+                pass
+            last_t = t
 
     def perform_quest_reroll(self, quest_index):
         try:
@@ -4412,7 +4658,8 @@ class BiomePresence():
                 (self.aura_loop_check, "Aura Check"),
                 (self.merchant_log_check, "Merchant Check"),
                 (self.anti_afk_loop, "Anti-AFK"),
-                (self.quest_claim_loop, "Quest Claim")
+                (self.quest_claim_loop, "Quest Claim"),
+                (self.snowman_path_loop, "Snowman Path")
             ]
 
             for thread_func, name in threads:
@@ -4458,6 +4705,7 @@ class BiomePresence():
             self.start_time = None
             self.stop_sent = True
             self.set_title_threadsafe(f"Coteab Macro {current_ver} (Stopped)")
+            self._snowman_running = False
             try:
                 self.stop_remote_bot()
             except Exception:
