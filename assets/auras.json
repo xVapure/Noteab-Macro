@@ -48,7 +48,7 @@
     "Origin_Onion": {"rarity": 8000000, "exclusive_biome": ["None", 1]},
     "Hades": {"rarity": 6666666, "exclusive_biome": ["HELL", 6]},
     "Celestial_Divine": {"rarity": 7000000, "exclusive_biome": ["None", 1]},
-    "Anubis": {"rarity": 7200000, "exclusive_biome": ["SANDSTORM", 4]},
+    "Anubis": {"rarity": 7200000, "exclusive_biome": ["SAND STORM", 4]},
     "HYPER-VOLT": {"rarity": 7500000, "exclusive_biome": ["None", 1]},
     "Velocity": {"rarity": 7630000, "exclusive_biome": ["None", 1]},
     "Nautilus_Lost": {"rarity": 7700000, "exclusive_biome": ["None", 1]},
@@ -76,7 +76,7 @@
     "Runic": {"rarity": 50000000, "exclusive_biome": ["None", 1]},
     "Twilight_Iridescent Memory": {"rarity": 60000000, "exclusive_biome": ["None", 1]},
     "Sentinel": {"rarity": 60000000, "exclusive_biome": ["None", 1]},
-    "Carriage": {"rarity": 80000000, "exclusive_biome": ["SANDSTORM", 4]},
+    "Carriage": {"rarity": 80000000, "exclusive_biome": ["SAND STORM", 4]},
     "WinterFantasy": {"rarity": 72000000, "exclusive_biome": ["SNOWY", 3]},
     "Sailor_Flying Dutchman": {"rarity": 80000000, "exclusive_biome": ["RAINY", 4]},
     "HARNESSED_Elements": {"rarity": 85000000, "exclusive_biome": ["None", 1]},
@@ -89,7 +89,7 @@
     "Exotic_Void": {"rarity": 299999999, "exclusive_biome": ["None", 1]},
     "Overture_History": {"rarity": 300000000, "exclusive_biome": ["None", 1]},
     "BLOODLUST": {"rarity": 300000000, "exclusive_biome": ["HELL", 6]},
-    "Atlas": {"rarity": 360000000, "exclusive_biome": ["SANDSTORM", 4]},
+    "Atlas": {"rarity": 360000000, "exclusive_biome": ["SAND STORM", 4]},
     "AbyssalHunter": {"rarity": 400000000, "exclusive_biome": ["RAINY", 4]},
     "GARGANTUA": {"rarity": 430000000, "exclusive_biome": ["STARFALL", 5]},
     "APOSTOLOS": {"rarity": 444000000, "exclusive_biome": ["None", 1]},
@@ -144,3 +144,4 @@
     "SkyBurst": {"rarity": 60000000, "exclusive_biome": ["AURORA", 2]},
     "Diddy": {"rarity": 67, "exclusive_biome": ["DIDDY BIOME", 676767]}
 }
+
