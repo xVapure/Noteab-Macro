@@ -12,7 +12,7 @@ import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, \
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
-current_ver = "v2.0.4-hotfix"
+current_ver = "v2.0.5"
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
@@ -200,6 +200,7 @@ def apply_fast_flags(version=None, force=False):
         except Exception as e:
             logging.exception("Error prompting restart: %s", e)
 
+rare_biomes = ["GLITCHED", "DREAMSPACE", "CYBERSPACE"]
 
 class SnippingWidget:
     def __init__(self, root, config_key=None, callback=None):
@@ -757,14 +758,11 @@ class BiomePresence():
             "claim_quest_button": self.config.get("claim_quest_button", self.config.get("claim_quest_button", [0, 0])),
             "quest_reroll_button": self.config.get("quest_reroll_button", self.config.get("quest_reroll_button", [0, 0])),
             "enable_potion_crafting": self.enable_potion_crafting_var.get(),
-            "potion_button1": [self.potion_button1_x.get(), self.potion_button1_y.get()],
-            "potion_search_bar1": [self.potion_search_x.get(), self.potion_search_y.get()],
-            "potion_button2": [self.potion_button2_x.get(), self.potion_button2_y.get()],
+            "potion_button1": self.config.get("potion_button1", [0, 0]),
+            "potion_search_bar1": self.config.get("potion_search_bar1", [0, 0]),
+            "potion_button2": self.config.get("potion_button2", [0, 0]),
             "potion_last_file": self.config.get("potion_last_file", ""),
             "enable_potion_crafting": self.enable_potion_crafting_var.get(),
-            "potion_button1": [self.potion_button1_x.get(), self.potion_button1_y.get()],
-            "potion_search_bar1": [self.potion_search_x.get(), self.potion_search_y.get()],
-            "potion_button2": [self.potion_button2_x.get(), self.potion_button2_y.get()],
             "potion_last_file": self.config.get("potion_last_file", ""),
             "enable_potion_switching": self.enable_potion_switching_var.get() if hasattr(self, "enable_potion_switching_var") else self.config.get("enable_potion_switching", False),
             "potion_switch_interval": self.potion_switch_interval_var.get() if hasattr(self, "potion_switch_interval_var") else self.config.get("potion_switch_interval", "60"),
@@ -777,6 +775,9 @@ class BiomePresence():
             "exit_collections_button": self.config.get("exit_collections_button", [375, 124]),
             "enable_snowman_path": self.enable_snowman_var.get() if hasattr(self, "enable_snowman_var") else self.config.get("enable_snowman_path", False),
             "snowman_claim_interval": self.snowman_claim_interval_var.get() if hasattr(self, "snowman_claim_interval_var") else self.config.get("snowman_claim_interval", "15"),
+            "reset_on_rare": self.reset_on_rare_var.get() if hasattr(self, "reset_on_rare_var") else self.config.get("reset_on_rare", False),
+            "teleport_back_to_limbo": self.teleport_back_to_limbo_var.get() if hasattr(self, "teleport_back_to_limbo_var") else self.config.get("teleport_back_to_limbo", False),
+
         })
 
         if not config["auto_buff_glitched"]:
@@ -845,6 +846,8 @@ class BiomePresence():
 
             # misc
             self.auto_pop_glitched_var.set(config.get("auto_pop_glitched", False))
+            if hasattr(self, "reset_on_rare_var"): self.reset_on_rare_var.set(config.get("reset_on_rare", False))
+            if hasattr(self, "teleport_back_to_limbo_var"): self.teleport_back_to_limbo_var.set(config.get("teleport_back_to_limbo", False))
             self.record_rarest_biome_var.set(config.get("record_rare_biome", False))
             self.rarest_biome_keybind_var.set(config.get("rare_biome_record_keybind", "shift + F8"))
             self.br_var.set(config.get("biome_randomizer", False))
@@ -885,18 +888,6 @@ class BiomePresence():
             self.jester_user_id_var.set(config.get("jester_user_id", ""))
             self.detect_merchant_no_mt_var.set(config.get("detect_merchant_no_mt", True))
             try:
-                if "potion_button1" in config:
-                    b1 = config.get("potion_button1", [0, 0])
-                    if hasattr(self, "potion_button1_x"): self.potion_button1_x.set(b1[0])
-                    if hasattr(self, "potion_button1_y"): self.potion_button1_y.set(b1[1])
-                if "potion_search_bar1" in config:
-                    s = config.get("potion_search_bar1", [0, 0])
-                    if hasattr(self, "potion_search_x"): self.potion_search_x.set(s[0])
-                    if hasattr(self, "potion_search_y"): self.potion_search_y.set(s[1])
-                if "potion_button2" in config:
-                    b2 = config.get("potion_button2", [0, 0])
-                    if hasattr(self, "potion_button2_x"): self.potion_button2_x.set(b2[0])
-                    if hasattr(self, "potion_button2_y"): self.potion_button2_y.set(b2[1])
                 if "potion_last_file" in config:
                     if hasattr(self, "potion_file_var"):
                         self.potion_file_var.set(config.get("potion_last_file", ""))
@@ -1008,6 +999,7 @@ class BiomePresence():
 
         notice_frame = ttk.Frame(content_frame)
         webhook_frame = ttk.Frame(content_frame)
+        macro_calibrations_frame = ttk.Frame(content_frame) 
         pathing_frame = ttk.Frame(content_frame)
         misc_frame = ttk.Frame(content_frame)
         merchant_frame = ttk.Frame(content_frame)
@@ -1023,6 +1015,7 @@ class BiomePresence():
         frames = {
             "Notice": notice_frame,
             "Webhook": webhook_frame,
+            "Macro Calibrations": macro_calibrations_frame, 
             "Remote Access": remote_access_frame,
             "Pathing": pathing_frame,
             "Misc": misc_frame,
@@ -1042,6 +1035,7 @@ class BiomePresence():
 
         self.create_notice_tab(notice_frame)
         self.create_webhook_tab(webhook_frame)
+        self.create_macro_calibrations_tab(macro_calibrations_frame)  
         self.create_pathing_tab(pathing_frame)
         self.create_misc_tab(misc_frame)
         self.create_other_features_tab(other_features_frame)
@@ -1162,7 +1156,7 @@ class BiomePresence():
                                      foreground="red")
         silly_note_label.grid(row=0, columnspan=2, padx=(10, 0), pady=(10, 0))
 
-        biomes = [biome for biome in self.biome_data.keys() if biome not in ["GLITCHED", "DREAMSPACE", "CYBERSPACE", "NORMAL"]]
+        biomes = [biome for biome in self.biome_data.keys() if biome not in rare_biomes + ["NORMAL"]]
         window_height = max(475, len(biomes) * 43)
         settings_window.geometry(f"465x{window_height}")
 
@@ -1259,6 +1253,100 @@ class BiomePresence():
                                                                                           sticky="e", padx=10)
         ttk.Button(frame, text="Import Config", command=self.import_config).grid(row=2, column=2, pady=10, sticky="w",
                                                                                  padx=10)
+        
+    def create_macro_calibrations_tab(self, frame):
+        container = ttk.Frame(frame)
+        container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        canvas = ttk.Canvas(container)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        ttk.Label(scrollable_frame, text="Macro Calibrations (all the calibrations required inside the macro are listed here)", font=("Segoe UI", 12, "bold")).pack(pady=(0, 15))
+        ttk.Label(scrollable_frame, text="You don't need to redo your calibrations, it's here for easier navigation :)", font=("Segoe UI", 9)).pack(pady=(0, 15))
+        placeholder_link = ttk.Label(
+            scrollable_frame, 
+            text="Click me if you have no idea on how to calibrate! (Tutorial)", 
+            foreground="royalblue", 
+            cursor="hand2",
+            font=('Segoe UI', 9, 'underline')
+        )
+        placeholder_link.pack(anchor="w", pady=(0, 15))
+        placeholder_link.bind("<Button-1>", lambda e: webbrowser.open_new("https://www.youtube.com/watch?v=y3gocH9Hd18"))
+
+        calib_frame = ttk.Frame(scrollable_frame)
+        calib_frame.pack(fill="x", padx=10)
+
+        calib_frame = ttk.Frame(scrollable_frame)
+        calib_frame.pack(fill="x", padx=10)
+
+        pathing_btn = ttk.Button(
+            calib_frame,
+            text="Pathing Calibration",
+            command=self.open_pathing_calibration_window,
+            width=30
+        )
+        pathing_btn.grid(row=0, column=0, padx=5, pady=10, sticky="w")
+        ttk.Label(calib_frame, text="Calibrate collection menu positions").grid(row=0, column=1, padx=10, pady=10, sticky="w")
+
+        quest_btn = ttk.Button(
+            calib_frame,
+            text="Quest Claim Calibration",
+            command=self.open_quest_calibration_window,
+            width=30
+        )
+        quest_btn.grid(row=1, column=0, padx=5, pady=10, sticky="w")
+        ttk.Label(calib_frame, text="Calibrate daily quest positions").grid(row=1, column=1, padx=10, pady=10, sticky="w")
+
+        merchant_btn = ttk.Button(
+            calib_frame,
+            text="Merchant Calibrations",
+            command=self.open_merchant_calibration_window,
+            width=30
+        )
+        merchant_btn.grid(row=2, column=0, padx=5, pady=10, sticky="w")
+        ttk.Label(calib_frame, text="Calibrate merchant positions and OCR regions").grid(row=2, column=1, padx=10, pady=10, sticky="w")
+
+        potion_btn = ttk.Button(
+            calib_frame,
+            text="Potion Craft Calibration",
+            command=self.open_potion_craft_calibration_window,
+            width=30
+        )
+        potion_btn.grid(row=3, column=0, padx=5, pady=10, sticky="w")
+        ttk.Label(calib_frame, text="Calibrate potion crafting positions").grid(row=3, column=1, padx=10, pady=10, sticky="w")
+
+        glitched_btn = ttk.Button(
+            calib_frame,
+            text="Enable Buff Calibration",
+            command=self.open_glitched_buff_calibration_window,
+            width=30
+        )
+        glitched_btn.grid(row=4, column=0, padx=5, pady=10, sticky="w")
+        ttk.Label(calib_frame, text="Calibrate enable buff when Glitched positions").grid(row=4, column=1, padx=10, pady=10, sticky="w")
+
+        inventory_btn = ttk.Button(
+            calib_frame,
+            text="Inventory Click Calibration",
+            command=self.open_assign_inventory_window,
+            width=30
+        )
+        inventory_btn.grid(row=5, column=0, padx=5, pady=10, sticky="w")
+        ttk.Label(calib_frame, text="Calibrate inventory and item usage positions").grid(row=5, column=1, padx=10, pady=10, sticky="w")
+        calib_frame.grid_columnconfigure(0, weight=0)
+        calib_frame.grid_columnconfigure(1, weight=1)
+
     def create_remote_access_tab(self, frame):
         self.remote_access_var = ttk.BooleanVar(value=self.config.get("remote_access_enabled", False))
         en_cb = ttk.Checkbutton(frame, text="Enable Remote Access Control", variable=self.remote_access_var, command=self._remote_access_toggle)
@@ -2203,28 +2291,21 @@ class BiomePresence():
         )
         enable_buff_glitched_check.pack(anchor="w", padx=10, pady=10)
 
-        self.glitched_buff_frame = ttk.Frame(frame)
-        if self.enable_buff_glitched_var.get():
-            self.glitched_buff_frame.pack(anchor="w", padx=30, pady=5)
+        self.reset_on_rare_var = ttk.BooleanVar(value=self.config.get("reset_on_rare", False))
+        reset_on_rare_check = ttk.Checkbutton(frame,
+                                            text="Reset character when there's a rare biome",
+                                            variable=self.reset_on_rare_var,
+                                            command=self.toggle_reset_rare_frame)
+        reset_on_rare_check.pack(anchor="w", padx=10, pady=10)
 
-        self.glitched_coord_vars = {}
-        keys = [
-            ("Calibrate Menu Button", "glitched_menu_button"),
-            ("Calibrate Settings Button", "glitched_settings_button"),
-            ('Calibrate "Buff Enable"', "glitched_buff_enable_button")
-        ]
-
-        for i, (label_text, config_key) in enumerate(keys):
-            x_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[0])
-            y_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[1])
-            self.glitched_coord_vars[config_key] = (x_var, y_var)
-
-            btn = ttk.Button(self.glitched_buff_frame, text=label_text,
-                            command=lambda k=config_key: self.capture_single_click(k))
-            btn.grid(row=0, column=i, padx=5, pady=2)
-
-            ttk.Entry(self.glitched_buff_frame, textvariable=x_var, width=8).grid(row=1, column=i, padx=5, pady=2)
-            ttk.Entry(self.glitched_buff_frame, textvariable=y_var, width=8).grid(row=2, column=i, padx=5, pady=2)
+        self.teleport_back_to_limbo_var = ttk.BooleanVar(value=self.config.get("teleport_back_to_limbo", False))
+        self.teleport_back_to_limbo_check = ttk.Checkbutton(frame,
+                                                            text="Teleport back to Limbo when rare biome ends",
+                                                            variable=self.teleport_back_to_limbo_var,
+                                                            command=self.save_config)
+        self.teleport_back_to_limbo_check.pack(anchor="w", padx=10, pady=10)
+        if not self.reset_on_rare_var.get():
+            self.teleport_back_to_limbo_check.pack_forget()
 
     def create_customizations_tab(self, frame):
         btn_frame = ttk.Frame(frame)
@@ -2397,9 +2478,16 @@ class BiomePresence():
 
     def toggle_glitched_buff_frame(self):
         if self.enable_buff_glitched_var.get():
-            self.glitched_buff_frame.pack(anchor="w", padx=30, pady=5)
+            self.glitched_buff_frame.pack(anchor="w", padx=10, pady=1)
         else:
             self.glitched_buff_frame.pack_forget()
+        self.save_config()
+
+    def toggle_reset_rare_frame(self):
+        if self.reset_on_rare_var.get():
+            self.teleport_back_to_limbo_check.pack(anchor="w", padx=10, pady=10)
+        else:
+            self.teleport_back_to_limbo_check.pack_forget()
         self.save_config()
 
     def toggle_ocr_failsafe(self):
@@ -2502,6 +2590,60 @@ class BiomePresence():
                 time.sleep(0.67)
         except Exception as e:
             self.error_logging(e, "Error in perform_glitched_enable_buff")
+
+    def _reset_on_rare_impl(self):
+        try:
+            if not self.detection_running or self.reconnecting_state:
+                return
+            for _ in range(4):
+                if not self.detection_running:
+                    return
+                self.activate_roblox_window()
+                time.sleep(0.15)
+            keyboard.press_and_release('esc')
+            time.sleep(0.3)
+            keyboard.press_and_release('r')
+            time.sleep(0.3)
+            keyboard.press_and_release('enter')
+        except Exception:
+            pass
+
+    def _teleport_crack_impl(self):
+        try:
+            if not self.detection_running or self.reconnecting_state:
+                return
+            inventory_menu = self.config.get("inventory_menu", [36, 535])
+            items_tab = self.config.get("items_tab", [1272, 329])
+            search_bar = self.config.get("search_bar", [855, 358])
+            first_item_slot = self.config.get("first_item_slot", [839, 434])
+            use_button = self.config.get("use_button", [710, 573])
+            inventory_close = self.config.get("inventory_close_button", [1418, 298])
+            amount_box = self.config.get("amount_box", [954, 429])
+
+            self.activate_roblox_window()
+            time.sleep(0.15)
+            self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
+            time.sleep(0.3 + float(self.click_delay_var.get()))
+            self.Global_MouseClick(items_tab[0], items_tab[1])
+            time.sleep(0.3 + float(self.click_delay_var.get()))
+            self.Global_MouseClick(search_bar[0], search_bar[1])
+            time.sleep(0.3 + float(self.click_delay_var.get()))
+            self.Global_MouseClick(amount_box[0], amount_box[1], click=2)
+            time.sleep(0.3 + float(self.click_delay_var.get()))
+            keyboard.send("ctrl+a")
+            time.sleep(0.06 + float(self.click_delay_var.get()))
+            keyboard.send("backspace")
+            time.sleep(0.3 + float(self.click_delay_var.get()))
+            autoit.send("crack")
+            time.sleep(0.45 + float(self.click_delay_var.get()))
+            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
+            time.sleep(0.25 + float(self.click_delay_var.get()))
+            self.Global_MouseClick(use_button[0], use_button[1])
+            time.sleep(0.3 + float(self.click_delay_var.get()))
+            self.Global_MouseClick(inventory_close[0], inventory_close[1])
+            time.sleep(0.2 + float(self.click_delay_var.get()))
+        except Exception as e:
+            self.error_logging(e, "Error in _teleport_crack_impl")
 
     def open_webhooks_settings(self):
         win = ttk.Toplevel(self.root)
@@ -2652,8 +2794,6 @@ class BiomePresence():
     def create_pathing_tab(self, frame):
         path_frame = ttk.LabelFrame(frame, text="Pathing")
         path_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        open_btn = ttk.Button(path_frame, text="Open Pathing Calibration", command=self.open_pathing_calibration_window)
-        open_btn.pack(padx=3, pady=3, anchor="w")
 
         self.enable_snowman_var = ttk.BooleanVar(value=self.config.get("enable_snowman_path", False))
         snowman_row = ttk.Frame(path_frame)
@@ -2888,51 +3028,6 @@ class BiomePresence():
         auto_claim_interval_entry = ttk.Entry(hp2_frame, textvariable=self.auto_claim_interval_var, width=6)
         auto_claim_interval_entry.grid(row=11, column=2, padx=5, pady=5, sticky="w")
         auto_claim_interval_entry.bind("<FocusOut>", lambda event: self.save_config())
-
-        self.quest_cal_frame = ttk.LabelFrame(hp2_frame, text="Quest Claim Calibration")
-        self.quest_cal_frame.grid(row=12, column=0, columnspan=3, sticky="w", padx=5, pady=6)
-
-        positions = [
-            ("Quest Menu (open quests)", "quest_menu"),
-            ("Quest 1 button", "quest1_button"),
-            ("Quest 2 button", "quest2_button"),
-            ("Quest 3 button", "quest3_button"),
-            ("Claim Quest button", "claim_quest_button"), 
-            ("Quest Reroll button", "quest_reroll_button"),
-        ]
-
-        self.quest_coord_vars = {}
-        for i, (label_text, config_key) in enumerate(positions):
-            lbl = ttk.Label(self.quest_cal_frame, text=f"{label_text} (X, Y):")
-            lbl.grid(row=i, column=0, padx=5, pady=3, sticky="w")
-            x_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[0])
-            y_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[1])
-            self.quest_coord_vars[config_key] = (x_var, y_var)
-            x_entry = ttk.Entry(self.quest_cal_frame, textvariable=x_var, width=6)
-            x_entry.grid(row=i, column=1, padx=5, pady=3)
-            y_entry = ttk.Entry(self.quest_cal_frame, textvariable=y_var, width=6)
-            y_entry.grid(row=i, column=2, padx=5, pady=3)
-            select_btn = ttk.Button(self.quest_cal_frame, text="Assign Click",
-                                    command=lambda key=config_key: self.capture_single_click(key))
-            select_btn.grid(row=i, column=3, padx=5, pady=3)
-
-        def _update_quest_cal_visibility(*args):
-            if self.auto_claim_quests_var.get():
-                try:
-                    self.quest_cal_frame.grid()
-                except Exception:
-                    pass
-            else:
-                try:
-                    self.quest_cal_frame.grid_remove()
-                except Exception:
-                    pass
-        self.auto_claim_quests_var.trace_add('write', _update_quest_cal_visibility)
-        if not self.auto_claim_quests_var.get():
-            try:
-                self.quest_cal_frame.grid_remove()
-            except Exception:
-                pass
 
     def send_quest_screenshot_webhook(self, screenshot_path):
         try:
@@ -3404,33 +3499,6 @@ class BiomePresence():
         enable_cb = ttk.Checkbutton(top_row, text="Enable potion crafting", variable=self.enable_potion_crafting_var,
                                     command=self.save_config)
         enable_cb.pack(side="left", padx=(0, 12))
-        calib_frame = ttk.Frame(frame_label)
-        calib_frame.pack(fill="x", padx=6, pady=(0, 8))
-
-        ttk.Label(calib_frame, text="Calibrate:").grid(row=0, column=0, padx=4, pady=4, sticky="w")
-        ttk.Label(calib_frame, text="Calibrate:").grid(row=0, column=0, padx=4, pady=4, sticky="w")
-        ttk.Label(calib_frame, text="Potion menu search bar(X,Y):").grid(row=0, column=1, padx=4, pady=4, sticky="e")
-        self.potion_search_x = ttk.IntVar(value=self.config.get("potion_search_bar1", [0, 0])[0])
-        self.potion_search_y = ttk.IntVar(value=self.config.get("potion_search_bar1", [0, 0])[1])
-        ttk.Entry(calib_frame, textvariable=self.potion_search_x, width=6).grid(row=0, column=2, padx=4, pady=4)
-        ttk.Entry(calib_frame, textvariable=self.potion_search_y, width=6).grid(row=0, column=3, padx=4, pady=4)
-        ttk.Button(calib_frame, text="Assign", command=lambda k="potion_search_bar1": self.capture_single_click(k)).grid(row=0, column=4, padx=6)
-
-        btn1_text = ttk.Label(calib_frame, text="Potion first slot (X,Y):")
-        btn1_text.grid(row=1, column=1, padx=4, pady=4, sticky="e")
-        self.potion_button1_x = ttk.IntVar(value=self.config.get("potion_button1", [0, 0])[0])
-        self.potion_button1_y = ttk.IntVar(value=self.config.get("potion_button1", [0, 0])[1])
-        ttk.Entry(calib_frame, textvariable=self.potion_button1_x, width=6).grid(row=1, column=2, padx=4, pady=4)
-        ttk.Entry(calib_frame, textvariable=self.potion_button1_y, width=6).grid(row=1, column=3, padx=4, pady=4)
-        ttk.Button(calib_frame, text="Assign", command=lambda k="potion_button1": self.capture_single_click(k)).grid(row=1, column=4, padx=6)
-
-        ttk.Label(calib_frame, text="Auto add button (X,Y):").grid(row=2, column=1, padx=4, pady=4, sticky="e")
-        self.potion_button2_x = ttk.IntVar(value=self.config.get("potion_button2", [0, 0])[0])
-        self.potion_button2_y = ttk.IntVar(value=self.config.get("potion_button2", [0, 0])[1])
-        ttk.Entry(calib_frame, textvariable=self.potion_button2_x, width=6).grid(row=2, column=2, padx=4, pady=4)
-        ttk.Entry(calib_frame, textvariable=self.potion_button2_y, width=6).grid(row=2, column=3, padx=4, pady=4)
-        ttk.Button(calib_frame, text="Assign", command=lambda k="potion_button2": self.capture_single_click(k)).grid(row=2, column=4, padx=6)
-        ttk.Button(calib_frame, text="Assign", command=lambda k="potion_button2": self.capture_single_click(k)).grid(row=2, column=4, padx=6)
 
         file_frame = ttk.Frame(frame_label)
         file_frame.pack(fill="x", padx=6, pady=(6, 8))
@@ -3478,6 +3546,156 @@ class BiomePresence():
         self.potion3_combo.grid(row=2, column=1, columnspan=2, sticky="w", padx=6, pady=(6,0))
         self.potion3_combo.bind("<<ComboboxSelected>>", lambda e: self.save_config())
         self._refresh_potion_files(potions_directory)
+
+    def open_quest_calibration_window(self):
+        calibration_window = ttk.Toplevel(self.root)
+        calibration_window.title("Quest Claim Calibration")
+        calibration_window.geometry("650x400")
+
+        positions = [
+            ("Quest Menu (open quests)", "quest_menu"),
+            ("Quest 1 button", "quest1_button"),
+            ("Quest 2 button", "quest2_button"),
+            ("Quest 3 button", "quest3_button"),
+            ("Claim Quest button", "claim_quest_button"), 
+            ("Quest Reroll button", "quest_reroll_button"),
+        ]
+
+        self.quest_coord_vars = {}
+        for i, (label_text, config_key) in enumerate(positions):
+            ttk.Label(calibration_window, text=f"{label_text} (X, Y):").grid(row=i, column=0, padx=5, pady=5, sticky="w")
+            
+            x_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[0])
+            y_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[1])
+            self.quest_coord_vars[config_key] = (x_var, y_var)
+            
+            ttk.Entry(calibration_window, textvariable=x_var, width=6).grid(row=i, column=1, padx=5, pady=5)
+            ttk.Entry(calibration_window, textvariable=y_var, width=6).grid(row=i, column=2, padx=5, pady=5)
+            
+            select_button = ttk.Button(
+                calibration_window, 
+                text="Select Pos",
+                command=lambda key=config_key: self.start_capture_thread(key, self.quest_coord_vars)
+            )
+            select_button.grid(row=i, column=3, padx=5, pady=5)
+
+        save_button = ttk.Button(
+            calibration_window, 
+            text="Save Calibration",
+            command=lambda: self.save_quest_coordinates(calibration_window)
+        )
+        save_button.grid(row=len(positions), column=0, columnspan=4, pady=10)
+
+    def save_quest_coordinates(self, win):
+        for config_key, vars in self.quest_coord_vars.items():
+            self.config[config_key] = [vars[0].get(), vars[1].get()]
+        self.save_config()
+        try:
+            win.destroy()
+        except Exception:
+            pass
+        try:
+            messagebox.showinfo("Calibration Saved", "Saved quest claim coordinates.")
+        except Exception:
+            pass
+
+    def open_potion_craft_calibration_window(self):
+        calibration_window = ttk.Toplevel(self.root)
+        calibration_window.title("Potion Craft Calibration")
+        calibration_window.geometry("650x250")
+
+        positions = [
+            ("Potion menu search bar", "potion_search_bar1"),
+            ("Potion first slot", "potion_button1"),
+            ("Auto add button", "potion_button2"),
+        ]
+
+        self.potion_coord_vars = {}
+        for i, (label_text, config_key) in enumerate(positions):
+            ttk.Label(calibration_window, text=f"{label_text} (X, Y):").grid(row=i, column=0, padx=5, pady=5, sticky="w")
+            
+            x_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[0])
+            y_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[1])
+            self.potion_coord_vars[config_key] = (x_var, y_var)
+            
+            ttk.Entry(calibration_window, textvariable=x_var, width=6).grid(row=i, column=1, padx=5, pady=5)
+            ttk.Entry(calibration_window, textvariable=y_var, width=6).grid(row=i, column=2, padx=5, pady=5)
+            
+            select_button = ttk.Button(
+                calibration_window, 
+                text="Select Pos",
+                command=lambda key=config_key: self.start_capture_thread(key, self.potion_coord_vars)
+            )
+            select_button.grid(row=i, column=3, padx=5, pady=5)
+
+        save_button = ttk.Button(
+            calibration_window, 
+            text="Save Calibration",
+            command=lambda: self.save_potion_coordinates(calibration_window)
+        )
+        save_button.grid(row=len(positions), column=0, columnspan=4, pady=10)
+
+    def save_potion_coordinates(self, win):
+        for config_key, vars in self.potion_coord_vars.items():
+            self.config[config_key] = [vars[0].get(), vars[1].get()]
+        self.save_config()
+        try:
+            win.destroy()
+        except Exception:
+            pass
+        try:
+            messagebox.showinfo("Calibration Saved", "Saved potion craft coordinates.")
+        except Exception:
+            pass
+
+    def open_glitched_buff_calibration_window(self):
+        calibration_window = ttk.Toplevel(self.root)
+        calibration_window.title("Glitched Buff Calibration")
+        calibration_window.geometry("650x250")
+
+        positions = [
+            ("Menu Button", "glitched_menu_button"),
+            ("Settings Button", "glitched_settings_button"),
+            ("Buff Enable Button", "glitched_buff_enable_button"),
+        ]
+
+        self.glitched_coord_vars = {}
+        for i, (label_text, config_key) in enumerate(positions):
+            ttk.Label(calibration_window, text=f"{label_text} (X, Y):").grid(row=i, column=0, padx=5, pady=5, sticky="w")
+            
+            x_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[0])
+            y_var = ttk.IntVar(value=self.config.get(config_key, [0, 0])[1])
+            self.glitched_coord_vars[config_key] = (x_var, y_var)
+            
+            ttk.Entry(calibration_window, textvariable=x_var, width=6).grid(row=i, column=1, padx=5, pady=5)
+            ttk.Entry(calibration_window, textvariable=y_var, width=6).grid(row=i, column=2, padx=5, pady=5)
+            
+            select_button = ttk.Button(
+                calibration_window, 
+                text="Select Pos",
+                command=lambda key=config_key: self.start_capture_thread(key, self.glitched_coord_vars)
+            )
+            select_button.grid(row=i, column=3, padx=5, pady=5)
+
+        save_button = ttk.Button(
+            calibration_window, 
+            text="Save Calibration",
+            command=lambda: self.save_glitched_coordinates(calibration_window)
+        )
+        save_button.grid(row=len(positions), column=0, columnspan=4, pady=10)
+
+    def save_glitched_coordinates(self, win):
+        for config_key, vars in self.glitched_coord_vars.items():
+            self.config[config_key] = [vars[0].get(), vars[1].get()]
+        self.save_config()
+        try:
+            win.destroy()
+        except Exception:
+            pass
+        try:
+            messagebox.showinfo("Calibration Saved", "Saved glitched buff coordinates.")
+        except Exception:
+            pass
 
     def _refresh_potion_files(self, potions_directory="crafting_files_do_not_open"):
         try:
@@ -3887,10 +4105,6 @@ class BiomePresence():
         jester_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
         jester_button = ttk.Button(jester_frame, text="Jester Item Settings", command=self.open_jester_settings)
         jester_button.pack(padx=3, pady=3)
-
-        calibration_button = ttk.Button(frame, text="Merchant Calibrations",
-                                        command=self.open_merchant_calibration_window)
-        calibration_button.grid(row=1, column=0, padx=5, pady=3, sticky="w")
 
         ttk.Label(frame,
                   text="Merchant item extra slot\n(extra slot if your mouse missed/cannot reach to merchant's 5th slot):").grid(
@@ -5010,13 +5224,25 @@ class BiomePresence():
 
                 message_type = self.config["biome_notifier"].get(biome, "None")
 
-                if biome in ["GLITCHED", "DREAMSPACE", "CYBERSPACE"]:
+                if biome in rare_biomes:
                     message_type = "Ping"
                     if self.config.get("record_rare_biome", False):
                         self.trigger_biome_record()
+                    try:
+                        if getattr(self, "reset_on_rare_var", None) and self.reset_on_rare_var.get():
+                            self._action_scheduler.enqueue_action(self._reset_on_rare_impl, name="reset_rare", priority=0)
+                    except Exception:
+                        pass
 
                 if biome != "NORMAL":
                     self.send_webhook(biome, message_type, "start")
+
+                if last_biome in rare_biomes and biome not in rare_biomes:
+                    try:
+                        if getattr(self, "teleport_back_to_limbo_var", None) and self.teleport_back_to_limbo_var.get():
+                            self._action_scheduler.enqueue_action(self._teleport_crack_impl, name="teleport_back", priority=0)
+                    except Exception:
+                        pass
 
                 if biome == "GLITCHED":
                     with self.lock:
@@ -6123,7 +6349,7 @@ class BiomePresence():
         current_utc_time = str(current_utc_time)
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
         content = ""
-        if event_type == "start" and biome in ["GLITCHED", "DREAMSPACE", "CYBERSPACE"]:
+        if event_type == "start" and biome in rare_biomes:
             content = "@everyone"
         private_server_link = self.config.get("private_server_link").replace("\n", "")
         if private_server_link == "":
