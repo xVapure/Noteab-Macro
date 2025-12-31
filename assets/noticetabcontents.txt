@@ -1,5 +1,12 @@
 PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
 
+# Coteab Macro v2.0.5, what's new?
+- This will be the final update of the 2.0.x family unless there are bug(s) that require my attention.
+- Reworked calibrations, all calibrations have been removed from independent tabs and grouped into one big tab for easier navigation.
+- Added reset character when rare biome.
+- Added teleport back to Limbo when rare biome ends.
+- I hope you guys enjoyed 2.0.x family :) It was really fun developing the new era of Coteab macro. I hope we can keep up the momentum in the upcoming Coteab updates and I'll be trying my best to maintain this project <3
+
 # v2.0.4, what's new?
 - Added snowflake auto claimer and paths (credits to "ManasAarohi" for snowflake paths).
    - Disclaimer: I recommend putting the claiming interval at around 30 minutes instead of 2 hours.
@@ -39,5 +46,6 @@ PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/
 - Attempted to fix not being able to detect Jester bug 🎭
 - Fixed the bug where you cannot buy 2 items next to each other in a merchant 🛍️ 
 - Removed Herobrine <:67mason:1427603671407005766>
+
 
 
