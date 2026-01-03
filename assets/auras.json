@@ -133,7 +133,7 @@
     "Antivirus": {"rarity": 62500000, "exclusive_biome": ["CYBERSPACE", 2]},
     "Illusionary": {"rarity": 10000000, "exclusive_biome": ["CYBERSPACE", 1]},
     "ENCASE": {"rarity": 230000000, "exclusive_biome": ["AURORA", 2]},
-    "CyroFang": {"rarity": 380000000, "exclusive_biome": ["AURORA", 2]},
+    "CryoFang": {"rarity": 380000000, "exclusive_biome": ["AURORA", 2]},
     "NORTHERN": {"rarity": 405000000, "exclusive_biome": ["AURORA", 2]},
     "Sovereign_Frostveil": {"rarity": 1000000000, "exclusive_biome": ["AURORA", 2]},
     "NorthPole": {"rarity": 45000000, "exclusive_biome": ["AURORA", 2]},
@@ -150,5 +150,6 @@
     "Cyrogenic": {"rarity": 250000, "exclusive_biome": ["AURORA", 1]},
     "Diddy": {"rarity": 67, "exclusive_biome": ["DIDDY BIOME", 676767]}
 }
+
 
 
