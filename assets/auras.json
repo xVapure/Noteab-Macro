@@ -131,9 +131,9 @@
     "Felled": {"rarity": 180000000, "exclusive_biome": ["HELL", 6]},
     "NYCTOPHOBIA": {"rarity": 1011111010, "exclusive_biome": ["None", 1]},
     "Antivirus": {"rarity": 62500000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Illusionary": {"rarity": 10000000, "exclusive_biome": ["CYBERSPACE", 2]},
+    "Illusionary": {"rarity": 10000000, "exclusive_biome": ["CYBERSPACE", 1]},
     "ENCASE": {"rarity": 230000000, "exclusive_biome": ["AURORA", 2]},
-    "CyroFang": {"rarity": 380000000, "exclusive_biome": ["AURORA", 2]},
+    "CyroFang\": {"rarity": 380000000, "exclusive_biome": ["AURORA", 2]},
     "NORTHERN": {"rarity": 405000000, "exclusive_biome": ["AURORA", 2]},
     "Sovereign_Frostveil": {"rarity": 1000000000, "exclusive_biome": ["AURORA", 2]},
     "NorthPole": {"rarity": 45000000, "exclusive_biome": ["AURORA", 2]},
@@ -142,6 +142,11 @@
     "Frostwood": {"rarity": 24500000, "exclusive_biome": ["AURORA", 2]},
     "LostSoul_Wander": {"rarity": 9400000, "exclusive_biome": ["AURORA", 2]},
     "SkyBurst": {"rarity": 60000000, "exclusive_biome": ["AURORA", 2]},
+    "Parol": {"rarity": 760000000, "exclusive_biome": ["AURORA", 2]},
+    "Dream_Traveler": {"rarity": 2025812825, "exclusive_biome": ["AURORA", 2]},
+    "Workshop": {"rarity": 700000000, "exclusive_biome": ["AURORA", 2]},
+    "EveNight": {"rarity": 424000000, "exclusive_biome": ["AURORA", 2]},
+    "Winter_Garden": {"rarity": 1450012025, "exclusive_biome": ["AURORA", 2]},
+    "Cyrogenic": {"rarity": 250000, "exclusive_biome": ["AURORA", 1]},
     "Diddy": {"rarity": 67, "exclusive_biome": ["DIDDY BIOME", 676767]}
 }
-
