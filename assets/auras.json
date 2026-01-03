@@ -147,9 +147,10 @@
     "Workshop": {"rarity": 700000000, "exclusive_biome": ["AURORA", 2]},
     "EveNight": {"rarity": 424000000, "exclusive_biome": ["AURORA", 2]},
     "Winter_Garden": {"rarity": 1450012025, "exclusive_biome": ["AURORA", 2]},
-    "Cyrogenic": {"rarity": 250000, "exclusive_biome": ["AURORA", 1]},
+    "Cryogenic": {"rarity": 250000, "exclusive_biome": ["AURORA", 1]},
     "Diddy": {"rarity": 67, "exclusive_biome": ["DIDDY BIOME", 676767]}
 }
+
 
 
 
