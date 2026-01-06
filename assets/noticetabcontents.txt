@@ -1,5 +1,10 @@
 PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
 
+# Coteab Macro v2.0.5-hotfix1, what's new?
+- This is just a silent hotfix. Changed something small to improve merchant detection accuracy.
+- Coteab Macro v2.1.x is current in development! Join our community server to get in touch of what's going on! Also you might notice EasyOCR and some stuff getting installed but it is for the future updates ;)
+- Also buy our merch @ https://www.roblox.com/communities/34184182/O-o-Whats-this#!/store
+
 # Coteab Macro v2.0.5, what's new?
 - This will be the final update of the 2.0.x family unless there are bug(s) that require my attention.
 - Reworked calibrations, all calibrations have been removed from independent tabs and grouped into one big tab for easier navigation.
@@ -46,6 +51,7 @@ PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/
 - Attempted to fix not being able to detect Jester bug 🎭
 - Fixed the bug where you cannot buy 2 items next to each other in a merchant 🛍️ 
 - Removed Herobrine <:67mason:1427603671407005766>
+
 
 
 
