@@ -148,9 +148,17 @@
     "EveNight": {"rarity": 424000000, "exclusive_biome": ["AURORA", 2]},
     "Winter_Garden": {"rarity": 1450012025, "exclusive_biome": ["AURORA", 2]},
     "Cryogenic": {"rarity": 250000, "exclusive_biome": ["AURORA", 1]},
+    "Player_Respawn": {"rarity": 1999999, "exclusive_biome": ["None", 1]},
+    "Flowed": {"rarity": 2121121, "exclusive_biome": ["NULL", 1000]},
+    "Sharkyn": {"rarity": 10000000, "exclusive_biome": ["RAINY", 4]},
+    "Melodic": {"rarity": 11300000, "exclusive_biome": ["None", 1]},
+    "Apotheosis": {"rarity": 24649430, "exclusive_biome": ["None", 1]},
+    "Flora_Florest": {"rarity": 32800000, "exclusive_biome": ["None", 1]},
+    "Prophecy": {"rarity": 275649430, "exclusive_biome": ["HEAVEN", 5]},
+    "Pythios": {"rarity": 666666666, "exclusive_biome": ["HELL", 6]},
+    "ASCENDANT": {"rarity": 935000000, "exclusive_biome": ["HEAVEN", 5]},
+    "BREAKTHROUGH": {"rarity": 1999999999, "exclusive_biome": ["None", 1]},
+    "LEVIATHAN": {"rarity": 1730400000, "exclusive_biome": ["RAINY", 1]},
+    "Borealis": {"rarity": 13333333, "exclusive_biome": ["DREAMSPACE", 1]},
     "Diddy": {"rarity": 67, "exclusive_biome": ["DIDDY BIOME", 676767]}
 }
-
-
-
-
