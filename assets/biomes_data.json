@@ -1,66 +1,59 @@
 {
     "NORMAL": {
-        "color": "0xd40028",
-        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/Untitled24_20251203000157.png"
+        "color": "0xffffff",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NORMAL.png"
     },
+
     "WINDY": {
-        "color": "0xff0000",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/WINDY.png"
+        "color": "0x9ae5ff",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/WINDY.png"
     },
     "RAINY": {
-        "color": "0x00cc00",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/RAINY.png"
+        "color": "0x027cbd",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/RAINY.png"
     },
     "SNOWY": {
-        "color": "0xff0000",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/SNOWY.png"
+        "color": "0xDceff9",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SNOWY.png"
     },
     "SAND STORM": {
-        "color": "0x00cc00",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/SAND%20STORM.png"
+        "color": "0x8F7057",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SAND%20STORM.png"
     },
     "HELL": {
-        "color": "0xff0000",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/HELL.png"
+        "color": "0xff4719",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/HELL.png"
     },
     "STARFALL": {
-        "color": "0x00cc00",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/STARFALL.png"
+        "color": "0x011ab7",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/STARFALL.png"
     },
     "CORRUPTION": {
-        "color": "0xff0000",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/CORRUPTION.png"
+        "color": "0x6d32a8",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/CORRUPTION.png"
     },
     "NULL": {
-        "color": "0x00cc00",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/NULL.png"
+        "color": "0x838383",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NULL.png"
     },
     "GLITCHED": {
-        "color": "0xff0000",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/GLITCHED.png"
+        "color": "0xbfff00",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png"
     },
     "DREAMSPACE": {
-        "color": "0x00cc00",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/DREAMSPACE.png"
-    },
-    "CYBERSPACE": {
-        "color": "0xff0000",
-        "thumbnail_url": "http://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/temp%20chrimuh%20icons/CYBERSPACE.png"
-    },
-    "HEAVEN": {
-        "color": "0x00cc00",
-        "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Merry_Old_Santa_Claus_by_Thomas_Nast.jpg/500px-Merry_Old_Santa_Claus_by_Thomas_Nast.jpg"
+        "color": "0xea9dda",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
     },
     "AURORA": {
-        "color": "0xff0000",
-        "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Merry_Old_Santa_Claus_by_Thomas_Nast.jpg/500px-Merry_Old_Santa_Claus_by_Thomas_Nast.jpg"
+        "color": "0x0047ab",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
+    },
+    "HEAVEN": {
+        "color": "0xFFE8A0",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/HEAVEN.png"
+    },
+    "CYBERSPACE": {
+        "color": "0x0A1A3D",
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/CYBERSPACE.png"
     }
 }
-
-
-
-
-
-
-
-
