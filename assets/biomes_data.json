@@ -42,11 +42,11 @@
     },
     "DREAMSPACE": {
         "color": "0xea9dda",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
+        "thumbnail_url": "http://github.com/xVapure/Noteab-Macro/blob/main/images/Screenshot_2026-01-03_021107.png?raw=true"
     },
     "AURORA": {
         "color": "0x0047ab",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/DREAMSPACE.png"
+        "thumbnail_url": "https://raw.githubusercontent.com/vexthecoder/OysterDetector/main/assets/aurora.png"
     },
     "HEAVEN": {
         "color": "0xFFE8A0",
@@ -57,3 +57,4 @@
         "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/CYBERSPACE.png"
     }
 }
+
