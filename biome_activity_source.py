@@ -12,7 +12,7 @@ import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, \
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
-current_ver = "v2.0.5-hotfix1"
+current_ver = "v2.0.5-hotfix2"
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
