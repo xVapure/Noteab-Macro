@@ -3961,8 +3961,14 @@ class BiomePresence():
 
             if potion_search and potion_search[0]:
                 _click(potion_search, label="search_bar", tries=3, pause_after=0.18)
-                time.sleep(0.08)
+                time.sleep(0.18)
+                autoit.send("^{a}")
+                time.sleep(0.28)
+                autoit.send("{BACKSPACE}")
+                time.sleep(0.18)
                 autoit.send(pname)
+                time.sleep(0.18)
+                autoit.send("{ENTER}")
                 time.sleep(0.18)
             else:
                 self.error_logging(RuntimeError("Missing potion_search coordinates"), "Potion setup warning")
