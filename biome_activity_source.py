@@ -9,10 +9,10 @@ import logging
 import shutil, glob
 import atexit
 import difflib
-import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, pytesseract, autoit, psutil, \
+import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, easyocr, autoit, psutil, \
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
-current_ver = "v2.0.5-hotfix2"
+current_ver = "v2.1.0"
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
@@ -202,6 +202,87 @@ def apply_fast_flags(version=None, force=False):
 
 rare_biomes = ["GLITCHED", "DREAMSPACE", "CYBERSPACE"]
 
+def fuzzy_match_any(text, candidates, threshold=0.6):
+    try:
+        import difflib
+    except Exception:
+        return False
+
+    if not text:
+        return False
+
+    t = str(text).lower().strip()
+    tokens = [tok for tok in re.split(r"\s+|[^a-z0-9]", t) if tok]
+
+    for cand in candidates:
+        c = str(cand).lower().strip()
+        if not c:
+            continue
+        if c in t:
+            return True
+        try:
+            whole_ratio = difflib.SequenceMatcher(None, c, t).ratio()
+            if whole_ratio >= threshold:
+                return True
+        except Exception:
+            pass
+        for tok in tokens:
+            try:
+                if difflib.SequenceMatcher(None, c, tok).ratio() >= threshold:
+                    return True
+            except Exception:
+                pass
+    return False
+
+def fuzzy_correct_item_name(text, mapping, threshold=0.6):
+    try:
+        import difflib
+    except Exception:
+        return text
+
+    if not text:
+        return text
+
+    t = str(text).lower().strip()
+    for mis, correct in mapping.items():
+        if t == mis.lower().strip():
+            return correct
+    tokens = [tok for tok in re.split(r"\s+|[^a-z0-9]", t) if tok]
+
+    best_score = 0.0
+    best_correct = None
+    best_key = None
+
+    for mis, correct in mapping.items():
+        mis_norm = str(mis).lower().strip()
+        try:
+            if mis_norm in t:
+                return correct
+        except Exception:
+            pass
+        try:
+            score_whole = difflib.SequenceMatcher(None, t, mis_norm).ratio()
+            if score_whole > best_score:
+                best_score = score_whole
+                best_correct = correct
+                best_key = mis
+        except Exception:
+            pass
+        for tok in tokens:
+            try:
+                score_tok = difflib.SequenceMatcher(None, tok, mis_norm).ratio()
+                if score_tok > best_score:
+                    best_score = score_tok
+                    best_correct = correct
+                    best_key = mis
+            except Exception:
+                pass
+
+    if best_score >= float(threshold):
+        return best_correct
+
+    return text
+
 class SnippingWidget:
     def __init__(self, root, config_key=None, callback=None):
         self.root = root
@@ -379,6 +460,7 @@ class BiomePresence():
                 self.session_window_start = None
         self.has_started_once = False
         self.stop_sent = False
+        self.just_reconnected = False
 
         self.last_position = 0
         self.detection_running = False
@@ -409,7 +491,8 @@ class BiomePresence():
         self.auto_pop_state = False
         self.buff_vars = {}
         self.buff_amount_vars = {}
-
+        self.easyocr_reader = None
+        self.init_easyocr()
         # Reconnect state
         self.reconnecting_state = False
         self.timer_paused_by_disconnect = False
@@ -417,6 +500,8 @@ class BiomePresence():
         self._snowman_running = False
         self.initialize_paths_and_files()
         self.last_snowman_claim = datetime.min
+        self._obby_running = False
+        self.last_obby_claim = datetime.min
         screenshot_dir = os.path.join(os.getcwd(), "images")
         try:
             if os.path.exists(screenshot_dir):
@@ -577,10 +662,57 @@ class BiomePresence():
                     print(f"Warning: Could not download snowman.json: {e}")
             else:
                 print(f"snowman.json already exists at: {snowman_file}")
-                
+            obby_file = os.path.join(paths_folder, "obby.json")
+            if not os.path.exists(obby_file):
+                print("Downloading obby.json file...")
+                try:
+                    response = requests.get(
+                        "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/paths/obby.json",
+                        timeout=15
+                    )
+                    response.raise_for_status()
+                    with open(obby_file, "w", encoding="utf-8") as f:
+                        f.write(response.text)
+                    print(f"Downloaded obby.json to: {obby_file}")
+                except Exception as e:
+                    self.error_logging(e, "Failed to download obby.json file")
+                    print(f"Warning: Could not download obby.json: {e}")
+            else:
+                print(f"obby.json already exists at: {obby_file}")
         except Exception as e:
             self.error_logging(e, "Error in initialize_paths_and_files")
+
+    def init_easyocr(self):
+        try:
+            self.easyocr_reader = easyocr.Reader(['en'])
+            print("EasyOCR initialized successfully")
+        except Exception as e:
+            self.error_logging(e, "Failed to initialize EasyOCR")
+            print(f"Error initializing EasyOCR: {e}")
+            self.easyocr_reader = None
+
+    def extract_text_with_easyocr(self, region):
+        if not self.easyocr_reader:
+            self.init_easyocr()
+            if not self.easyocr_reader:
+                return ""
+        
+        try:
+            x, y, width, height = region
+            screenshot = pyautogui.screenshot(region=(x, y, width, height))
             
+            import numpy as np
+            img_array = np.array(screenshot)
+            
+            results = self.easyocr_reader.readtext(img_array, detail=0)
+            
+            extracted_text = " ".join(results).strip()
+            return extracted_text
+            
+        except Exception as e:
+            self.error_logging(e, "Error extracting text with EasyOCR")
+            return ""
+
     def load_notice_tab(self):
         url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/assets/noticetabcontents.txt"
         data = ""
@@ -710,10 +842,13 @@ class BiomePresence():
             "merchant_extra_slot": self.merchant_extra_slot_var.get(),
             "Mari_Items": self.config.get("Mari_Items", {}),
             "Jester_Items": self.config.get("Jester_Items", {}),
+            "Rin_Items": self.config.get("Rin_Items", {}),
             "ping_mari": self.ping_mari_var.get(),
             "mari_user_id": self.mari_user_id_var.get(),
             "ping_jester": self.ping_jester_var.get(),
             "jester_user_id": self.jester_user_id_var.get(),
+            "ping_rin": self.ping_rin_var.get(),
+            "rin_user_id": self.rin_user_id_var.get(),
             "merchant_open_button": self.config.get("merchant_open_button", [579, 906]),
             "merchant_dialogue_box": self.config.get("merchant_dialogue_box", [1114, 796]),
             "purchase_amount_button": self.config.get("purchase_amount_button", [700, 584]),
@@ -777,7 +912,10 @@ class BiomePresence():
             "snowman_claim_interval": self.snowman_claim_interval_var.get() if hasattr(self, "snowman_claim_interval_var") else self.config.get("snowman_claim_interval", "15"),
             "reset_on_rare": self.reset_on_rare_var.get() if hasattr(self, "reset_on_rare_var") else self.config.get("reset_on_rare", False),
             "teleport_back_to_limbo": self.teleport_back_to_limbo_var.get() if hasattr(self, "teleport_back_to_limbo_var") else self.config.get("teleport_back_to_limbo", False),
-
+            "auto_claim_interval": self.auto_claim_interval_var.get() if hasattr(self, "auto_claim_interval_var") else self.config.get("auto_claim_interval", "30"),
+            "macro_idle_mode": self.macro_idle_mode_var.get() if hasattr(self, "macro_idle_mode_var") else self.config.get("macro_idle_mode", False),
+            "enable_obby_path": self.enable_obby_var.get() if hasattr(self, "enable_obby_var") else self.config.get("enable_obby_path", False),
+            "obby_claim_interval": self.obby_claim_interval_var.get() if hasattr(self, "obby_claim_interval_var") else self.config.get("obby_claim_interval", "15"),
         })
 
         if not config["auto_buff_glitched"]:
@@ -880,6 +1018,9 @@ class BiomePresence():
             if hasattr(self, "periodical_inventory_interval_var"): self.periodical_inventory_interval_var.set(str(config.get("periodical_inventory_interval", "5")))
             if hasattr(self, "auto_claim_quests_var"): self.auto_claim_quests_var.set(config.get("auto_claim_daily_quests", False))
             if hasattr(self, "auto_claim_interval_var"): self.auto_claim_interval_var.set(str(config.get("auto_claim_interval", "30")))
+            if hasattr(self, "macro_idle_mode_var"): self.macro_idle_mode_var.set(config.get("macro_idle_mode", False))
+            if hasattr(self, "enable_obby_var"): self.enable_obby_var.set(config.get("enable_obby_path", False))
+            if hasattr(self, "obby_claim_interval_var"): self.obby_claim_interval_var.set(str(config.get("obby_claim_interval", "15")))
             # merchant
             self.merchant_extra_slot_var.set(config.get("merchant_extra_slot", "0"))
             self.ping_mari_var.set(config.get("ping_mari", False))
@@ -1017,11 +1158,11 @@ class BiomePresence():
             "Webhook": webhook_frame,
             "Macro Calibrations": macro_calibrations_frame, 
             "Remote Access": remote_access_frame,
-            "Pathing": pathing_frame,
-            "Misc": misc_frame,
+            "Use item/mouse actions": misc_frame,
+            "Movements": pathing_frame,
             "Merchant": merchant_frame,
-            "Auras": aura_webhook_frame,
             "Potion Crafting": hp_craft_frame,
+            "Auras": aura_webhook_frame,
             "Stats": stats_frame,
             "Other Features": other_features_frame,
             "Customizations": customizations_frame,
@@ -1293,12 +1434,12 @@ class BiomePresence():
 
         pathing_btn = ttk.Button(
             calib_frame,
-            text="Pathing Calibration",
+            text="Movements Calibration",
             command=self.open_pathing_calibration_window,
             width=30
         )
         pathing_btn.grid(row=0, column=0, padx=5, pady=10, sticky="w")
-        ttk.Label(calib_frame, text="Calibrate collection menu positions").grid(row=0, column=1, padx=10, pady=10, sticky="w")
+        ttk.Label(calib_frame, text="Calibrate movements related menu positions").grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
         quest_btn = ttk.Button(
             calib_frame,
@@ -2051,6 +2192,8 @@ class BiomePresence():
         try:
             if not getattr(self, "periodical_inventory_var", None) or not self.periodical_inventory_var.get():
                 return
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
             if not self.check_roblox_procs():
                 return
             self.activate_roblox_window()
@@ -2105,6 +2248,8 @@ class BiomePresence():
     def take_aura_screenshot_now(self):
         try:
             if not getattr(self, "periodical_aura_var", None) or not self.periodical_aura_var.get():
+                return
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
                 return
             if not self.check_roblox_procs():
                 return
@@ -2565,6 +2710,9 @@ class BiomePresence():
         try:
             if not self.config.get("enable_buff_glitched", False):
                 return
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             menu = self.config.get("glitched_menu_button", [0, 0])
             buff_enable = self.config.get("glitched_buff_enable_button", [0, 0])
             settings = self.config.get("glitched_settings_button", [0, 0])
@@ -2593,8 +2741,11 @@ class BiomePresence():
 
     def _reset_on_rare_impl(self):
         try:
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
             if not self.detection_running or self.reconnecting_state:
                 return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             for _ in range(4):
                 if not self.detection_running:
                     return
@@ -2610,8 +2761,11 @@ class BiomePresence():
 
     def _teleport_crack_impl(self):
         try:
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
             if not self.detection_running or self.reconnecting_state:
                 return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             inventory_menu = self.config.get("inventory_menu", [36, 535])
             items_tab = self.config.get("items_tab", [1272, 329])
             search_bar = self.config.get("search_bar", [855, 358])
@@ -2644,6 +2798,84 @@ class BiomePresence():
             time.sleep(0.2 + float(self.click_delay_var.get()))
         except Exception as e:
             self.error_logging(e, "Error in _teleport_crack_impl")
+
+    def confirm_biome_popup(self, biome):
+        evt = threading.Event()
+        result = {"confirmed": False}
+        def _make_popup():
+            try:
+                popup = tk.Toplevel(self.root)
+                popup.title("Biome Confirmation")
+                popup.geometry("800x460")
+                popup.resizable(False, False)
+                popup.attributes('-topmost', True)
+                popup.lift()
+                try:
+                    popup.focus_force()
+                except Exception:
+                    pass
+                label = ttk.Label(popup, text="This popup will close after 10 second, did you forget to close the macro before joining a rare biome?", wraplength=380)
+                label.pack(pady=(12, 6))
+                btn_frame = ttk.Frame(popup)
+                btn_frame.pack(pady=(0, 8))
+                def on_yes():
+                    result["confirmed"] = True
+                    try:
+                        popup.destroy()
+                    except Exception:
+                        pass
+                    evt.set()
+                def on_no():
+                    result["confirmed"] = False
+                    try:
+                        popup.destroy()
+                    except Exception:
+                        pass
+                    evt.set()
+                yes_btn = ttk.Button(btn_frame, text="It is a real rare biome", command=on_yes, width=55)
+                no_btn = ttk.Button(btn_frame, text="Oh fuck i forgot to close it :skul: (dw Coteab gotchu)", command=on_no, width=55)
+                yes_btn.pack(side="left", padx=12)
+                no_btn.pack(side="left", padx=12)
+                def _timeout():
+                    result["confirmed"] = True
+                    try:
+                        popup.destroy()
+                    except Exception:
+                        pass
+                    evt.set()
+                popup.transient(self.root)
+                try:
+                    popup.grab_set()
+                except Exception:
+                    pass
+                popup.after(10000, _timeout)
+                try:
+                    hwnd = popup.winfo_id()
+                    try:
+                        ctypes.windll.user32.SetForegroundWindow(hwnd)
+                    except Exception:
+                        pass
+                    try:
+                        SWP_NOSIZE = 0x0001
+                        SWP_NOMOVE = 0x0002
+                        HWND_TOPMOST = -1
+                        ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+            except Exception:
+                result["confirmed"] = True
+                evt.set()
+        try:
+            try:
+                self.root.after(0, _make_popup)
+            except Exception:
+                _make_popup()
+            evt.wait(11.0)
+        except Exception:
+            return True
+        return bool(result.get("confirmed", False))
 
     def open_webhooks_settings(self):
         win = ttk.Toplevel(self.root)
@@ -2811,6 +3043,23 @@ class BiomePresence():
         interval_entry = ttk.Entry(snowman_row, textvariable=self.snowman_claim_interval_var, width=6)
         interval_entry.pack(side="left", padx=3)
         interval_entry.bind("<FocusOut>", lambda event: self.save_config())
+
+        self.enable_obby_var = ttk.BooleanVar(value=self.config.get("enable_obby_path", False))
+        obby_row = ttk.Frame(path_frame)
+        obby_row.pack(fill="x", padx=3, pady=3)
+
+        obby_check = ttk.Checkbutton(
+            obby_row,
+            text="Enable Auto complete obby",
+            variable=self.enable_obby_var,
+            command=self.save_config
+        )
+        obby_check.pack(side="left", padx=(0,200))
+        ttk.Label(obby_row, text="Claiming interval (minutes):").pack(side="left")
+        self.obby_claim_interval_var = ttk.StringVar(value=str(self.config.get("obby_claim_interval", "15")))
+        obby_interval_entry = ttk.Entry(obby_row, textvariable=self.obby_claim_interval_var, width=6)
+        obby_interval_entry.pack(side="left", padx=3)
+        obby_interval_entry.bind("<FocusOut>", lambda event: self.save_config())
 
         self.pathing_coord_vars = {}
 
@@ -3028,6 +3277,15 @@ class BiomePresence():
         auto_claim_interval_entry = ttk.Entry(hp2_frame, textvariable=self.auto_claim_interval_var, width=6)
         auto_claim_interval_entry.grid(row=11, column=2, padx=5, pady=5, sticky="w")
         auto_claim_interval_entry.bind("<FocusOut>", lambda event: self.save_config())
+        ttk.Label(hp2_frame, text="### MACRO IDLE MODE ###").grid(row=12, column=0, padx=5, sticky="w")
+        self.macro_idle_mode_var = ttk.BooleanVar(value=self.config.get("macro_idle_mode", False))
+        macro_idle_mode_check = ttk.Checkbutton(
+            hp2_frame,
+            text="Enable macro idle mode (it will disable all mouse actions and make the macro do nothing aside from detecting biomes/auras)",
+            variable=self.macro_idle_mode_var,
+            command=self.save_config
+        )
+        macro_idle_mode_check.grid(row=13, column=0, columnspan=3, padx=5, sticky="w")
 
     def send_quest_screenshot_webhook(self, screenshot_path):
         try:
@@ -3072,8 +3330,11 @@ class BiomePresence():
 
     def _perform_quest_claim_sequence_impl(self):
         try:
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
             if not getattr(self, "auto_claim_quests_var", None) or not self.auto_claim_quests_var.get():
                 return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             if not self.check_roblox_procs():
                 return
             self.activate_roblox_window()
@@ -3184,6 +3445,13 @@ class BiomePresence():
             self.error_logging(e, "Error in perform_quest_claim_sequence_sync")
 
     def snowman_path_loop(self):
+        try:
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
+        except Exception as e:
+            self.error_logging(e, "Error in snowman_path_loop")
+
         while self.detection_running:
             try:
                 if not getattr(self, "enable_snowman_var", None) or not self.enable_snowman_var.get():
@@ -3305,6 +3573,167 @@ class BiomePresence():
                         break
                     time.sleep(min(rem, 0.01))
             
+            typ = ev.get("type")
+            try:
+                if typ == "mouse_move":
+                    autoit.mouse_move(int(ev["x"]), int(ev["y"]), 0)
+                elif typ == "mouse_down":
+                    b = ev.get("button", "left")
+                    autoit.mouse_down(b)
+                elif typ == "mouse_up":
+                    b = ev.get("button", "left")
+                    autoit.mouse_up(b)
+                elif typ == "mouse_wheel":
+                    delta = int(ev.get("delta", 0))
+                    if delta != 0:
+                        mouse.wheel(delta)
+                elif typ == "key_down":
+                    k = ev.get("key")
+                    if k not in ("f3", "f4"):
+                        keyboard.press(k)
+                elif typ == "key_up":
+                    k = ev.get("key")
+                    if k not in ("f3", "f4"):
+                        keyboard.release(k)
+            except Exception:
+                pass
+            last_t = t
+
+    def obby_path_loop(self):
+        try:
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
+        except Exception as e:
+            self.error_logging(e, "Error in obby_path_loop")
+
+        while self.detection_running:
+            try:
+                if not getattr(self, "enable_obby_var", None) or not self.enable_obby_var.get():
+                    time.sleep(2)
+                    continue
+
+                try:
+                    interval_min = float(self.obby_claim_interval_var.get())
+                except Exception:
+                    interval_min = 15.0
+
+                if (datetime.now() - self.last_obby_claim) < timedelta(minutes=interval_min):
+                    time.sleep(2)
+                    continue
+
+                if (getattr(self, "_br_sc_running", False) or
+                    getattr(self, "_mt_running", False) or
+                    getattr(self, "auto_pop_state", False) or
+                    getattr(self, "on_auto_merchant_state", False) or
+                    getattr(self, "config", {}).get("enable_auto_craft", False)):
+                    time.sleep(2)
+                    continue
+
+                self._action_scheduler.enqueue_action(
+                    self._perform_obby_path_sequence_impl,
+                    name="obby_path",
+                    priority=0
+                )
+
+                self.last_obby_claim = datetime.now()
+
+            except Exception as e:
+                self.error_logging(e, "Error in obby_path_loop")
+            time.sleep(1)
+
+    def _perform_obby_path_sequence_impl(self):
+        try:
+            if not getattr(self, "enable_obby_var", None) or not self.enable_obby_var.get():
+                return
+            if not self.check_roblox_procs():
+                return
+
+            self._obby_running = True
+
+            for _ in range(4):
+                if not self.detection_running:
+                    self._obby_running = False
+                    return
+                self.activate_roblox_window()
+                time.sleep(0.15)
+            keyboard.press_and_release('esc')
+            time.sleep(0.3)
+            keyboard.press_and_release('r')
+            time.sleep(0.3)
+            keyboard.press_and_release('enter')
+            time.sleep(2)
+
+            collections_button = self.config.get("collections_button", [0, 0])
+            if collections_button and collections_button[0]:
+                try:
+                    autoit.mouse_click("left", collections_button[0], collections_button[1], 1, speed=3)
+                except Exception:
+                    try:
+                        self.Global_MouseClick(collections_button[0], collections_button[1])
+                    except Exception:
+                        pass
+                time.sleep(0.3)
+
+            exit_collections_button = self.config.get("exit_collections_button", [0, 0])
+            if exit_collections_button and exit_collections_button[0]:
+                try:
+                    autoit.mouse_click("left", exit_collections_button[0], exit_collections_button[1], 1, speed=3)
+                except Exception:
+                    try:
+                        self.Global_MouseClick(exit_collections_button[0], exit_collections_button[1])
+                    except Exception:
+                        pass
+                time.sleep(0.3)
+
+            current_x, current_y = autoit.mouse_get_pos()
+            autoit.mouse_down("right")
+            time.sleep(0.1)
+            autoit.mouse_move(current_x, current_y + 75, 0)
+            time.sleep(0.1)
+            autoit.mouse_up("right")
+            time.sleep(0.2)
+
+            obby_file = os.path.join("paths", "obby.json")
+            if os.path.exists(obby_file):
+                self._run_obby_macro(obby_file)
+
+        except Exception as e:
+            self.error_logging(e, "Error in _perform_obby_path_sequence_impl")
+        finally:
+            self._obby_running = False
+
+    def _run_obby_macro(self, json_file_path):
+        try:
+            with open(json_file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            self.error_logging(e, f"Failed to load obby macro from {json_file_path}")
+            return
+
+        events = data.get("events", [])
+        if not events:
+            return
+        events.sort(key=lambda ev: ev.get("t", 0.0))
+
+        start_time = time.perf_counter()
+        last_t = 0.0
+        for ev in events:
+            if not self.detection_running or not getattr(self, "enable_obby_var", None) or not self.enable_obby_var.get():
+                break
+
+            t = float(ev.get("t", 0.0))
+            dt = t - last_t
+            if dt > 0:
+                end = time.perf_counter() + dt
+                while True:
+                    if not self.detection_running or not getattr(self, "enable_obby_var", None) or not self.enable_obby_var.get():
+                        break
+                    rem = end - time.perf_counter()
+                    if rem <= 0:
+                        break
+                    time.sleep(min(rem, 0.01))
+
             typ = ev.get("type")
             try:
                 if typ == "mouse_move":
@@ -3937,7 +4366,6 @@ class BiomePresence():
         potion_search = self.config.get("potion_search_bar1", [0, 0])
         potion_b2 = self.config.get("potion_button2", [0, 0])
         potion_name = os.path.splitext(file_name)[0]
-
         try:
             def _click(xy, label="click", tries=3, pause_after=0.12):
                 if not xy or not xy[0]:
@@ -3953,7 +4381,7 @@ class BiomePresence():
                         last_exc = exc
                         time.sleep(0.05)
                 raise last_exc or RuntimeError(f"{label} failed at {x},{y}")
-
+            inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
             pname = (potion_name or "").strip()
             if pname == "":
                 self.error_logging(ValueError("Empty potion name"), "Potion setup: empty potion_name")
@@ -3963,13 +4391,13 @@ class BiomePresence():
                 _click(potion_search, label="search_bar", tries=3, pause_after=0.18)
                 time.sleep(0.18)
                 autoit.send("^{a}")
-                time.sleep(0.28)
+                time.sleep(0.5 + inventory_click_delay)
                 autoit.send("{BACKSPACE}")
-                time.sleep(0.18)
+                time.sleep(0.5 + inventory_click_delay)
                 autoit.send(pname)
-                time.sleep(0.18)
+                time.sleep(0.6767 + inventory_click_delay)
                 autoit.send("{ENTER}")
-                time.sleep(0.18)
+                time.sleep(0.6767 + inventory_click_delay)
             else:
                 self.error_logging(RuntimeError("Missing potion_search coordinates"), "Potion setup warning")
 
@@ -3986,7 +4414,6 @@ class BiomePresence():
         except Exception as e:
             self.error_logging(e, "Potion setup clicks failed")
             return
-
         start_time = time.perf_counter()
         while self.detection_running and self.enable_potion_crafting_var.get():
             if stop_after is not None:
@@ -4036,7 +4463,8 @@ class BiomePresence():
                             keyboard.release(k)
                 except Exception:
                     pass
-                last_t = t
+                finally:
+                    last_t = t
             if stop_after is not None:
                 if time.perf_counter() - start_time >= float(stop_after):
                     break
@@ -4044,11 +4472,18 @@ class BiomePresence():
 
     def start_potion_crafting(self):
         try:
+            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
+                "enable_auto_craft") or self.current_biome == "GLITCHED" or getattr(self, '_merchant_pending_from_logs',
+                                                                                    False) or getattr(self,
+                                                                                                      '_mt_running',
+                                                                                                      False): return
+            if not self.detection_running or self.reconnecting_state: return
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
             if not getattr(self, "detection_running", False):
                 return
             if not getattr(self, "enable_potion_crafting_var", None) or not self.enable_potion_crafting_var.get():
                 return
-
             if getattr(self, "enable_potion_switching_var", None) and self.enable_potion_switching_var.get():
                 def switcher():
                     try:
@@ -4058,8 +4493,6 @@ class BiomePresence():
                             f1_raw = (self.potion_file_var.get().strip() or self.config.get("potion_last_file", ""))
                             f2_raw = (self.potion2_var.get().strip() or self.config.get("potion_file2", ""))
                             f3_raw = (self.potion3_var.get().strip() or self.config.get("potion_file3", ""))
-
-                            # treat explicit "None" (case-insensitive) as disabled
                             def normalize(v):
                                 if not v: return ""
                                 return "" if str(v).strip().lower() == "none" else v
@@ -4071,7 +4504,6 @@ class BiomePresence():
                                     order.append(nv)
 
                             if not order:
-                                # nothing to run
                                 time.sleep(0.5)
                                 continue
 
@@ -4111,6 +4543,11 @@ class BiomePresence():
         jester_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
         jester_button = ttk.Button(jester_frame, text="Jester Item Settings", command=self.open_jester_settings)
         jester_button.pack(padx=3, pady=3)
+
+        rin_frame = ttk.LabelFrame(frame, text="Rin")
+        rin_frame.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
+        rin_button = ttk.Button(rin_frame, text="Rin Item Settings", command=self.open_rin_settings)
+        rin_button.pack(padx=3, pady=3)
 
         ttk.Label(frame,
                   text="Merchant item extra slot\n(extra slot if your mouse missed/cannot reach to merchant's 5th slot):").grid(
@@ -4189,73 +4626,29 @@ class BiomePresence():
         jester_user_id_entry.grid(row=6, column=1, padx=0, pady=3, sticky="w")
         jester_user_id_entry.bind("<FocusOut>", lambda event: self.save_config())
 
+        jester_label = ttk.Label(frame, text="")
+        jester_label.grid(row=6, column=2, padx=5, pady=3, sticky="w")
+
+        # Ping Rin
+        self.ping_rin_var = ttk.BooleanVar(value=self.config.get("ping_rin", False))
+        ping_rin_check = ttk.Checkbutton(
+            frame, text="Ping if Rin found? (Custom Ping UserID/RoleID: &roleid)",
+            variable=self.ping_rin_var, command=self.save_config)
+        ping_rin_check.grid(row=7, column=0, padx=5, pady=3, sticky="w")
+
+        self.rin_user_id_var = ttk.StringVar(value=self.config.get("rin_user_id", ""))
+        rin_user_id_entry = ttk.Entry(frame, textvariable=self.rin_user_id_var, width=15)
+        rin_user_id_entry.grid(row=7, column=1, padx=0, pady=3, sticky="w")
+        rin_user_id_entry.bind("<FocusOut>", lambda event: self.save_config())
+
+        rin_label = ttk.Label(frame, text="")
+        rin_label.grid(row=7, column=2, padx=5, pady=3, sticky="w")
+
         merchant_no_mt_check = ttk.Checkbutton(
             frame, text="Merchant detection without Merchant Teleporter gamepass.",
             variable=self.detect_merchant_no_mt_var, command=self.save_config
         )
         merchant_no_mt_check.grid(row=8, column=0, padx=5, pady=3, sticky="w")
-
-        jester_label = ttk.Label(frame, text="")
-        jester_label.grid(row=6, column=2, padx=5, pady=3, sticky="w")
-
-        # Required Package Frame
-        package_frame = ttk.LabelFrame(frame, text="Required Package For Auto Merchant")
-        package_frame.grid(row=7, column=0, padx=5, pady=5, sticky="nsew")
-
-        # Tesseract OCR Status
-        ocr_status = self.check_tesseract_ocr()
-        ocr_status_text = "Tesseract OCR Installed: Yes" if ocr_status else "Tesseract OCR Installed: No, click here to get OCR module"
-        ocr_status_label = ttk.Label(package_frame, text=ocr_status_text, foreground="light blue", cursor="hand2")
-        ocr_status_label.pack(anchor="w", padx=5, pady=3)
-        if not ocr_status:
-            ocr_status_label.bind("<Button-1>", lambda e: self.download_tesseract())
-
-        frame.grid_columnconfigure(0, weight=1)
-        frame.grid_columnconfigure(1, weight=1)
-        frame.grid_columnconfigure(2, weight=1)
-
-    def check_tesseract_ocr(self):
-        tesseract_env_path = os.getenv('TESSERACT_PATH')
-        if tesseract_env_path and os.path.exists(tesseract_env_path):
-            pytesseract.pytesseract.tesseract_cmd = tesseract_env_path
-            return True
-
-        possible_paths = [
-            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
-            os.path.join(os.getenv('LOCALAPPDATA'), 'Programs', 'Tesseract-OCR', 'tesseract.exe'),
-            os.path.join(os.getenv('LOCALAPPDATA'), 'Tesseract-OCR', 'tesseract.exe')
-        ]
-
-        for path in possible_paths:
-            if os.path.exists(path):
-                pytesseract.pytesseract.tesseract_cmd = path
-                return True
-
-        return False
-
-    def download_tesseract(self):
-        download_url = "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe"
-        try:
-            exe_filename = os.path.basename(download_url)
-            save_path = filedialog.asksaveasfilename(defaultextension=".exe", initialfile=exe_filename, title="Save As")
-
-            if not save_path:
-                messagebox.showwarning("Download Cancelled", "No file path selected. Download cancelled.")
-                return
-
-            response = requests.get(download_url)
-            response.raise_for_status()
-
-            with open(save_path, 'wb') as file:
-                file.write(response.content)
-
-            messagebox.showinfo("Download Complete",
-                                f"Tesseract installer has been downloaded as {save_path}. Please run the installer to complete the setup. \n \n After installed tesseract, restart the macro to let it check if your ocr module is ready!")
-        except requests.RequestException as e:
-            messagebox.showerror("Download Failed", f"Failed to download Tesseract: {e}")
-        except IOError as e:
-            messagebox.showerror("File Error", f"Failed to save the file: {e}")
 
     def open_merchant_calibration_window(self):
         calibration_window = ttk.Toplevel(self.root)
@@ -4433,6 +4826,52 @@ class BiomePresence():
         self.config["Jester_Items"] = jester_items
         self.save_config()
         jester_window.destroy()
+
+    def open_rin_settings(self):
+        rin_window = ttk.Toplevel(self.root)
+        rin_window.title("Rin Items")
+
+        items = [
+            "Sunstone Talisman", "Moonstone Talisman", "Day and Night Talisman",
+            "Overtime Talisman", "Soul Collector's Talisman", "Soul Master's Talisman"
+        ]
+
+        item_frame = ttk.Frame(rin_window)
+        item_frame.pack(padx=10, pady=10, fill='x')
+        ttk.Label(item_frame, text="Item Name").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(item_frame, text="Amount").grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        ttk.Label(item_frame, text="Rebuy").grid(row=0, column=2, padx=5, pady=5, sticky="w")
+
+        self.rin_items_vars = {}
+        self.rin_items_amounts = {}
+        self.rin_items_rebuy = {}
+        saved_rin_items = self.config.get("Rin_Items", {})
+
+        for i, item in enumerate(items, start=1):
+            saved_data = saved_rin_items.get(item, [False, 1, False])
+            var = ttk.BooleanVar(value=saved_data[0])
+            self.rin_items_vars[item] = var
+            ttk.Checkbutton(item_frame, text=item, variable=var).grid(row=i, column=0, sticky="w", padx=5, pady=2)
+
+            amount_var = ttk.StringVar(value=str(saved_data[1]))
+            self.rin_items_amounts[item] = amount_var
+            ttk.Entry(item_frame, textvariable=amount_var, width=5).grid(row=i, column=1, padx=5, pady=2)
+
+            rebuy_var = ttk.BooleanVar(value=saved_data[2] if len(saved_data) > 2 else False)
+            self.rin_items_rebuy[item] = rebuy_var
+            ttk.Checkbutton(item_frame, variable=rebuy_var).grid(row=i, column=2, sticky="w", padx=5, pady=2)
+
+        save_button = ttk.Button(rin_window, text="Save Selections", command=lambda: self.save_rin_selections(rin_window))
+        save_button.pack(pady=10)
+
+    def save_rin_selections(self, rin_window):
+        rin_items = {
+            item: [var.get(), int(self.rin_items_amounts[item].get()), self.rin_items_rebuy[item].get()]
+            for item, var in self.rin_items_vars.items()
+        }
+        self.config["Rin_Items"] = rin_items
+        self.save_config()
+        rin_window.destroy()
 
     def create_stats_tab(self, frame):
         self.stats_labels = {}
@@ -4879,7 +5318,8 @@ class BiomePresence():
                 (self.merchant_log_check, "Merchant Check"),
                 (self.anti_afk_loop, "Anti-AFK"),
                 (self.quest_claim_loop, "Quest Claim"),
-                (self.snowman_path_loop, "Snowman Path")
+                (self.snowman_path_loop, "Snowman Path"),
+                (self.obby_path_loop, "Obby Path"),
             ]
 
             for thread_func, name in threads:
@@ -5154,11 +5594,15 @@ class BiomePresence():
                     merchant_name = "Mari"
                 elif "Jester has arrived on the island" in l:
                     merchant_name = "Jester"
+                elif "Rin has arrived on the island" in l:
+                    merchant_name = "Rin"
                 else:
                     if "Mari" in l and "has arrived" in l:
                         merchant_name = "Mari"
                     elif "Jester" in l and "has arrived" in l:
                         merchant_name = "Jester"
+                    elif "Rin" in l and "has arrived" in l:
+                        merchant_name = "Rin"
 
                 if not merchant_name:
                     continue
@@ -5235,17 +5679,26 @@ class BiomePresence():
                     if self.config.get("record_rare_biome", False):
                         self.trigger_biome_record()
                     try:
-                        if getattr(self, "reset_on_rare_var", None) and self.reset_on_rare_var.get():
+                        if getattr(self, "reset_on_rare_var", None) and self.reset_on_rare_var.get() and not (getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get()):
                             self._action_scheduler.enqueue_action(self._reset_on_rare_impl, name="reset_rare", priority=0)
                     except Exception:
                         pass
 
                 if biome != "NORMAL":
+                    if biome in rare_biomes and getattr(self, "just_reconnected", False):
+                        try:
+                            confirmed = self.confirm_biome_popup(biome)
+                        except Exception:
+                            confirmed = False
+                        self.just_reconnected = False
+                        if not confirmed:
+                            self.stop_detection()
+                            return
                     self.send_webhook(biome, message_type, "start")
 
                 if last_biome in rare_biomes and biome not in rare_biomes:
                     try:
-                        if getattr(self, "teleport_back_to_limbo_var", None) and self.teleport_back_to_limbo_var.get():
+                        if getattr(self, "teleport_back_to_limbo_var", None) and self.teleport_back_to_limbo_var.get() and not (getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get()):
                             self._action_scheduler.enqueue_action(self._teleport_crack_impl, name="teleport_back", priority=0)
                     except Exception:
                         pass
@@ -5253,11 +5706,14 @@ class BiomePresence():
                 if biome == "GLITCHED":
                     with self.lock:
                         if self.config.get("auto_pop_glitched", False):
-                            self.auto_pop_state = True
-                            self.auto_pop_buffs()
-                            self.auto_pop_state = False
-                        if self.config.get("enable_buff_glitched", False):
-                            threading.Thread(target=self.perform_glitched_enable_buff, daemon=True).start()
+                            if not (getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get()):
+                                if self.config.get("auto_pop_glitched", False):
+                                    self.auto_pop_state = True
+                                    self.auto_pop_buffs()
+                                    self.auto_pop_state = False
+                                if self.config.get("enable_buff_glitched", False):
+                                    threading.Thread(target=self.perform_glitched_enable_buff, daemon=True).start()
+
 
         except Exception as e:
             self.error_logging(e,
@@ -5399,6 +5855,7 @@ class BiomePresence():
                     self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
+            self.just_reconnected = True
             self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
             self.save_config()
         except Exception as e:
@@ -5729,7 +6186,7 @@ class BiomePresence():
                                                                                                     '_br_sc_running',
                                                                                                     False) and not getattr(
                         self, '_mt_running', False) and not getattr(self, '_remote_running', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
-                                                                                datetime.min):
+                                                                                datetime.min) and not (getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get()):
             self.use_merchant_teleporter()
             self.last_mt_time = datetime.now()
 
@@ -5739,11 +6196,10 @@ class BiomePresence():
             sc_cooldown = timedelta(minutes=20)
 
         if self.sc_var.get() and datetime.now() - self.last_sc_time >= sc_cooldown and not getattr(self,
-                                                                                                        '_merchant_pending_from_logs',
-                                                                                                        False) and not getattr(
-                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and not self.on_auto_merchant_state and datetime.now() >= getattr(self,
-                                                                                                                    '_cancel_next_actions_until',
-                                                                                                                    datetime.min):
+                                                                                                    '_br_sc_running',
+                                                                                                    False) and not getattr(
+                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
+                                                                                datetime.min) and not (getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get()):
             self.use_br_sc('strange controller')
             self.last_sc_time = datetime.now()
 
@@ -5753,17 +6209,22 @@ class BiomePresence():
             br_cooldown = timedelta(minutes=35)
 
         if self.br_var.get() and datetime.now() - self.last_br_time >= br_cooldown and not getattr(self,
-                                                                                                   '_merchant_pending_from_logs',
-                                                                                                   False) and not getattr(
-                self, '_mt_running', False) and not self.on_auto_merchant_state and datetime.now() >= getattr(self,
-                                                                                                              '_cancel_next_actions_until',
-                                                                                                              datetime.min):
+                                                                                                    '_br_sc_running',
+                                                                                                    False) and not getattr(
+                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
+                                                                                datetime.min) and not (getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get()):
             self.use_br_sc('biome randomizer')
             self.last_br_time = datetime.now()
 
     def perform_periodic_aura_screenshot_sync(self):
+        if not self.detection_running or self.reconnecting_state: 
+            return
+        if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get():
+            return 
         inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
         try:
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
             if not getattr(self, "periodical_aura_var", None) or not self.periodical_aura_var.get():
                 return
             try:
@@ -5806,8 +6267,12 @@ class BiomePresence():
 
     def perform_periodic_inventory_screenshot_sync(self):
         try:
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             if not getattr(self, "periodical_inventory_var", None) or not self.periodical_inventory_var.get():
                 return
+            if not self.detection_running or self.reconnecting_state: return
             try:
                 interval_min = float(self.periodical_inventory_interval_var.get())
             except Exception:
@@ -5950,6 +6415,7 @@ class BiomePresence():
                                                                                     False) or getattr(self,
                                                                                                       '_mt_running',
                                                                                                       False): return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             time.sleep(1.3)
 
             inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
@@ -6042,15 +6508,21 @@ class BiomePresence():
 
     def use_merchant_teleporter(self):
         try:
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             self._action_scheduler.enqueue_action(self._merchant_teleporter_impl, name="merchant_tele", priority=5)
         except Exception:
             try:
+                if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                    return
                 self._merchant_teleporter_impl()
             except Exception:
                 pass
 
     def _merchant_teleporter_impl(self):
         if getattr(self, '_br_sc_running', False): return
+        if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
         self._mt_running = True
         try:
             if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
@@ -6197,18 +6669,33 @@ class BiomePresence():
 
             merchant_name = ""
             ocrMisdetect_Key = {
-                "heovenly potion": "heavenly potion",
-                "heovenly potion!": "heavenly potion",
                 "heavenly potion": "heavenly potion",
-                "heavenly potion!": "heavenly potion",
-                "rune of goloxy": "rune of galaxy",
-                "rune of roinstorm": "rune of rainstorm",
-                "stronge potion": "strange potion",
-                "stello's condle": "stella's candle",
-                "merchont trocker": "merchant tracker",
-                "rondom potion sock": "random potion sack",
-                "geor a": "gear a",
-                "geor b": "gear b"
+                "rune of galaxy": "rune of galaxy",
+                "rune of rainstorm": "rune of rainstorm",
+                "strange potion": "strange potion",
+                "stella's candle": "stella's candle",
+                "merchant tracker": "merchant tracker",
+                "random potion sack": "random potion sack",
+                "gear a": "gear a",
+                "gear b": "gear b",
+                "lucky potion": "lucky potion",
+                "void coin": "void coin",
+                "lucky penny": "lucky penny",
+                "mixed potion": "mixed potion",
+                "lucky potion l": "lucky potion l",
+                "lucky potion xl": "lucky potion xl",
+                "speed potion": "speed potion",
+                "speed potion l": "speed potion l",
+                "speed potion xl": "speed potion xl",
+                "oblivion potion": "oblivion potion",
+                "potion of bound": "potion of bound",
+                "rune of everything": "rune of everything",
+                "rune of dust": "rune of dust",
+                "rune of nothing": "rune of nothing",
+                "rune of corruption": "rune of corruption",
+                "rune of hell": "rune of hell",
+                "rune of frost": "rune of frost",
+                "rune of wind": "rune of wind"
             }
 
             if not hasattr(self, 'last_merchant_interaction'):
@@ -6238,17 +6725,31 @@ class BiomePresence():
 
                 x, y, w, h = merchant_name_ocr_pos
                 screenshot = pyautogui.screenshot(region=(x, y, w, h))
-                merchant_name_text = pytesseract.image_to_string(screenshot, config='--psm 6').strip()
-                if any(name in merchant_name_text for name in
-                       ["Mari", "Mori", "Marl", "Mar1", "MarI", "Mar!", "Maori"]):
-                    merchant_name = "Mari"
-                    print("[Merchant Detection]: Mari name found!")
-                    break
-                elif any(name in merchant_name_text for name in
-                         ["Jester", "Dester", "Jostor", "Jestor", "Joster", "Destor", "Doster", "Dostor", "jester", "dester"]):
-                    merchant_name = "Jester"
-                    print("[Merchant Detection]: Jester name found!")
-                    break
+                merchant_name_text = self.extract_text_with_easyocr((x, y, w, h)).strip()
+
+                mari_candidates = ["Mari", "Mori", "Marl", "Mar1", "MarI", "Mar!", "Maori"]
+                jester_candidates = ["Jester", "Dester", "Jostor", "Jestor", "Joster", "Destor", "Doster", "Dostor", "jester", "dester"]
+                try:
+                    if fuzzy_match_any(merchant_name_text, mari_candidates, threshold=0.6):
+                        merchant_name = "Mari"
+                        print("[Merchant Detection]: Mari name found!")
+                        break
+                    elif fuzzy_match_any(merchant_name_text, jester_candidates, threshold=0.6):
+                        merchant_name = "Jester"
+                        print("[Merchant Detection]: Jester name found!")
+                        break
+                except Exception as e:
+                    try:
+                        if any(name in merchant_name_text for name in mari_candidates):
+                            merchant_name = "Mari"
+                            print("[Merchant Detection - fallback]: Mari name found!")
+                            break
+                        if any(name in merchant_name_text for name in jester_candidates):
+                            merchant_name = "Jester"
+                            print("[Merchant Detection - fallback]: Jester name found!")
+                            break
+                    except Exception:
+                        pass
 
                 time.sleep(0.12)
 
@@ -6291,16 +6792,24 @@ class BiomePresence():
 
                     x, y, w, h = item_name_ocr_pos
                     screenshot = pyautogui.screenshot(region=(x, y, w, h))
-                    item_text = pytesseract.image_to_string(screenshot, config='--psm 6').strip().lower()
+                    item_text = self.extract_text_with_easyocr((x, y, w, h)).strip().lower()
 
                     self.append_log(f"[Merchant Detection - {merchant_name}] Detected item text: {item_text}")
 
                     corrected_item_name = item_text.split('|')[0].strip()
-                    for misdetect, correct in ocrMisdetect_Key.items():
-                        if misdetect in corrected_item_name:
-                            corrected_item_name = correct
-                            print(f"Corrected OCR misdetection: '{item_text}' -> '{correct}'")
-                            break
+                    corrected_candidate = fuzzy_correct_item_name(corrected_item_name, ocrMisdetect_Key, threshold=0.6)
+                    if isinstance(corrected_candidate, str) and corrected_candidate != corrected_item_name:
+                        print(f"Corrected OCR misdetection: '{item_text}' -> '{corrected_candidate}'")
+                        corrected_item_name = corrected_candidate
+                    else:
+                        for misdetect, correct in ocrMisdetect_Key.items():
+                            try:
+                                if misdetect in corrected_item_name.lower():
+                                    corrected_item_name = correct
+                                    print(f"Corrected OCR misdetection (fallback): '{item_text}' -> '{correct}'")
+                                    break
+                            except Exception:
+                                pass
 
                     print(f"Detected item text: {item_text} | Corrected: {corrected_item_name}")
 
@@ -6331,8 +6840,9 @@ class BiomePresence():
                                 break
 
                 self.last_merchant_interaction = current_time
-            else:
+            else:    
                 print("No merchant detected.")
+                time.sleep(0.67)
                 self.Global_MouseClick(merchant_open_button[0], merchant_open_button[1], click=3)
 
         except Exception as e:
@@ -6391,18 +6901,18 @@ class BiomePresence():
             return
         merchant_thumbnails = {
             "Mari": "https://raw.githubusercontent.com/vexthecoder/OysterDetector/refs/heads/main/mari.png",
-            "Jester": "https://raw.githubusercontent.com/vexthecoder/OysterDetector/refs/heads/main/jester.png"
+            "Jester": "https://raw.githubusercontent.com/vexthecoder/OysterDetector/refs/heads/main/jester.png",
+            "Rin": "https://raw.githubusercontent.com/vexthecoder/OysterDetector/refs/heads/main/rin.png"
         }
         if merchant_name == "Mari":
-            ping_id = self.mari_user_id_var.get() if hasattr(self, 'mari_user_id_var') else self.config.get(
-                "mari_user_id", "")
-            ping_enabled = self.ping_mari_var.get() if hasattr(self, 'ping_mari_var') else self.config.get("ping_mari",
-                                                                                                           False)
+            ping_id = self.mari_user_id_var.get() if hasattr(self, 'mari_user_id_var') else self.config.get("mari_user_id", "")
+            ping_enabled = self.ping_mari_var.get() if hasattr(self, 'ping_mari_var') else self.config.get("ping_mari", False)
         elif merchant_name == "Jester":
-            ping_id = self.jester_user_id_var.get() if hasattr(self, 'jester_user_id_var') else self.config.get(
-                "jester_user_id", "")
-            ping_enabled = self.ping_jester_var.get() if hasattr(self, 'ping_jester_var') else self.config.get(
-                "ping_jester", False)
+            ping_id = self.jester_user_id_var.get() if hasattr(self, 'jester_user_id_var') else self.config.get("jester_user_id", "")
+            ping_enabled = self.ping_jester_var.get() if hasattr(self, 'ping_jester_var') else self.config.get("ping_jester", False)
+        elif merchant_name == "Rin":
+            ping_id = self.rin_user_id_var.get() if hasattr(self, 'rin_user_id_var') else self.config.get("rin_user_id", "")
+            ping_enabled = self.ping_rin_var.get() if hasattr(self, 'ping_rin_var') else self.config.get("ping_rin", False)
         else:
             ping_id = ""
             ping_enabled = False
@@ -6684,7 +7194,7 @@ class BiomePresence():
         try:
             x, y, w, h = int(ocr_pos[0]), int(ocr_pos[1]), int(ocr_pos[2]), int(ocr_pos[3])
             img = pyautogui.screenshot(region=(x, y, w, h))
-            text = pytesseract.image_to_string(img).strip().lower()
+            text = self.extract_text_with_easyocr((x, y, w, h)).strip().lower()
         except Exception:
             text = ""
         expected_lower = (expected or "").lower()
@@ -6815,12 +7325,6 @@ class BiomePresence():
     def perform_anti_afk_action(self):
         try:
             if not getattr(self, "anti_afk_var", None) or not self.anti_afk_var.get(): return
-            if getattr(self, "br_var", None) and self.br_var.get(): return
-            if getattr(self, "sc_var", None) and self.sc_var.get(): return
-            if getattr(self, "mt_var", None) and self.mt_var.get(): return
-            if getattr(self, "on_auto_merchant_state", False): return
-            if getattr(self, "_br_sc_running", False): return
-            if getattr(self, "_mt_running", False): return
             if not self.check_roblox_procs(): return
             try:
                 hwnd_before = win32gui.GetForegroundWindow()
@@ -6946,6 +7450,9 @@ class BiomePresence():
 
     def _auto_pop_buffs_impl(self):
         try:
+            if getattr(self, "macro_idle_mode_var", None) and self.macro_idle_mode_var.get():
+                return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
 
             # Priority list for potions
@@ -7096,5 +7603,3 @@ finally:
         pass
     finally:
         keyboard.unhook_all()
-
-print("vamp") # vamp said he wants to say hi     
