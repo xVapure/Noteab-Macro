@@ -12,7 +12,7 @@ import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, easyocr, autoit, psutil, \
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
-current_ver = "v2.1.0"
+current_ver = "v2.1.0-hotfix1"
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
@@ -916,6 +916,7 @@ class BiomePresence():
             "macro_idle_mode": self.macro_idle_mode_var.get() if hasattr(self, "macro_idle_mode_var") else self.config.get("macro_idle_mode", False),
             "enable_obby_path": self.enable_obby_var.get() if hasattr(self, "enable_obby_var") else self.config.get("enable_obby_path", False),
             "obby_claim_interval": self.obby_claim_interval_var.get() if hasattr(self, "obby_claim_interval_var") else self.config.get("obby_claim_interval", "15"),
+            "merchant_close_button": self.config.get("merchant_close_button", [1086, 342]),
         })
 
         if not config["auto_buff_glitched"]:
@@ -4662,7 +4663,8 @@ class BiomePresence():
             ("Purchase Button", "purchase_button"),
             ("First Item Slot Position", "first_item_slot_pos"),
             ("Merchant Name OCR Position", "merchant_name_ocr_pos"),
-            ("Item Name OCR Position", "item_name_ocr_pos")
+            ("Item Name OCR Position", "item_name_ocr_pos"),
+            ("Merchant Close Button", "merchant_close_button"),
         ]
 
         self.coord_vars = {}
@@ -6729,6 +6731,7 @@ class BiomePresence():
 
                 mari_candidates = ["Mari", "Mori", "Marl", "Mar1", "MarI", "Mar!", "Maori"]
                 jester_candidates = ["Jester", "Dester", "Jostor", "Jestor", "Joster", "Destor", "Doster", "Dostor", "jester", "dester"]
+                rin_candidates = ["Rin", "R1n", "R1N", "RIN", "RiN"]
                 try:
                     if fuzzy_match_any(merchant_name_text, mari_candidates, threshold=0.6):
                         merchant_name = "Mari"
@@ -6737,6 +6740,10 @@ class BiomePresence():
                     elif fuzzy_match_any(merchant_name_text, jester_candidates, threshold=0.6):
                         merchant_name = "Jester"
                         print("[Merchant Detection]: Jester name found!")
+                        break
+                    elif fuzzy_match_any(merchant_name_text, rin_candidates, threshold=0.6):
+                        merchant_name = "Rin"
+                        print("[Merchant Detection]: Rin name found!")
                         break
                 except Exception as e:
                     try:
@@ -6747,6 +6754,10 @@ class BiomePresence():
                         if any(name in merchant_name_text for name in jester_candidates):
                             merchant_name = "Jester"
                             print("[Merchant Detection - fallback]: Jester name found!")
+                            break
+                        if any(name in merchant_name_text for name in rin_candidates):
+                            merchant_name = "Rin"
+                            print("[Merchant Detection - fallback]: Rin name found!")
                             break
                     except Exception:
                         pass
@@ -6763,7 +6774,8 @@ class BiomePresence():
 
                 x, y = merchant_open_button
                 autoit.mouse_click("left", x, y, 3)
-                time.sleep(2)
+                inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
+                time.sleep(7 + inventory_click_delay)
 
                 screenshot_dir = os.path.join(os.getcwd(), "images")
                 os.makedirs(screenshot_dir, exist_ok=True)
@@ -6838,7 +6850,8 @@ class BiomePresence():
 
                                 purchased_items[item_name] = purchased_count + 1
                                 break
-
+                merchant_close_button = self.config.get("merchant_close_button", [1086, 342])
+                self.Global_MouseClick(merchant_close_button[0], merchant_close_button[1], click=3)
                 self.last_merchant_interaction = current_time
             else:    
                 print("No merchant detected.")
