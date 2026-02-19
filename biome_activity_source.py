@@ -12,7 +12,7 @@ import difflib
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, easyocr, autoit, psutil, \
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
 
-current_ver = "v2.1.0-hotfix1"
+current_ver = "v2.1.0-hotfix2"
 
 def apply_fast_flags(version=None, force=False):
     config_paths = [
@@ -6539,6 +6539,14 @@ class BiomePresence():
             amount_box = self.config.get("amount_box", [594, 570])
             use_button = self.config.get("use_button", [710, 573])
             inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
+
+            current_x, current_y = autoit.mouse_get_pos()
+            autoit.mouse_down("right")
+            time.sleep(0.1)
+            autoit.mouse_move(current_x, current_y + 75, 0)
+            time.sleep(0.1)
+            autoit.mouse_up("right")
+            time.sleep(0.2)
 
             for _ in range(3):
                 if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
