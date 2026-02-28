@@ -6872,6 +6872,29 @@ class BiomePresence():
         finally:
             self.on_auto_merchant_state = False
 
+    def get_duration(self, biome):
+        # Specify 0 if biome has no duration
+
+        biome_data = {
+            "NORMAL": 0,
+            "WINDY": 120,
+            "RAINY": 120,
+            "SNOWY": 120,
+            "SAND STORM": 650,
+            "HELL": 666,
+            "STARFALL": 600,
+            "CORRUPTION": 650,
+            "NULL": 99,
+            "GLITCHED": 164,
+            "DREAMSPACE": 192,
+            "AURORA": 300,
+            "HEAVEN": 240,
+            "CYBERSPACE": 720
+        }
+
+        # Returns the integer duration, or 0 if the biome name is not found
+        return biome_data.get(biome.upper(), 0)
+
     def send_webhook(self, biome, message_type, event_type):
         urls = self.get_webhook_list()
         if not urls:
@@ -6880,9 +6903,13 @@ class BiomePresence():
         if message_type == "None": return
         biome_info = self.biome_data[biome]
         biome_color = int(biome_info["color"], 16)
+        print(str(biome))
+        biome_duration = int(self.get_duration(str(biome)))
         current_utc_time = datetime.now(timezone.utc)
         current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
         current_utc_time = str(current_utc_time)
+        unix_stamp = str(int(time.time() + biome_duration))
+        biome_count = self.biome_counts[biome]
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
         content = ""
         if event_type == "start" and biome in rare_biomes:
@@ -6891,7 +6918,10 @@ class BiomePresence():
         if private_server_link == "":
             description = f"> ## Biome Started - {biome} \nNo link provided (ManasAarohi ate the link blame him)" if event_type == "start" else f"> ### Biome Ended - {biome}"
         else:
-            description = f"> ## Biome Started - {biome} \n> ### **[Join Server]({private_server_link})**" if event_type == "start" else f"> ### Biome Ended - {biome}"
+            if biome_duration != 0:
+                description = f"> ## Biome Started - {biome} \n> ### Ends <t:{unix_stamp}:R> (Unless stated otherwise) \n> ### \#{biome_count} - **[Join Server]({private_server_link})**" if event_type == "start" else f"> ### Biome Ended - {biome}"
+            else:
+                description = f"> ## Biome Started - {biome} \n> ### **[Join Server]({private_server_link})**" if event_type == "start" else f"> ### Biome Ended - {biome}"
         embed = {
             "description": description,
             "color": biome_color,
@@ -6909,7 +6939,7 @@ class BiomePresence():
         }
         for webhook_url in urls:
             try:
-                response = requests.post(webhook_url, json=payload)
+                response = requests.post(webhook_url, json=payload, timeout = 30)
                 response.raise_for_status()
                 print(f"[Line 1744] Sent {message_type} for {biome} - {event_type} to {webhook_url}")
             except requests.exceptions.RequestException as e:
