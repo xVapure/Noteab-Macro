@@ -6903,7 +6903,6 @@ class BiomePresence():
         if message_type == "None": return
         biome_info = self.biome_data[biome]
         biome_color = int(biome_info["color"], 16)
-        print(str(biome))
         biome_duration = int(self.get_duration(str(biome)))
         current_utc_time = datetime.now(timezone.utc)
         current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
