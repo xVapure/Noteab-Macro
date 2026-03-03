@@ -1,10 +1,23 @@
-PLEASE WATCH THE TUTORIAL IF YOU DON'T KNOW WHAT YOU'RE DOING: https://youtu.be/y3gocH9Hd18
-
-# v2.1.0-hotfix what's new?
-- I forgot to add some changelogs so here they are.
-- Added macro idle mode, all mouse actions will be disabled when this mode is turned on (anti-afk will still work).
-- Added obby path (unstable).
-- Added & fixed Rin detection, it works now.
-- Fixed merchant detection to work with the new Sol's update, in addition added a merchant_close_button variable (pls config in calibrations tab).
-- EasyOCR full implementation, merchants and merchants item detection will be 100% accurate now.
-- Adding a bit of delay to potion crafting.
+# v2.1.1 full release (preview)
+## Main features:
+- Added fishing mode (currently only available to VIP/VIP+ Sol's gamepass owners).
+    - Added use BR/SC every x fish.
+    - Added auto merchant + fishing.
+    - Fishing failsafe (must have reconnect to ps enabled, if not the macro will prompt a warning to the user).
+    - Fishing path reworked for the **5th time**, fishing should work in basically ANY regular FPS now.
+    - Added fishing mouse click delay.
+    - Added equip an aura before pathing.
+- Added auto pop in Cyberspace biome.
+- Added default calibrations for `1920*1080 full screen 100% scale` for first time users/users with empty config.
+- Added anti ghost server, basically when using the Coteab auto reconnect feature it will now detect if Sol's RNG put u on it's rejoin mode which leads to ghost servers (enabled when you enable auto reconnect to PS).
+## Systemic changes:
+- Proper back-end and front-end workspace structure for easier codeflow and manipulation.
+    - Macro is now written in typescript, html, css for front-end and the entire back-end structure is written in Python with local JSON data-set handling.
+- Reverted to the traditional `.exe` file type.
+- Auto update now is embedded into the executable file.
+## Misc changes:
+- UI/front-end rework.
+- Reworked and added new developers to credits tab.
+- Calibration guide added.
+## Known issues/bugs:
+- RAC not working.
