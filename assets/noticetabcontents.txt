@@ -1,3 +1,14 @@
+# v2.1.2 (mainly bug fixes)
+## New features:
+- Added mouse drag down move before start Flarg selling because sometimes it clicks on Flarg's dialogue box 😭
+## Bug fixes:
+- Remote access control now works.
+- Attempted a fix at WebView2 bug for some users (the macro black screen).
+- Attempted a fix at anti ghost server detection.
+- Fixed auto add not appearing in potion crafting calibrations.
+- Changed the rare biomes popup when forgetting to turn off macro logic.
+  - Timeout/wait interval: 10s instead of 60s.
+  - No response after timeout: ping for rare biome.
 # v2.1.1 full release (preview)
 ## Main features:
 - Added fishing mode (currently only available to VIP/VIP+ Sol's gamepass owners).
