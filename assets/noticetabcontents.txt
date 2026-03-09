@@ -1,3 +1,13 @@
+# v2.1.3, what's new?
+## Bug fixes:
+* Reduced macro startup time, OCR readings instead of hosting it directly on your PC now sends a request to EasyOCR API.
+    * Since EasyOCR isn't bundled into the app anymore the macro is wayyy more lightweighted now.
+* Duplication merchant count logic in macro resolved.
+* Attempted at fixing using item usage softlock (Using the br/sc thrice).
+* Fixed the issue with "Disconnected" logs reading, it will not read old log files anymore... (so it won't falsely flag you as DIsconnected from logs anymore).
+* Fixed the issue with rare biomes confirmation popup, it will only popup in the first 1 minute of reconnection now.
+## Misc changes:
+* Specificed the fishing delay in fishing page is in miliseconds.
 # v2.1.2 (mainly bug fixes)
 ## New features:
 - Added mouse drag down move before start Flarg selling because sometimes it clicks on Flarg's dialogue box 😭
