@@ -1,0 +1,22 @@
+**** IMPORTANT (PLEASE DO THIS FIRST LOW-ATTENTION SPAN USER) you need to get node js (for npm command: https://nodejs.org/en/download) **** 
+-- AKITO 
+1. to create frontend template: cmd.exe /c "npx create-tauri-app@latest . --manager npm --template react-ts -y --force" (no need to create if "frontend" folder already exist)
+
+2. to create the dist build: run "npm run build" inside "frontend" folder so it would compile the modern UI into index.html and requires the main.py to find that index.html from dist folder and use it. (Remember to the move whole "dist" folder inside "frontend" folder to "lib" folder)
+
+^^ ALWAYS COMPILE THE DIST BUILD FIRST WHENEVER YOU CHANGES SOMETHING TO THE FRONTEND/TSX FILE OTHERWISE THE PYTHON WILL ONLY LOOK FOR THE OLD DIST FILE ^^
+
+-> find any string or function name (in case you're so lost smh): findstr /s /n /i "stuff u want to find" *.py -> run this terminal command inside the biome_tracker folder so it would tell you the thing in relevant py files.
+
+-> compile the main.py file to exe: (pyinstaller)
+pyinstaller --name="CoteabMacro" --noconsole --onefile --icon="lib/official_release.ico" --add-data "lib;lib" --add-data "C:\Users\Akitosama\AppData\Local\Programs\Python\Python312\Lib\site-packages\autoit\lib\AutoItX3_x64.dll;autoit\lib" --collect-all webview --collect-all discord --upx-dir "C:\Users\Akitosama\Documents\upx-5.1.0-win64" main.py (replace my name as your current window user name, always ensure the autoit dll are installed!)
+
+-> compile the main.py file to exe (nuitka)
+python -m nuitka main.py --standalone --onefile --windows-console-mode=disable --windows-icon-from-ico=lib/official_release.ico --include-data-dir=lib=lib --include-data-file=C:\Users\Akitosama\AppData\Local\Programs\Python\Python312\Lib\site-packages\autoit\lib\AutoItX3_x64.dll=autoit\lib\AutoItX3_x64.dll --static-libpython=no --remove-output --output-filename=CoteabMacro.exe
+
+--icon="lib/aga.ico" (You can change the aga.ico to your desired icon with .ico format, the macro will use your custom one!)
+--upx-dir "C:\Users\your_user_here\path_to_upx_folder" (optional flag for pyinstaller you can insert this flag if you want, this flag will compress the exe size to a smaller size as possible. Otherwise, remove the --upx flag if you don't want to compress it)
+
+^^ (I assume you've installed python, so do pip install autoit and it should install the AutoItX3_x64.dll for you!) ^^
+
+

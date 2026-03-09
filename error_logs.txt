@@ -1,0 +1,183 @@
+Error Log File Created
+----------------------------------------
+
+[2026-02-20 17:54:12] ERROR LOG
+Error Type: JSONDecodeError
+Error Message: Expecting value: line 1 column 1 (char 0)
+Custom Message: Error at loading config.json. Try adding empty: '{}' into config.json to fix this error!
+Traceback:
+Traceback (most recent call last):
+  File "C:\Users\vapur\Desktop\Coteab Workspace 1\biome_tracker\core.py", line 950, in load_config
+    config = json.load(file)
+             ^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+----------------------------------------
+
+[2026-02-20 17:54:18] ERROR LOG
+Error Type: JSONDecodeError
+Error Message: Expecting value: line 1 column 1 (char 0)
+Custom Message: Error at loading config.json. Try adding empty: '{}' into config.json to fix this error!
+Traceback:
+Traceback (most recent call last):
+  File "C:\Users\vapur\Desktop\Coteab Workspace 1\biome_tracker\core.py", line 950, in load_config
+    config = json.load(file)
+             ^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+----------------------------------------
+
+[2026-02-20 17:54:28] ERROR LOG
+Error Type: JSONDecodeError
+Error Message: Expecting value: line 1 column 1 (char 0)
+Custom Message: Error at loading config.json. Try adding empty: '{}' into config.json to fix this error!
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\Coteab Workspace 1\biome_tracker\core.py", line 950, in load_config
+    config = json.load(file)
+             ^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vapur\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+----------------------------------------
+
+[2026-02-20 18:10:03] ERROR LOG
+Error Type: AttributeError
+Error Message: 'BiomeTracker' object has no attribute 'potion_run_status'
+Custom Message: Error launching potion loop
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\Coteab Workspace 1\biome_tracker\mixin_actions.py", line 1677, in start_potion_crafting
+    self.potion_run_status.set(f"Looping: {file_name}")
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'BiomeTracker' object has no attribute 'potion_run_status'. Did you mean: 'potion_rec_status'?
+
+----------------------------------------
+
+[2026-03-04 18:23:53] ERROR LOG
+Error Type: ValueError
+Error Message: Invalid session time format
+Custom Message: Error parsing session time.
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\devcoteab-python-workspace\biome_tracker\mixin_detection.py", line 312, in parse_session_time
+    raise ValueError("Invalid session time format")
+ValueError: Invalid session time format
+
+----------------------------------------
+
+[2026-03-04 18:24:12] ERROR LOG
+Error Type: ValueError
+Error Message: Invalid session time format
+Custom Message: Error parsing session time.
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\devcoteab-python-workspace\biome_tracker\mixin_detection.py", line 312, in parse_session_time
+    raise ValueError("Invalid session time format")
+ValueError: Invalid session time format
+
+----------------------------------------
+
+[2026-03-04 18:24:42] ERROR LOG
+Error Type: ValueError
+Error Message: Invalid session time format
+Custom Message: Error parsing session time.
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\devcoteab-python-workspace\biome_tracker\mixin_detection.py", line 312, in parse_session_time
+    raise ValueError("Invalid session time format")
+ValueError: Invalid session time format
+
+----------------------------------------
+
+[2026-03-04 18:25:21] ERROR LOG
+Error Type: ValueError
+Error Message: Invalid session time format
+Custom Message: Error parsing session time.
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\devcoteab-python-workspace\biome_tracker\mixin_detection.py", line 312, in parse_session_time
+    raise ValueError("Invalid session time format")
+ValueError: Invalid session time format
+
+----------------------------------------
+
+[2026-03-04 18:26:03] ERROR LOG
+Error Type: ValueError
+Error Message: Invalid session time format
+Custom Message: Error parsing session time.
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\devcoteab-python-workspace\biome_tracker\mixin_detection.py", line 312, in parse_session_time
+    raise ValueError("Invalid session time format")
+ValueError: Invalid session time format
+
+----------------------------------------
+
+[2026-03-04 18:30:29] ERROR LOG
+Error Type: ValueError
+Error Message: Invalid session time format
+Custom Message: Error parsing session time.
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\devcoteab-python-workspace\biome_tracker\mixin_detection.py", line 312, in parse_session_time
+    raise ValueError("Invalid session time format")
+ValueError: Invalid session time format
+
+----------------------------------------
+
+[2026-03-04 18:30:51] ERROR LOG
+Error Type: ValueError
+Error Message: Invalid session time format
+Custom Message: Error parsing session time.
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\devcoteab-python-workspace\biome_tracker\mixin_detection.py", line 312, in parse_session_time
+    raise ValueError("Invalid session time format")
+ValueError: Invalid session time format
+
+----------------------------------------
+
+[2026-03-04 18:34:32] ERROR LOG
+Error Type: ValueError
+Error Message: Invalid session time format
+Custom Message: Error parsing session time.
+Traceback:
+Traceback (most recent call last):
+  File "c:\Users\vapur\Desktop\devcoteab-python-workspace\biome_tracker\mixin_detection.py", line 312, in parse_session_time
+    raise ValueError("Invalid session time format")
+ValueError: Invalid session time format
+
+----------------------------------------

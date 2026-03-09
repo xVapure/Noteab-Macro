@@ -1,0 +1,116 @@
+.update-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+    border-bottom: 1px solid rgba(34, 197, 94, 0.3);
+    gap: 12px;
+    z-index: 100;
+    flex-shrink: 0;
+    animation: banner-slide-in 0.3s ease-out;
+}
+
+.update-banner-error {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+    border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.update-banner-success {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.1));
+    border-bottom: 1px solid rgba(34, 197, 94, 0.5);
+}
+
+@keyframes banner-slide-in {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.update-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.update-icon {
+    font-size: 16px;
+}
+
+.update-text {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.update-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.update-btn {
+    padding: 5px 14px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.update-btn-primary {
+    background: #22c55e;
+    color: white;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.update-btn-primary:hover {
+    background: #16a34a;
+    transform: translateY(-1px);
+}
+
+.update-btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.update-btn-secondary:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+.update-btn-muted {
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.update-btn-muted:hover {
+    color: var(--text-secondary);
+}
+
+.update-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(34, 197, 94, 0.3);
+    border-top-color: #22c55e;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
