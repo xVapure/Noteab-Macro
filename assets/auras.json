@@ -1,176 +1,1743 @@
-{   
-    "pukeko": {"rarity": 3198, "exclusive_biome": ["None", 1]},  
-    "Hazard": {"rarity": 7000, "exclusive_biome": ["CORRUPTION", 5]},
-    "Quartz": {"rarity": 8192, "exclusive_biome": ["None", 1]},  
-    "Undead": {"rarity": 12000, "exclusive_biome": ["HELL", 6]},
-    "Corrosive": {"rarity": 12000, "exclusive_biome": ["CORRUPTION", 5]},
-    "Lost Soul": {"rarity": 9200, "exclusive_biome": ["None", 1]},  
-    "Powered": {"rarity": 16384, "exclusive_biome": ["None", 1]},
-    "Aquatic": {"rarity": 40000, "exclusive_biome": ["None", 1]},
-    "Starlight": {"rarity": 50000, "exclusive_biome": ["STARFALL", 5]},
-    "Lunar": {"rarity": 50000, "exclusive_biome": ["None", 1]},
-    "Solar": {"rarity": 50000, "exclusive_biome": ["None", 1]},
-    "StarRider": {"rarity": 50000, "exclusive_biome": ["STARFALL", 5]},
-    "Nautilus": {"rarity": 70000, "exclusive_biome": ["None", 1]},
-    "Hazard_Rays": {"rarity": 70000, "exclusive_biome": ["CORRUPTION", 5]},
-    "Permafrost": {"rarity": 73500, "exclusive_biome": ["SNOWY", 3]},
-    "Stormal": {"rarity": 90000, "exclusive_biome": ["WINDY", 3]},
-    "Exotic": {"rarity": 99999, "exclusive_biome": ["None", 1]},
-    "Diaboli_Void": {"rarity": 100400, "exclusive_biome": ["None", 1]},
-    "Undead_Devil": {"rarity": 120000, "exclusive_biome": ["HELL", 6]},
-    "Comet": {"rarity": 120000, "exclusive_biome": ["STARFALL", 5]},
-    "Jade": {"rarity": 125000, "exclusive_biome": ["None", 1]},
-    "Aether": {"rarity": 180000, "exclusive_biome": ["None", 1]},
-    "BOUNDED": {"rarity": 200000, "exclusive_biome": ["None", 1]},
-    "Celestial": {"rarity": 350000, "exclusive_biome": ["None", 1]},
-    "Twilight": {"rarity": 600000, "exclusive_biome": ["None", 1]},
-    "Kyawthuite": {"rarity": 850000, "exclusive_biome": ["None", 1]},
-    "Arcane": {"rarity": 1000000, "exclusive_biome": ["None", 1]},
-    ":Flushed:_Troll": {"rarity": 1000000, "exclusive_biome": ["None", 1]},
-    "Magnetic_Reverse Polarity": {"rarity": 1024000, "exclusive_biome": ["None", 1]},
-    "Undefined": {"rarity": 1111000, "exclusive_biome": ["NULL", 1000]},
-    "Rage_Brawler": {"rarity": 1280000, "exclusive_biome": ["None", 1]},
-    "Astral": {"rarity": 1336000, "exclusive_biome": ["STARFALL", 5]},
-    "Cosmos": {"rarity": 1520000, "exclusive_biome": ["None", 1]},
-    "Gravitational": {"rarity": 2000000, "exclusive_biome": ["None", 1]},
-    "BOUNDED_UNBOUND": {"rarity": 2000000, "exclusive_biome": ["None", 1]},
-    "Virtual": {"rarity": 2500000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Parasite": {"rarity": 3000000, "exclusive_biome": ["CORRUPTION", 5]},
-    "Savior": {"rarity": 3200000, "exclusive_biome": ["None", 1]},
-    "Aquatic_Flame": {"rarity": 4000000, "exclusive_biome": ["None", 1]},
-    "Poseidon": {"rarity": 4000000, "exclusive_biome": ["RAINY", 4]},
-    "Zeus": {"rarity": 4500000, "exclusive_biome": ["None", 1]},
-    "Galaxy": {"rarity": 5000000, "exclusive_biome": ["STARFALL", 5]},
-    "Lunar_Full Moon": {"rarity": 5000000, "exclusive_biome": ["None", 1]},
-    "Solar_Solstice": {"rarity": 5000000, "exclusive_biome": ["None", 1]},
-    "Anima": {"rarity": 5730000, "exclusive_biome": ["None", 1]},
-    "Origin": {"rarity": 6500000, "exclusive_biome": ["None", 1]},
-    "Origin_Onion": {"rarity": 8000000, "exclusive_biome": ["None", 1]},
-    "Hades": {"rarity": 6666666, "exclusive_biome": ["HELL", 6]},
-    "Celestial_Divine": {"rarity": 7000000, "exclusive_biome": ["None", 1]},
-    "Anubis": {"rarity": 7200000, "exclusive_biome": ["SAND STORM", 4]},
-    "HYPER-VOLT": {"rarity": 7500000, "exclusive_biome": ["None", 1]},
-    "Velocity": {"rarity": 7630000, "exclusive_biome": ["None", 1]},
-    "Nautilus_Lost": {"rarity": 7700000, "exclusive_biome": ["None", 1]},
-    "HARNESSED": {"rarity": 8500000, "exclusive_biome": ["None", 1]},
-    "Nihility": {"rarity": 9000000, "exclusive_biome": ["NULL", 1000]},
-    "Helios": {"rarity": 9000000, "exclusive_biome": ["None", 1]},
-    "Stargazer": {"rarity": 9200000, "exclusive_biome": ["None", 1]},
-    "Starscourge": {"rarity": 10000000, "exclusive_biome": ["STARFALL", 5]},
-    "Wonderland": {"rarity": 12000000, "exclusive_biome": ["SNOWY", 3]},
-    "Sailor": {"rarity": 12000000, "exclusive_biome": ["RAINY", 4]},
-    "Stormal_Hurricane": {"rarity": 13500000, "exclusive_biome": ["WINDY", 3]},
-    "Sirius": {"rarity": 14000000, "exclusive_biome": ["STARFALL", 5]},
-    "Arcane_Legacy": {"rarity": 15000000, "exclusive_biome": ["None", 1]},
-    "Lullaby": {"rarity": 17000000, "exclusive_biome": ["None", 1]},
-    "Chromatic": {"rarity": 20000000, "exclusive_biome": ["None", 1]},
-    "Aviator": {"rarity": 24000000, "exclusive_biome": ["None", 1]},
-    "Arcane_Dark": {"rarity": 30000000, "exclusive_biome": ["None", 1]},
-    "Ethereal": {"rarity": 35000000, "exclusive_biome": ["None", 1]},
-    "Virtual_Fatal Error": {"rarity": 40413000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Juxtaposition": {"rarity": 40440400, "exclusive_biome": ["None", 1]},
-    "Santa Frost": {"rarity": 45000000, "exclusive_biome": ["SNOWY", 3]},
-    "Overseer": {"rarity": 45000000, "exclusive_biome": ["None", 1]},
-    "Exotic_APEX": {"rarity": 49999500, "exclusive_biome": ["None", 1]},
-    "Matrix": {"rarity": 50000000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Runic": {"rarity": 50000000, "exclusive_biome": ["None", 1]},
-    "Twilight_Iridescent Memory": {"rarity": 60000000, "exclusive_biome": ["None", 1]},
-    "Sentinel": {"rarity": 60000000, "exclusive_biome": ["None", 1]},
-    "Carriage": {"rarity": 80000000, "exclusive_biome": ["SAND STORM", 4]},
-    "WinterFantasy": {"rarity": 72000000, "exclusive_biome": ["SNOWY", 3]},
-    "Sailor_Flying Dutchman": {"rarity": 80000000, "exclusive_biome": ["RAINY", 4]},
-    "HARNESSED_Elements": {"rarity": 85000000, "exclusive_biome": ["None", 1]},
-    "Chromatic_Genesis": {"rarity": 99999999, "exclusive_biome": ["None", 1]},
-    "Starscourge_Radiant": {"rarity": 100000000, "exclusive_biome": ["STARFALL", 5]},
-    "Overture": {"rarity": 150000000, "exclusive_biome": ["None", 1]},
-    "Symphony": {"rarity": 175000000, "exclusive_biome": ["None", 1]},
-    "Impeached": {"rarity": 200000000, "exclusive_biome": ["CORRUPTION", 5]},
-    "Archangel": {"rarity": 250000000, "exclusive_biome": ["None", 1]},
-    "Exotic_Void": {"rarity": 299999999, "exclusive_biome": ["None", 1]},
-    "Overture_History": {"rarity": 300000000, "exclusive_biome": ["None", 1]},
-    "BLOODLUST": {"rarity": 300000000, "exclusive_biome": ["HELL", 6]},
-    "Atlas": {"rarity": 360000000, "exclusive_biome": ["SAND STORM", 4]},
-    "AbyssalHunter": {"rarity": 400000000, "exclusive_biome": ["RAINY", 4]},
-    "GARGANTUA": {"rarity": 430000000, "exclusive_biome": ["STARFALL", 5]},
-    "APOSTOLOS": {"rarity": 444000000, "exclusive_biome": ["None", 1]},
-    "Ruins": {"rarity": 500000000, "exclusive_biome": ["None", 1]},
-    "Matrix_Overdrive": {"rarity": 503000000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Matrix_Reality": {"rarity": 601020102, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Sovereign": {"rarity": 750000000, "exclusive_biome": ["None", 1]},
-    "Ruins_Withered": {"rarity": 800000000, "exclusive_biome": ["None", 1]},
-    "Aegis": {"rarity": 825000000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Pixelation": {"rarity": 1073741824, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Luminosity": {"rarity": 1200000000, "exclusive_biome": ["None", 1]},
-    "Fault": {"rarity": 3000, "exclusive_biome": ["GLITCHED", 1]},
-    "Glitch": {"rarity": 12210110, "exclusive_biome": ["GLITCHED", 1]},
-    "Oppression": {"rarity": 220000000, "exclusive_biome": ["GLITCHED", 1]},
-    "Cosmos_Alice": {"rarity": 3500000, "exclusive_biome": ["None", 1]},
-    "Maelstrom": {"rarity": 309999999, "exclusive_biome": ["WINDY", 3]},
-    "Jazz_Orchestra": {"rarity": 336870912, "exclusive_biome": ["None", 1]},
-    "Astral_Legendarium": {"rarity": 267200000, "exclusive_biome": ["STARFALL", 5]},
-    "Astral_Zodiac": {"rarity": 267200000, "exclusive_biome": ["STARFALL", 5]},
-    "LOTUSFALL": {"rarity": 320000000, "exclusive_biome": ["None", 1]},
-    "Unknown": {"rarity": 444444444, "exclusive_biome": ["None", 1]},
-    "Kyawthuite_Remembrance": {"rarity": 450000000, "exclusive_biome": ["None", 1]},
-    "Elude": {"rarity": 555555555, "exclusive_biome": ["None", 1]},
-    "PROLOGUE": {"rarity": 666616111, "exclusive_biome": ["None", 1]},
-    "dreamscape": {"rarity": 850000000, "exclusive_biome": ["None", 1]},
-    "Dreammetric": {"rarity": 520000000, "exclusive_biome": ["DREAMSPACE", 1]},
-    "EQUINOX": {"rarity": 2500000000, "exclusive_biome": ["None", 1]},
-    "Sophyra": {"rarity": 570000000, "exclusive_biome": ["None", 1]},
-    "Terror": {"rarity": 400000, "exclusive_biome": ["None", 1]},
-    "Prowler": {"rarity": 540000, "exclusive_biome": ["None", 1]},
-    "Hyper-Volt": {"rarity": 7500000, "exclusive_biome": ["None", 1]},
-    "Virtual_WorldWide": {"rarity": 87500000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Hyper-Volt_Ever-Storm": {"rarity": 225000000, "exclusive_biome": ["None", 1]},
-    "Twilight_Withering Grace": {"rarity": 180000000, "exclusive_biome": ["None", 1]},
-    "CHILLSEAR": {"rarity": 375000000, "exclusive_biome": ["SNOWY", 3]},
-    "Flora_Evergreen": {"rarity": 370073730, "exclusive_biome": ["None", 1]},
-    "Shiftlock": {"rarity": 3325000, "exclusive_biome": ["NULL", 1000]},
-    "Lumenpool": {"rarity": 220000000, "exclusive_biome": ["RAINY", 4]},
-    "Felled": {"rarity": 180000000, "exclusive_biome": ["HELL", 6]},
-    "NYCTOPHOBIA": {"rarity": 1011111010, "exclusive_biome": ["None", 1]},
-    "Antivirus": {"rarity": 62500000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Illusionary": {"rarity": 10000000, "exclusive_biome": ["CYBERSPACE", 1]},
-    "ENCASE": {"rarity": 230000000, "exclusive_biome": ["AURORA", 2]},
-    "CryoFang": {"rarity": 380000000, "exclusive_biome": ["AURORA", 2]},
-    "NORTHERN": {"rarity": 405000000, "exclusive_biome": ["AURORA", 2]},
-    "Sovereign_Frostveil": {"rarity": 1000000000, "exclusive_biome": ["AURORA", 2]},
-    "NorthPole": {"rarity": 45000000, "exclusive_biome": ["AURORA", 2]},
-    "Gingerbread": {"rarity": 3750000, "exclusive_biome": ["AURORA", 2]},
-    "Jackfrost": {"rarity": 4700000, "exclusive_biome": ["AURORA", 2]},
-    "Frostwood": {"rarity": 24500000, "exclusive_biome": ["AURORA", 2]},
-    "LostSoul_Wander": {"rarity": 9400000, "exclusive_biome": ["AURORA", 2]},
-    "SkyBurst": {"rarity": 60000000, "exclusive_biome": ["AURORA", 2]},
-    "Parol": {"rarity": 760000000, "exclusive_biome": ["AURORA", 2]},
-    "Dream_Traveler": {"rarity": 2025812825, "exclusive_biome": ["AURORA", 2]},
-    "Workshop": {"rarity": 700000000, "exclusive_biome": ["AURORA", 2]},
-    "EveNight": {"rarity": 424000000, "exclusive_biome": ["AURORA", 2]},
-    "Winter_Garden": {"rarity": 1450012025, "exclusive_biome": ["AURORA", 2]},
-    "Cryogenic": {"rarity": 250000, "exclusive_biome": ["AURORA", 1]},
-    "Player_Respawn": {"rarity": 1999999, "exclusive_biome": ["None", 1]},
-    "Flowed": {"rarity": 2121121, "exclusive_biome": ["NULL", 1000]},
-    "Sharkyn": {"rarity": 10000000, "exclusive_biome": ["RAINY", 4]},
-    "Melodic": {"rarity": 11300000, "exclusive_biome": ["None", 1]},
-    "Apotheosis": {"rarity": 24649430, "exclusive_biome": ["None", 1]},
-    "Flora_Florest": {"rarity": 32800000, "exclusive_biome": ["None", 1]},
-    "Prophecy": {"rarity": 275649430, "exclusive_biome": ["HEAVEN", 5]},
-    "PYTHIOS": {"rarity": 666666666, "exclusive_biome": ["HELL", 6]},
-    "ASCENDANT": {"rarity": 935000000, "exclusive_biome": ["HEAVEN", 5]},
-    "BREAKTHROUGH": {"rarity": 1999999999, "exclusive_biome": ["None", 1]},
-    "LEVIATHAN": {"rarity": 1730400000, "exclusive_biome": ["RAINY", 1]},
-    "Borealis": {"rarity": 13333333, "exclusive_biome": ["DREAMSPACE", 1]},
-    "Monarch": {"rarity": 3000000000, "exclusive_biome": ["CORRUPTION", 1]},
-    "Perpetual": {"rarity": 315000000, "exclusive_biome": ["None", 1]},
-    "Spectraflow": {"rarity": 100000000, "exclusive_biome": ["None", 1]},
-    "Atomic_Nucleus": {"rarity": 92118000, "exclusive_biome": ["None", 1]},
-    "Virtual_FULL CONTROL": {"rarity": 80000000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Dominion": {"rarity": 70000000, "exclusive_biome": ["HEAVEN", 5]},
-    "GUARDIAN": {"rarity": 10000000, "exclusive_biome": ["None", 1]},
-    "OUTLAW": {"rarity": 8000000, "exclusive_biome": ["SAND STORM", 4]},
-    "Refraction": {"rarity": 7242000, "exclusive_biome": ["None", 1]},
-    "Metabytes": {"rarity": 4000000, "exclusive_biome": ["CYBERSPACE", 2]},
-    "Crystallized_Bejeweled": {"rarity": 3600000, "exclusive_biome": ["None", 1]},
-    "Starlight_Kunzite": {"rarity": 1000000, "exclusive_biome": ["STARFALL", 5]},
-    "Diddy": {"rarity": 67, "exclusive_biome": ["DIDDY BIOME", 676767]}
+C
+criticize.
+Carpenters
+
+-COOH [CM], Role icon, The Undisputed King — 3/9/2026 11:47 PM
+so ts doesnt happen
+
+GitHub
+APP
+ — 3/10/2026 12:01 AM
+
+xVapure
+[devcoteab:python-workspace] 1 new commit
+febbcc4 Guard logs by scanning full file until Tutorial... - Vapur
+ [CM], 
+-COOH [CM], Role icon, The Undisputed King — 3/10/2026 12:01 AM
+@Akito (mambo 💝) (100/400 hp) another update for 
+mixin_actions.py
+mixin_detection.py
+
+It will scan the entire log file until it detects the Tutorial line :Aga:
+GitHub
+APP
+ — 11:33 AM
+
+NotWindyZ
+[devcoteab:python-workspace] 1 new commit
+4f8a639 change to main.py - NotWindyZ
+
+NotWindyZ
+[devcoteab:python-workspace] 1 new commit
+9d804de change to mixin_config - NotWindyZ
+
+NotWindyZ
+[devcoteab:python-workspace] 1 new commit
+1cc5b18 change to mixin_lifecycle - NotWindyZ
+
+NotWindyZ
+[devcoteab:python-workspace] 1 new commit
+06eb9f2 change to fishing.py - NotWindyZ
+
+NotWindyZ
+[devcoteab:python-workspace] 1 new commit
+283ee3c change to base_support - NotWindyZ
+GitHub
+APP
+ — 11:41 AM
+
+NotWindyZ
+[devcoteab:python-workspace] 1 new commit
+4c1b086 change to mixin_actions.py - NotWindyZ
+
+NotWindyZ
+[devcoteab:python-workspace] 1 new commit
+9d1b499 Add roblox chat calib to CalibrationPage - NotWindyZ
+Akito (mambo 💝) (100/400 hp) [UMA], Role icon, Legacy Noteab Macro creator — 11:50 AM
+main.py
+biome_tracker/fishing.py
+biome_tracker/mixin_config
+biome_tracker/mixin_lifecycle, 
+biome_tracker/mixin_actions, 
+biome_tracker/base_support
+frontend/src/calibrationpages.tsx
+
+--> migrated easyocr to winocr with preprocessing
+--> custom biome embed didn't applied and merchant total count doesnt even count at all patched
+--> auto close chat before entering collection cam alignment (this applies to obby/fishing/upcoming path...)
+--> close the fishing minigame (when caught a fish) mutiple times due of lagspike could occurs at anytime
+
+(macro version: v2.1.4-beta1 -> v2.1.4-beta2) 
+@-COOH
+ [UMA], 
+-COOH [CM], Role icon, The Undisputed King — 11:51 AM
+ty for ur work
+ [CM], 
+Akito (mambo 💝) (100/400 hp) [UMA], Role icon, Legacy Noteab Macro creator — 12:50 PM
+ohh btw could you update the auras.json as well
+Forwarded
+{
+    "Nothing": {
+        "rarity": 1,
+        "exclusive_biome": [
+            "None",
+            1
+
+auras.json
+32 KB
+#dev-chat  •  Yesterday at 1:06 AM
+here
+:aga~15:
+ [UMA], 
+-COOH [CM], Role icon, The Undisputed King — 1:02 PM
+alr
+ [UMA], 
+-COOH [CM], Role icon, The Undisputed King — 1:03 PM
+huh why is the format changed??
+i mean it's just pretty printing aint it
+ [CM], 
+Akito (mambo 💝) (100/400 hp) [UMA], Role icon, Legacy Noteab Macro creator — 1:03 PM
+yeah it remains the same
+just the indent
+😭
+﻿
+{
+    "Nothing": {
+        "rarity": 1,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Common": {
+        "rarity": 2,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Uncommon": {
+        "rarity": 4,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Good": {
+        "rarity": 5,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Natural": {
+        "rarity": 8,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Rare": {
+        "rarity": 16,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Divinus": {
+        "rarity": 32,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "Crystallized": {
+        "rarity": 64,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Rage": {
+        "rarity": 128,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "★": {
+        "rarity": 100,
+        "exclusive_biome": [
+            "DREAMSPACE",
+            1
+        ]
+    },
+    "Topaz": {
+        "rarity": 150,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Ruby": {
+        "rarity": 350,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Forbidden": {
+        "rarity": 403,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Emerald": {
+        "rarity": 500,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Gilded": {
+        "rarity": 512,
+        "exclusive_biome": [
+            "SAND STORM",
+            4
+        ]
+    },
+    "Ink": {
+        "rarity": 700,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Jackpot": {
+        "rarity": 777,
+        "exclusive_biome": [
+            "SAND STORM",
+            4
+        ]
+    },
+    "Sapphire": {
+        "rarity": 800,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Aquamarine": {
+        "rarity": 900,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Wind": {
+        "rarity": 900,
+        "exclusive_biome": [
+            "WINDY",
+            3
+        ]
+    },
+    "★★": {
+        "rarity": 1000,
+        "exclusive_biome": [
+            "DREAMSPACE",
+            1
+        ]
+    },
+    "Diaboli": {
+        "rarity": 1004,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Precious": {
+        "rarity": 1024,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Hydrogen": {
+        "rarity": 1111,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Atomic": {
+        "rarity": 1180,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Glock": {
+        "rarity": 1700,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Magnetic": {
+        "rarity": 2048,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Ash": {
+        "rarity": 2300,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Glacier": {
+        "rarity": 2304,
+        "exclusive_biome": [
+            "SNOWY",
+            3
+        ]
+    },
+    "PLAYER": {
+        "rarity": 3000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Fault": {
+        "rarity": 3000,
+        "exclusive_biome": [
+            "GLITCHED",
+            1
+        ]
+    },
+    "pukeko": {
+        "rarity": 3198,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Flora": {
+        "rarity": 3700,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Sidereum": {
+        "rarity": 4096,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Bleeding": {
+        "rarity": 4444,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Flutter": {
+        "rarity": 5000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    ":Flushed:": {
+        "rarity": 6900,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Hazard": {
+        "rarity": 7000,
+        "exclusive_biome": [
+            "CORRUPTION",
+            5
+        ]
+    },
+    "Doodle": {
+        "rarity": 7500,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Quartz": {
+        "rarity": 8192,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Honey": {
+        "rarity": 8335,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Lost Soul": {
+        "rarity": 9200,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Atomic_Ribonucleic": {
+        "rarity": 9876,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "★★★": {
+        "rarity": 10000,
+        "exclusive_biome": [
+            "DREAMSPACE",
+            1
+        ]
+    },
+    "Undead": {
+        "rarity": 12000,
+        "exclusive_biome": [
+            "HELL",
+            6
+        ]
+    },
+    "Corrosive": {
+        "rarity": 12000,
+        "exclusive_biome": [
+            "CORRUPTION",
+            5
+        ]
+    },
+    "Rage_Heated": {
+        "rarity": 12800,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "L E A K": {
+        "rarity": 14000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Powered": {
+        "rarity": 16384,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "COPPER": {
+        "rarity": 29000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "WATT": {
+        "rarity": 32768,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Aquatic": {
+        "rarity": 40000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Lightning": {
+        "rarity": 40000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Solar": {
+        "rarity": 50000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Lunar": {
+        "rarity": 50000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Starlight": {
+        "rarity": 50000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "StarRider": {
+        "rarity": 50000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Flushed_Lobotomy": {
+        "rarity": 69000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Hazard_Rays": {
+        "rarity": 70000,
+        "exclusive_biome": [
+            "CORRUPTION",
+            5
+        ]
+    },
+    "Nautilus": {
+        "rarity": 70000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Permafrost": {
+        "rarity": 73500,
+        "exclusive_biome": [
+            "SNOWY",
+            3
+        ]
+    },
+    "Flow": {
+        "rarity": 87000,
+        "exclusive_biome": [
+            "WINDY",
+            3
+        ]
+    },
+    "Stormal": {
+        "rarity": 90000,
+        "exclusive_biome": [
+            "WINDY",
+            3
+        ]
+    },
+    "Exotic": {
+        "rarity": 99999,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Diaboli_Void": {
+        "rarity": 100400,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Comet": {
+        "rarity": 120000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Divinus_Angel": {
+        "rarity": 120000,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "Jade": {
+        "rarity": 125000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Spectre": {
+        "rarity": 140000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Jazz": {
+        "rarity": 160000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Aether": {
+        "rarity": 180000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "BOUNDED": {
+        "rarity": 200000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Cryogenic": {
+        "rarity": 250000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Celestial": {
+        "rarity": 350000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Terror": {
+        "rarity": 400000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "HOPE": {
+        "rarity": 488725,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "Raven": {
+        "rarity": 500000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Prowler": {
+        "rarity": 540000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Warlock": {
+        "rarity": 666000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Undead_Devil": {
+        "rarity": 666666,
+        "exclusive_biome": [
+            "HELL",
+            6
+        ]
+    },
+    "Kyawthuite": {
+        "rarity": 850000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Arcane": {
+        "rarity": 1000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    ":Flushed:_Troll": {
+        "rarity": 1000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Starlight_Kunzite": {
+        "rarity": 1000000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Magnetic_Reverse Polarity": {
+        "rarity": 1024000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Undefined": {
+        "rarity": 1111000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Rage_Brawler": {
+        "rarity": 1280000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Astral": {
+        "rarity": 1336000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Cosmos": {
+        "rarity": 1520000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Archmage": {
+        "rarity": 1766000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Player_Respawn": {
+        "rarity": 1999999,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Gravitational": {
+        "rarity": 2000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "BOUNDED_UNBOUND": {
+        "rarity": 2000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Flutter_Buggify": {
+        "rarity": 2000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Flowed": {
+        "rarity": 2121121,
+        "exclusive_biome": [
+            "NULL",
+            1000
+        ]
+    },
+    "Defined": {
+        "rarity": 2222000,
+        "exclusive_biome": [
+            "NULL",
+            1000
+        ]
+    },
+    "Virtual": {
+        "rarity": 2500000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Parasite": {
+        "rarity": 3000000,
+        "exclusive_biome": [
+            "CORRUPTION",
+            5
+        ]
+    },
+    "Apatite": {
+        "rarity": 3133133,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Savior": {
+        "rarity": 3200000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Shiftlock": {
+        "rarity": 3325000,
+        "exclusive_biome": [
+            "NULL",
+            1000
+        ]
+    },
+    "Evanescent": {
+        "rarity": 3360000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    },
+    "Cosmos_Alice": {
+        "rarity": 3500000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Crystallized_Bejeweled": {
+        "rarity": 3600000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Gingerbread": {
+        "rarity": 3750000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Aquatic_Flame": {
+        "rarity": 4000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Poseidon": {
+        "rarity": 4000000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    },
+    "Metabytes": {
+        "rarity": 4000000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Zeus": {
+        "rarity": 4500000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Jackfrost": {
+        "rarity": 4700000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Solar_Solstice": {
+        "rarity": 5000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Galaxy": {
+        "rarity": 5000000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Lunar_Full Moon": {
+        "rarity": 5000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Anima": {
+        "rarity": 5730000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Twilight": {
+        "rarity": 6000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Origin": {
+        "rarity": 6500000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Hades": {
+        "rarity": 6666666,
+        "exclusive_biome": [
+            "HELL",
+            6
+        ]
+    },
+    "Celestial_Divine": {
+        "rarity": 7000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Anubis": {
+        "rarity": 7200000,
+        "exclusive_biome": [
+            "SAND STORM",
+            4
+        ]
+    },
+    "Refraction": {
+        "rarity": 7242000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Faith": {
+        "rarity": 7250000,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "Hyper-Volt": {
+        "rarity": 7500000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Velocity": {
+        "rarity": 7630000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "OUTLAW": {
+        "rarity": 8000000,
+        "exclusive_biome": [
+            "SAND STORM",
+            4
+        ]
+    },
+    "Origin_Onion": {
+        "rarity": 8000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Helios": {
+        "rarity": 9000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Nihility": {
+        "rarity": 9000000,
+        "exclusive_biome": [
+            "NULL",
+            1000
+        ]
+    },
+    "Stargazer": {
+        "rarity": 9200000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "LostSoul_Wander": {
+        "rarity": 9400000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Illusionary": {
+        "rarity": 10000000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Starscourge": {
+        "rarity": 10000000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Sharkyn": {
+        "rarity": 10000000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    },
+    "GUARDIAN": {
+        "rarity": 10000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Melodic": {
+        "rarity": 11300000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Glitch": {
+        "rarity": 12210110,
+        "exclusive_biome": [
+            "GLITCHED",
+            1
+        ]
+    },
+    "Wonderland": {
+        "rarity": 12000000,
+        "exclusive_biome": [
+            "SNOWY",
+            3
+        ]
+    },
+    "Sailor": {
+        "rarity": 12000000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    },
+    "Borealis": {
+        "rarity": 13333333,
+        "exclusive_biome": [
+            "DREAMSPACE",
+            1
+        ]
+    },
+    "Stormal_Hurricane": {
+        "rarity": 13500000,
+        "exclusive_biome": [
+            "WINDY",
+            3
+        ]
+    },
+    "Sirius": {
+        "rarity": 14000000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Arcane_Legacy": {
+        "rarity": 15000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "ICARUS": {
+        "rarity": 15660000,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "Lullaby": {
+        "rarity": 17000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Chromatic": {
+        "rarity": 20000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Plasma": {
+        "rarity": 20600000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Aviator": {
+        "rarity": 24000000,
+        "exclusive_biome": [
+            "WINDY",
+            3
+        ]
+    },
+    "Ruby_Brimstone": {
+        "rarity": 24060000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Frostwood": {
+        "rarity": 24500000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Apotheosis": {
+        "rarity": 24691356,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Arcane_Dark": {
+        "rarity": 30000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Flora_Florest": {
+        "rarity": 32800000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Ethereal": {
+        "rarity": 35000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Kromat1k": {
+        "rarity": 40000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Virtual_Fatal Error": {
+        "rarity": 40413000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Juxtaposition": {
+        "rarity": 40440400,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "NorthPole": {
+        "rarity": 45000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Overseer": {
+        "rarity": 45000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Santa Frost": {
+        "rarity": 45000000,
+        "exclusive_biome": [
+            "SNOWY",
+            3
+        ]
+    },
+    "Exotic_APEX": {
+        "rarity": 49999500,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Matrix": {
+        "rarity": 50000000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Runic": {
+        "rarity": 50000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Sentinel": {
+        "rarity": 60000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "SkyBurst": {
+        "rarity": 60000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Antivirus": {
+        "rarity": 62500000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Reaper": {
+        "rarity": 66000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Dominion": {
+        "rarity": 70000000,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "WinterFantasy": {
+        "rarity": 72000000,
+        "exclusive_biome": [
+            "SNOWY",
+            3
+        ]
+    },
+    "Sailor_Flying Dutchman": {
+        "rarity": 80000000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    },
+    "Carriage": {
+        "rarity": 80000000,
+        "exclusive_biome": [
+            "SAND STORM",
+            4
+        ]
+    },
+    "Virtual_FULL CONTROL": {
+        "rarity": 80000000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Virtual_WorldWide": {
+        "rarity": 87500000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Atomic_Nucleus": {
+        "rarity": 92118000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Chromatic_Genesis": {
+        "rarity": 99999999,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Starscourge_Radiant": {
+        "rarity": 100000000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Spectraflow": {
+        "rarity": 100000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Lily": {
+        "rarity": 112000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Overture": {
+        "rarity": 150000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Symphony": {
+        "rarity": 175000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Felled": {
+        "rarity": 180000000,
+        "exclusive_biome": [
+            "HELL",
+            6
+        ]
+    },
+    "Twilight_Withering Grace": {
+        "rarity": 180000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Impeached": {
+        "rarity": 200000000,
+        "exclusive_biome": [
+            "CORRUPTION",
+            5
+        ]
+    },
+    "Raven_Plague": {
+        "rarity": 200000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Oppression": {
+        "rarity": 220000000,
+        "exclusive_biome": [
+            "GLITCHED",
+            1
+        ]
+    },
+    "Lumenpool": {
+        "rarity": 220000000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    },
+    "Hyper-Volt_Ever-Storm": {
+        "rarity": 225000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "ENCASE": {
+        "rarity": 230000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Astral_Legendarium": {
+        "rarity": 267200000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Astral_Zodiac": {
+        "rarity": 267200000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "Prophecy": {
+        "rarity": 275649430,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "BLOODLUST": {
+        "rarity": 300000000,
+        "exclusive_biome": [
+            "HELL",
+            6
+        ]
+    },
+    "Overture_History": {
+        "rarity": 300000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Maelstrom": {
+        "rarity": 309999999,
+        "exclusive_biome": [
+            "WINDY",
+            3
+        ]
+    },
+    "Perpetual": {
+        "rarity": 315000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Dreammetric": {
+        "rarity": 320000000,
+        "exclusive_biome": [
+            "DREAMSPACE",
+            1
+        ]
+    },
+    "LOTUSFALL": {
+        "rarity": 320000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Jazz_Orchestra": {
+        "rarity": 336870912,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Archangel": {
+        "rarity": 350000000,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "Atlas": {
+        "rarity": 360000000,
+        "exclusive_biome": [
+            "SAND STORM",
+            4
+        ]
+    },
+    "Flora_Evergreen": {
+        "rarity": 370073730,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "CHILLSEAR": {
+        "rarity": 375000000,
+        "exclusive_biome": [
+            "SNOWY",
+            3
+        ]
+    },
+    "CryoFang": {
+        "rarity": 380000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "AbyssalHunter": {
+        "rarity": 400000000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    },
+    "NORTHERN": {
+        "rarity": 405000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "EveNight": {
+        "rarity": 424000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "GARGANTUA": {
+        "rarity": 430000000,
+        "exclusive_biome": [
+            "STARFALL",
+            5
+        ]
+    },
+    "APOSTOLOS": {
+        "rarity": 444000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Unknown": {
+        "rarity": 444444444,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Kyawthuite_Remembrance": {
+        "rarity": 450000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Elude": {
+        "rarity": 555555555,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Sophyra": {
+        "rarity": 570000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "PROLOGUE": {
+        "rarity": 666616111,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "PYTHIOS": {
+        "rarity": 666666666,
+        "exclusive_biome": [
+            "HELL",
+            6
+        ]
+    },
+    "Workshop": {
+        "rarity": 700000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Sovereign": {
+        "rarity": 750000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Parol": {
+        "rarity": 760000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "Ruins": {
+        "rarity": 500000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Ruins_Withered": {
+        "rarity": 800000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Aegis": {
+        "rarity": 825000000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "dreamscape": {
+        "rarity": 850000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "ASCENDANT": {
+        "rarity": 935000000,
+        "exclusive_biome": [
+            "HEAVEN",
+            5
+        ]
+    },
+    "NYCTOPHOBIA": {
+        "rarity": 1011111010,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Pixelation": {
+        "rarity": 1073741824,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Sovereign_Frostveil": {
+        "rarity": 1000000000,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "LAMENTHYR": {
+        "rarity": 1000000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Matrix_Overdrive": {
+        "rarity": 503000000,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Matrix_Reality": {
+        "rarity": 601020102,
+        "exclusive_biome": [
+            "CYBERSPACE",
+            2
+        ]
+    },
+    "Luminosity": {
+        "rarity": 1200000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Winter_Garden": {
+        "rarity": 1450012025,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "LEVIATHAN": {
+        "rarity": 1730400000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    },
+    "BREAKTHROUGH": {
+        "rarity": 1999999999,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "Dream_Traveler": {
+        "rarity": 2025812825,
+        "exclusive_biome": [
+            "AURORA",
+            2
+        ]
+    },
+    "EQUINOX": {
+        "rarity": 2500000000,
+        "exclusive_biome": [
+            "None",
+            1
+        ]
+    },
+    "MONARCH": {
+        "rarity": 3000000000,
+        "exclusive_biome": [
+            "CORRUPTION",
+            1
+        ]
+    },
+    "Sailor_Admiral": {
+        "rarity": 540000000,
+        "exclusive_biome": [
+            "RAINY",
+            4
+        ]
+    }
 }
