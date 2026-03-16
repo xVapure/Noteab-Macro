@@ -1,3 +1,13 @@
+# v2.1.4 (mainly bug fixes)
+* Fixed OCR not working by temporarily switched to a new OCR module.
+* Fixed Flarg's shop bug when it sometimes open the shop after sell (added a camera adjustment after clicking "e" to open Flarg's shop).
+* Added close chat calibrations in movement calibrations (before movement actions).
+* Added auto full screen option.
+* Fixed rare biomes popup detection to make it popup on foreground so you'll never join a rare biome and ur macro pings it :aga:
+* Added webhook resolver, the macro will now display the channels that your webhook(s) are placed in.
+* Added unix timestamps to biomes started and end messages.
+* Reduced close count fishing minigame 7 -> 5 times with slightly faster wait.
+* Fixed reconnection logic to make it retry clicking 3 times before rejoining Roblox again.
 # v2.1.3, what's new?
 ## New features:
 - Auto pop in every biomes.
