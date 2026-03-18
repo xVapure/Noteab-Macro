@@ -128,7 +128,14 @@ export default function PotionCraftPage() {
                         label="Enable Auto Craft"
                         description="Run selected recipe on a loop when macro is running (THIS WILL CANCEL ALL OTHERS MACRO ACTIONS FOR POTION CRAFTING)"
                         checked={enableCrafting}
-                        onChange={(v) => { setEnableCrafting(v); saveConfig("enable_potion_crafting", v); }}
+                        onChange={(v) => {
+                            if (v && !selectedPotion) {
+                                alert("No potion recipe selected!\n\nPlease select a potion recipe file before enabling Auto Craft.");
+                                return;
+                            }
+                            setEnableCrafting(v);
+                            saveConfig("enable_potion_crafting", v);
+                        }}
                     />
                 </div>
 

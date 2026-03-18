@@ -86,4 +86,3 @@ export default function Sidebar({ activeTab, onTabChange, isGlitching, macroVers
         </div>
     );
 }
-    

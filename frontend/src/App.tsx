@@ -23,6 +23,7 @@ import UpdateBanner from "./components/UpdateBanner";
 import CustomizationPage from "./pages/CustomizationPage";
 import MovementsPage from "./pages/MovementsPage";
 import RecorderWindow from "./pages/RecorderWindow";
+import BiomeConfirmWindow from "./pages/BiomeConfirmWindow";
 
 const pages: Record<string, React.FC> = {
   notice: NoticePage,
@@ -54,7 +55,7 @@ function App() {
   const autoUpdateTriggerRef = useRef<string | null>(null);
   const startupUpdateCheckRequestedRef = useRef(false);
   const isAutoUpdateEnabled = config ? (config.auto_update_enabled !== false) : false;
-  const [biomeConfirmName, setBiomeConfirmName] = useState<string | null>(null);
+
 
   const startMacro = async () => {
     if (isMacroRunning) return;
@@ -177,29 +178,7 @@ function App() {
     };
   }, [config]);
 
-  // Biome confirmation popup listener
-  useEffect(() => {
-    (window as any).onBiomeConfirmRequest = (biome: string) => {
-      setBiomeConfirmName(biome || "UNKNOWN");
-    };
-    return () => {
-      delete (window as any).onBiomeConfirmRequest;
-    };
-  }, []);
 
-  const handleBiomeConfirm = () => {
-    setBiomeConfirmName(null);
-    if (window.pywebview?.api?.confirm_biome_response) {
-      window.pywebview.api.confirm_biome_response(true);
-    }
-  };
-
-  const handleBiomeCancel = () => {
-    setBiomeConfirmName(null);
-    if (window.pywebview?.api?.confirm_biome_response) {
-      window.pywebview.api.confirm_biome_response(false);
-    }
-  };
 
   // Check Update Listener
   useEffect(() => {
@@ -378,6 +357,10 @@ function App() {
     return <RecorderWindow />;
   }
 
+  if (windowType === "biome_confirm") {
+    return <BiomeConfirmWindow />;
+  }
+
   if (activePageQuery) {
     const mode = activePageQuery === "region" ? "region" : "point";
     return <CalibrationOverlay mode={mode} />;
@@ -412,6 +395,13 @@ function App() {
               version={updateInfo.version}
               downloadUrl={updateInfo.url}
               updateStatus={updateStatus}
+              onDismiss={() => setUpdateInfo(null)}
+              onDontAskAgain={async () => {
+                if (config) {
+                  await saveConfig({ ...config, auto_update_enabled: false });
+                }
+                setUpdateInfo(null);
+              }}
             />
           )}
           <div className="page-content">
@@ -423,28 +413,7 @@ function App() {
       </div>
       {isGlitching && <GlitchOverlay />}
 
-      {biomeConfirmName && (
-        <div className="biome-confirm-overlay">
-          <div className="biome-confirm-modal">
-            <div className="biome-confirm-icon">⚠️</div>
-            <h2 className="biome-confirm-title">Rare Biome Detected After Rejoin!</h2>
-            <div className="biome-confirm-name">{biomeConfirmName}</div>
-            <p className="biome-confirm-warning">
-              You just rejoined a server that has a <b>rare biome</b> is active right now.<br />
-              Did you forget to close the macro before joining???<br /><br />
-              If you forgot, the macro will <b>stop immediately!!</b>
-            </p>
-            <div className="biome-confirm-buttons">
-              <button className="biome-confirm-btn confirm" onClick={handleBiomeConfirm}>
-                ✅ Nah. I'm good and keep this tuff macro running 🗣️🔥
-              </button>
-              <button className="biome-confirm-btn cancel" onClick={handleBiomeCancel}>
-                ❌ I forgot to turn the macro off please spare me 😭🥀
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

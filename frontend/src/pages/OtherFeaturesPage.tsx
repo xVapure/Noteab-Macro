@@ -85,6 +85,20 @@ export default function OtherFeaturesPage() {
                     checked={config.enable_idle_mode || false}
                     onChange={(val) => updateConfig("enable_idle_mode", val)}
                 />
+
+                <ToggleSwitch
+                    label="Make Roblox instance on fullscreen"
+                    description="Automatically fullscreen Roblox window when macro starts"
+                    checked={config.auto_roblox_fullscreen || false}
+                    onChange={(val) => updateConfig("auto_roblox_fullscreen", val)}
+                />
+
+                <ToggleSwitch
+                    label="Close Roblox chat before pathing (DO MACRO CALIBRATION - OPTIONAL)"
+                    description="Automatically close the in-game chat using OCR detection before obby/fishing path sequences"
+                    checked={config.auto_chat_close || false}
+                    onChange={(val) => updateConfig("auto_chat_close", val)}
+                />
             </div>
         </>
     );

@@ -72,6 +72,23 @@ export default function WebhookPage() {
 
             <div className="card">
                 <div className="card-header">
+                    <div className="card-icon">👤</div>
+                    <div>
+                        <h3>Your Roblox username</h3>
+                        <p>input your Roblox username (case-insensitive) for higher logs accuracy reading</p>
+                    </div>
+                </div>
+                <input
+                    className="form-input"
+                    placeholder="Enter your Roblox username"
+                    style={{ width: "100%" }}
+                    value={config.roblox_username || ""}
+                    onChange={(e) => saveConfig({ ...config, roblox_username: e.target.value })}
+                />
+            </div>
+
+            <div className="card">
+                <div className="card-header">
                     <div className="card-icon">🔗</div>
                     <div>
                         <h3>Discord Webhook URLs</h3>

@@ -45,7 +45,22 @@ export default function MovementsPage() {
                     <ToggleSwitch
                         label="Auto complete Basic Obby"
                         checked={config.enable_auto_obby || false}
-                        onChange={(val) => updateConfig("enable_auto_obby", val)}
+                        onChange={async (val) => {
+                            if (val) {
+                                try {
+                                    if (window.pywebview?.api) {
+                                        const hasPath = await window.pywebview.api.check_obby_path_exists();
+                                        if (!hasPath) {
+                                            alert("No obby path found!\n\nPlease record an obby path first using the obby recorder above.");
+                                            return;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Failed to check obby path:", e);
+                                }
+                            }
+                            updateConfig("enable_auto_obby", val);
+                        }}
                     />
 
                     {config.enable_auto_obby && (

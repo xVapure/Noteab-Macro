@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 export interface AppConfig {
     webhook_url: string[];
     private_server_link: string;
+    roblox_username?: string;
     biome_notifier: Record<string, string>;
     biome_counts: Record<string, number>;
     merchant_counts?: Record<string, number>;

@@ -29,6 +29,9 @@ const CALIBRATION_GROUPS: CalibrationGroup[] = [
         fields: [
             { key: "collections_button", label: "Collection Menu" },
             { key: "exit_collections_button", label: "Exit Collection" },
+            { key: "chat_hover_pos", label: "Roblox Chat Box" },
+            { key: "chat_tab_ocr_pos", label: "Chat Tab OCR Region (either 'General' or 'Server Message')", isRegion: true },
+            { key: "chat_close_button", label: "Roblox Chat Icon (to close chat box)" },
         ]
     },
     {
@@ -360,7 +363,7 @@ export default function CalibrationPage() {
                     </div>
                 </div>
                 <div className="form-hint" style={{ marginBottom: "8px" }}>
-                    Note: Features using OCR failsafe also require calibrating First Item Slot OCR Region under Inventory Click Calibration. 
+                    Note: Features using OCR failsafe also require calibrating First Item Slot OCR Region under Inventory Click Calibration.
                 </div>
                 <div style={{ display: "grid", gap: "8px" }}>
                     {MOUSE_ACTION_REQUIREMENTS.map((item) => (

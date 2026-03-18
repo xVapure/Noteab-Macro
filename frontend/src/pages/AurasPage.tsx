@@ -60,7 +60,7 @@ export default function AurasPage() {
 
                         <ToggleSwitch
                             label="Aura Detection Screenshot"
-                            description="Take a screenshot when a you rolled a new aura (Only works if Roblox window is focused)"
+                            description="Take a screenshot when you rolled a new aura (Only works if Roblox is focused/Fishing mode is OFF!)"
                             checked={config.aura_detection_screenshot || false}
                             onChange={(val) => updateConfig("aura_detection_screenshot", val)}
                         />
