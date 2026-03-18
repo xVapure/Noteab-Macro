@@ -28,6 +28,18 @@ class LifecycleMixin:
                 self.webhook_urls = [rw] if rw else []
         else:
             self.webhook_urls = []
+        
+        self._active_webhook_channel_lookup_urls = []
+        self._active_webhook_channel_mentions = []
+        try:
+            if hasattr(self, "refresh_active_webhook_channels"):
+                self.refresh_active_webhook_channels(force=True)
+        except Exception as e:
+            try:
+                print(f"Failed to resolve active webhook channels on startup: {e}")
+            except Exception:
+                pass
+            
         self.auras_data = self.load_auras_json()
         self.biome_data = self.load_biome_data()
         self.config["auto_pop_biomes"] = normalize_auto_pop_biomes(self.config, list(self.biome_data.keys()))
@@ -39,6 +51,12 @@ class LifecycleMixin:
         for biome in self.biome_data.keys():
             if biome not in self.biome_counts:
                 self.biome_counts[biome] = 0
+
+        self.merchant_counts = self.config.get("merchant_counts", {})
+        for merchant in ("Mari", "Jester", "Rin"):
+            if merchant not in self.merchant_counts:
+                self.merchant_counts[merchant] = 0
+        self.config["merchant_counts"] = self.merchant_counts
 
         self.start_time = None
         self.saved_session = self.parse_session_time(self.config.get("session_time", "0:00:00"))
@@ -127,6 +145,8 @@ class LifecycleMixin:
         self.anti_afk_var         = ConfigVar(self.config, "anti_afk", True)
         self.auto_reconnect_var   = ConfigVar(self.config, "auto_reconnect", False)
         self.macro_idle_mode_var  = ConfigVar(self.config, "enable_idle_mode", False)
+        self.auto_roblox_fullscreen_var = ConfigVar(self.config, "auto_roblox_fullscreen", False)
+        self.auto_chat_close_var  = ConfigVar(self.config, "auto_chat_close", False)
         self.auto_pop_glitched_var = ConfigVar(self.config, "auto_pop_glitched", False)
         self.enable_aura_detection_var = ConfigVar(self.config, "enable_aura_detection", False)
         self.enable_aura_record_var   = ConfigVar(self.config, "enable_aura_record", False)

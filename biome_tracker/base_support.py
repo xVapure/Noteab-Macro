@@ -11,8 +11,9 @@ import atexit
 import difflib
 import itertools
 import zipfile, subprocess, tempfile
+import keyboard as kb
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, autoit, psutil, \
-    locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys
+    locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys, hashlib, winocr, asyncio, win32api, traceback
 
 
 current_ver = os.environ.get("COTEAB_MACRO_VERSION", "v2.1.0-hotfix2")

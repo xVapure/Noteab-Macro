@@ -393,6 +393,7 @@ class DetectionMixin:
             self._last_disconnect_time = 0
             self._disconnect_handled = False
             self.has_sent_disconnected_message = False
+            self._roblox_fullscreened = False
 
             if not self.session_window_start:
                 self.session_window_start = now
@@ -426,7 +427,16 @@ class DetectionMixin:
                 thread = threading.Thread(target=thread_func, name=name, daemon=True)
                 thread.start()
 
-            self.perform_anti_afk_action()
+            # Fire one anti-AFK cycle immediately in background so users
+            # do not need to wait the first 268s interval.
+            try:
+                threading.Thread(
+                    target=self.perform_anti_afk_action,
+                    name="Anti-AFK Initial",
+                    daemon=True,
+                ).start()
+            except Exception:
+                pass
             
             try:
                 if getattr(self, "remote_access_var", None) and self.remote_access_var.get():
@@ -439,6 +449,17 @@ class DetectionMixin:
 
     def stop_detection(self):
         if self.detection_running:
+            caller_stack = traceback.extract_stack()
+            if len(caller_stack) >= 2:
+                caller = caller_stack[-2]
+                stop_reason = f"[TRACEBACK] Macro stopped by {caller.filename}:{caller.lineno} in {caller.name}()"
+            else:
+                stop_reason = "[TRACEBACK] Macro stopped (unknown caller)"
+            try:
+                self.append_log(stop_reason)
+            except Exception: pass
+            print(stop_reason)
+
             now = datetime.now()
             self.detection_running = False
             self._stop_player_logger_thread()
@@ -478,6 +499,94 @@ class DetectionMixin:
         latest_file = max(files, key=os.path.getmtime)
         return latest_file
 
+    def _get_target_roblox_username(self):
+        try:
+            raw = self.config.get("roblox_username", "")
+            if raw is None:
+                return ""
+            return str(raw).strip().lower()
+        except Exception:
+            return ""
+
+    def _extract_tutorial_cursor_username(self, line):
+        try:
+            if not line:
+                return ""
+            if "TutorialCursor" not in line or "Infinite yield possible" not in line or "Players." not in line:
+                return ""
+            match = re.search(
+                r"Players\.([^.']+)\.PlayerGui:WaitForChild\((?:\"|\\\")TutorialCursor(?:\"|\\\")\)",
+                line,
+                re.IGNORECASE,
+            )
+            if not match:
+                return ""
+            return str(match.group(1) or "").strip().lower()
+        except Exception:
+            return ""
+
+    def _consume_log_username_validation(self, log_file_path, lines=None):
+        try:
+            target_username = self._get_target_roblox_username()
+            if not target_username:
+                return True
+            if not log_file_path:
+                return False
+
+            state_map = getattr(self, "_log_username_state_map", None)
+            if not isinstance(state_map, dict):
+                state_map = {}
+                self._log_username_state_map = state_map
+            
+            last_guard_username = getattr(self, "_log_username_state_target", None)
+            if last_guard_username != target_username:
+                state_map.clear()
+                self._log_username_state_target = target_username
+
+            state = state_map.get(log_file_path)
+            if state == "rejected":
+                return False
+            if state == "accepted":
+                return True
+            if state is None:
+                state_map[log_file_path] = "pending"
+
+            # While this file is pending, keep scanning the entire file until
+            # the TutorialCursor line appears and we can accept/reject it.
+            lines_to_scan = lines
+            if lines_to_scan is None:
+                try:
+                    with open(log_file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        lines_to_scan = f.readlines()
+                except Exception:
+                    lines_to_scan = []
+
+            for line in (lines_to_scan or []):
+                found_username = self._extract_tutorial_cursor_username(line)
+                if not found_username:
+                    continue
+                if found_username == target_username:
+                    state_map[log_file_path] = "accepted"
+                    return True
+
+                state_map[log_file_path] = "rejected"
+                try:
+                    self.append_log(
+                        f"[Log Guard] Ignoring log file due to TutorialCursor username mismatch. "
+                        f"Expected '{target_username}', got '{found_username}'."
+                    )
+                except Exception:
+                    pass
+                return False
+
+            if len(state_map) > 200:
+                state_map.clear()
+                state_map[log_file_path] = "pending"
+            return True
+        except Exception as e:
+            self.error_logging(e, "Error validating log username guard")
+            return True
+
     def read_log_file(self, log_file_path):
         if not os.path.exists(log_file_path):
             print(f"Log file not found: {log_file_path}")
@@ -496,6 +605,8 @@ class DetectionMixin:
             file.seek(self.last_position)
             lines = file.readlines()
             self.last_position = file.tell()
+            if not self._consume_log_username_validation(log_file_path):
+                return []
             return [line for line in lines if not is_chat_log(line)]
 
     def read_log_file_for_detector(self, log_file_path, pos_attr='last_position', filter_chat=False):
@@ -508,6 +619,9 @@ class DetectionMixin:
                 f.seek(pos)
                 lines = f.readlines()
                 setattr(self, pos_attr, f.tell())
+
+            if not self._consume_log_username_validation(log_file_path):
+                return []
 
             if filter_chat:
                 def is_chat_log(line):
@@ -533,14 +647,17 @@ class DetectionMixin:
             return []
 
         with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as file:
-            return file.readlines()
+            lines = file.readlines()
+            if not self._consume_log_username_validation(log_file_path, lines):
+                return []
+            return lines
 
     def load_auras_json(self):
         url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/assets/auras.json"
         try:
             r = requests.get(url, timeout=10)
             r.raise_for_status()
-            data = r.json()
+            data = json.loads(r.content.decode('utf-8-sig'))
             if isinstance(data, dict):
                 return data
             return {}
@@ -555,6 +672,11 @@ class DetectionMixin:
 
             if not hasattr(self, 'last_aura_found'):
                 self.last_aura_found = None
+                
+            if not hasattr(self, 'auras_data') or not self.auras_data:
+                self.auras_data = self.load_auras_json()
+                if hasattr(self, '_auras_data_lower_map'):
+                    delattr(self, '_auras_data_lower_map')
 
             log_lines = self.read_full_log_file(log_file_path)
 
@@ -563,11 +685,19 @@ class DetectionMixin:
                     match = re.search(r'"state":"Equipped \\"(.*?)\\"', line)
                     if match:
                         aura = match.group(1)
+                        if not hasattr(self, "_auras_data_lower_map"):
+                            self._auras_data_lower_map = {k.lower(): k for k in self.auras_data.keys()}
 
-                        if aura in self.auras_data:
-                            aura_info = self.auras_data[aura]
-                            rarity = aura_info["rarity"]
-                            exclusive_biome, multiplier = aura_info["exclusive_biome"]
+                        aura_lower = aura.lower()
+                        if aura_lower in self._auras_data_lower_map:
+                            real_aura_key = self._auras_data_lower_map[aura_lower]
+                            aura_info = self.auras_data[real_aura_key]
+                            parsed_aura_name = real_aura_key
+                            
+                            rarity = aura_info.get("rarity", 1)
+                            exclusive_biome_list = aura_info.get("exclusive_biome", ["None", 1])
+                            exclusive_biome = exclusive_biome_list[0] if len(exclusive_biome_list) > 0 else "None"
+                            multiplier = exclusive_biome_list[1] if len(exclusive_biome_list) > 1 else 1
 
                             # Check if the current biome is GLITCHED
                             if self.current_biome == "GLITCHED":
@@ -585,11 +715,11 @@ class DetectionMixin:
                             # Format rarity
                             formatted_rarity = f"{int(rarity):,}"
 
-                            if aura != self.last_aura_found:
+                            if parsed_aura_name != self.last_aura_found:
                                 screenshot_path = None
                                 try:
                                     if getattr(self, "aura_screenshot_var", None) and self.aura_screenshot_var.get() and not self.is_fishing_mode_enabled():
-                                        for _ in range(5):
+                                        for _ in range(2):
                                             self.activate_roblox_window()
                                             time.sleep(0.75)
 
@@ -603,8 +733,8 @@ class DetectionMixin:
                                 except Exception as e:
                                     self.error_logging(e, "Error taking aura screenshot")
 
-                                self.send_aura_webhook(aura, formatted_rarity, biome_message, screenshot_path=screenshot_path)
-                                self.last_aura_found = aura
+                                self.send_aura_webhook(parsed_aura_name, formatted_rarity, biome_message, screenshot_path=screenshot_path)
+                                self.last_aura_found = parsed_aura_name
 
                                 if self.enable_aura_record_var.get() and rarity >= int(self.aura_record_minimum_var.get()):
                                     self.trigger_aura_record()
@@ -846,6 +976,7 @@ class DetectionMixin:
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
             self.just_reconnected = True
+            self._roblox_fullscreened = False
             self.reconnect_confirm_deadline = time.monotonic() + 60
             self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
             self.save_config()
@@ -983,6 +1114,9 @@ class DetectionMixin:
                     last_pos = os.path.getsize(path)
                 except:
                     last_pos = 0
+            if not self._consume_log_username_validation(path):
+                time.sleep(0.3)
+                continue
             try:
                 with open(path, "r", encoding="utf-8", errors="ignore") as f:
                     f.seek(last_pos)
@@ -993,6 +1127,8 @@ class DetectionMixin:
                     last_pos = f.tell()
             except:
                 time.sleep(0.5)
+                continue
+            if not self._consume_log_username_validation(path):
                 continue
             if "[ExpChat/mountClientApp (Trace)]" in line and ("Player added:" in line or "Player removed:" in line):
                 ts_str = line.split(",", 1)[0].strip()
@@ -1347,5 +1483,4 @@ class DetectionMixin:
                 pyautogui.hotkey(*keys)
             except Exception as e:
                 self.error_logging(e, "Error in trigger_biome_record")
-
         threading.Thread(target=record).start()

@@ -25,9 +25,12 @@ class ConfigMixin:
             # ── Core / Session ──
             "webhook_url": webhook_save_val,
             "private_server_link": self.private_server_link_entry.get() if hasattr(self, "private_server_link_entry") else self.config.get("private_server_link", ""),
+            "roblox_username": self.config.get("roblox_username", ""),
             "auto_reconnect": self.auto_reconnect_var.get(),
             "biome_notifier": {biome: self.variables[biome].get() for biome in self.biome_data} if self.variables else self.config.get("biome_notifier", {}),
             "biome_counts": self.biome_counts,
+            "merchant_counts": getattr(self, "merchant_counts", self.config.get("merchant_counts", {"Jester": 0, "Mari": 0, "Rin": 0})),
+            "custom_biome_overrides": self.config.get("custom_biome_overrides", {}),
             "session_time": session_time,
             "session_window_start": session_window_start_val,
             "macro_last_start": macro_last_start_val,
@@ -36,6 +39,8 @@ class ConfigMixin:
             "auto_update_enabled": self.config.get("auto_update_enabled", True),
             "anti_afk": self.anti_afk_var.get(),
             "enable_idle_mode": self.config.get("enable_idle_mode", False),
+            "auto_roblox_fullscreen": self.config.get("auto_roblox_fullscreen", False),
+            "auto_chat_close": self.config.get("auto_chat_close", False),
             "fishing_mode": self.config.get("fishing_mode", False),
 
             # ── Item Use (BR / SC / MT) ──
@@ -139,6 +144,9 @@ class ConfigMixin:
             # ── Pathing / Obby Paths ──
             "collections_button": self.config.get("collections_button", [30, 455]),
             "exit_collections_button": self.config.get("exit_collections_button", [375, 124]),
+            "chat_hover_pos": self.config.get("chat_hover_pos", [272, 252]),
+            "chat_tab_ocr_pos": self.config.get("chat_tab_ocr_pos", [341, 83, 210, 40]),
+            "chat_close_button": self.config.get("chat_close_button", [174, 40]),
             "enable_obby_path": self.enable_obby_var.get() if hasattr(self, "enable_obby_var") else self.config.get("enable_obby_path", False),
             "obby_claim_interval": self.obby_claim_interval_var.get() if hasattr(self, "obby_claim_interval_var") else self.config.get("obby_claim_interval", "15"),
 
@@ -380,6 +388,7 @@ class ConfigMixin:
                 "potion_search_bar": [ 1515, 271 ],
                 "potion_switch_interval": "180",
                 "private_server_link": "",
+                "roblox_username": "",
                 "purchase_amount_button": [ 1101, 594 ],
                 "purchase_button": [ 1172, 637 ],
                 "quest1_button": [ 1042, 511 ],
@@ -407,6 +416,8 @@ class ConfigMixin:
                 "use_button": [ 678, 563 ],
                 "use_float_aura": False,
                 "enable_idle_mode": False,
+                "auto_roblox_fullscreen": False,
+                "auto_chat_close": False,
                 "enable_obby_path": False,
                 "obby_claim_interval": "15",
                 "merchant_close_button": [ 1086, 342 ],

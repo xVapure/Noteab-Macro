@@ -41,77 +41,45 @@ class ActionsMixin:
                 ocr_lock = threading.Lock()
                 self._easyocr_lock = ocr_lock
 
-            ocr_cache = getattr(self, "_easyocr_cache", None)
-            if ocr_cache is None:
-                ocr_cache = {}
-                self._easyocr_cache = ocr_cache
+            _, img_encoded = cv2.imencode(".png", image_bgr)
+            file_bytes = img_encoded.tobytes()
+            img_hash = hashlib.sha256(file_bytes).hexdigest()
 
-            response = None
-            endpoints = ["https://cn-api.easyocr.org/ocr", "https://api.easyocr.org/ocr"]
-            
             with ocr_lock:
-                _, img_encoded = cv2.imencode(".png", image_bgr)
-                file_bytes = img_encoded.tobytes()
-                
-                import hashlib
-                img_hash = hashlib.sha256(file_bytes).hexdigest()
-                if img_hash in ocr_cache:
-                    cached_text = ocr_cache[img_hash]
-                    self.append_log(f"[EasyOCR - Cache] Cached text: '{cached_text}'")
-                    return cached_text
-                file_bytes = img_encoded.tobytes()
+                # ocr debug image
+                # try:
+                #     os.makedirs("images", exist_ok=True)
+                #     cv2.imwrite("images/ocr_debug.png", image_bgr)
+                # except Exception:
+                #     pass
 
-                for endpoint in endpoints:
+                try:
+                    image_ocr = cv2.resize(image_bgr, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+                    loop = asyncio.new_event_loop()
                     try:
-                        #self.append_log(f"[DEBUG] Sending request to {endpoint}...")
-                        response = requests.post(
-                            endpoint,
-                            files={"file": ("screenshot.png", file_bytes, "image/png")},
-                            timeout=5,
-                        )
-                        #self.append_log(f"[DEBUG] {endpoint} returned status: {response.status_code}")
-                        if response.status_code == 200:
-                            break
-                        else:
-                            self.append_log(f"[EasyOCR - API] Endpoint {endpoint} returned non-200. We're cooked...")
-                    except requests.exceptions.Timeout:
-                        self.append_log(f"[EasyOCR - API] {endpoint} timed out. Trying next...")
-                    except Exception as e:
-                        self.append_log(f"[EasyOCR - API] {endpoint} failed: {e}. Trying next...")
+                        result = loop.run_until_complete(winocr.recognize_cv2(image_ocr, "en"))
+                    finally:
+                        loop.close()
 
-            if response is not None and response.status_code == 200:
-                data = response.json()
-                words = data.get("words", [])
-                if words:
-                    def _safe_text(w):
-                        t = str(w.get("text", "")).strip()
-                        try:
-                            t.encode("ascii")
-                        except UnicodeEncodeError:
-                            t = "".join(c if ord(c) < 128 else "" for c in t)
-                        return t
-                    
-                    try:
-                        safe_words = [{"text": _safe_text(w)} for w in words]
-                        self.append_log(f"[EasyOCR - API] Extracted text: {safe_words}")
-                    except Exception:
-                        pass
-                    
-                    final_text = " ".join([_safe_text(w) for w in words if _safe_text(w)]).strip()
-                    if len(ocr_cache) > 100:
-                        ocr_cache.clear()
-                    ocr_cache[img_hash] = final_text
-                    return final_text
+                    if result and result.text:
+                        raw = result.text.strip()
+                        final_text = "".join(c if ord(c) < 128 else "" for c in raw).strip()
+                        self.append_log(f"[WinOCR] Extracted text: '{final_text}'")
+                        return final_text
+                    else:
+                        self.append_log("[WinOCR] No text detected.")
+                except ImportError:
+                    self.append_log("[WinOCR] winocr not installed.")
+                except Exception as winocr_err:
+                    self.append_log(f"[WinOCR] Failed: {winocr_err}")
 
-            if len(ocr_cache) > 100:
-                ocr_cache.clear()
-            ocr_cache[img_hash] = ""
-            return ""
+                return ""
+
         except Exception as e:
             try:
-                self.error_logging(e, "Error extracting text with EasyOCR API")
+                self.error_logging(e, "Error extracting text with WinOCR")
             except (UnicodeEncodeError, UnicodeDecodeError):
-                self.error_logging(e, "Error extracting text with EasyOCR API (unicode)")
+                self.error_logging(e, "Error extracting text with WinOCR (unicode)")
             return ""
 
     def load_notice_tab(self):
@@ -861,7 +829,10 @@ class ActionsMixin:
             if not self.detection_running or self._is_fishing_blocked() or self.auto_pop_state:
                 return
 
-            # 3. Click Collection Buttons
+            # 3. Close chat and then click Collection Buttons
+            self.close_chat_if_open()
+
+            if not self._sleep_with_cancel(0.2): return
             collections_button = self.config.get("collections_button", [0, 0])
             if collections_button and collections_button[0]:
                 try:
@@ -1683,6 +1654,12 @@ class ActionsMixin:
                 new_lines = f.readlines()
                 self._last_position_disconnect = f.tell()
 
+            try:
+                if hasattr(self, "_consume_log_username_validation") and not self._consume_log_username_validation(log_file):
+                    return False
+            except Exception:
+                pass
+
             if not new_lines: return False
 
             for line in reversed(new_lines):
@@ -1739,7 +1716,7 @@ class ActionsMixin:
                                         self.error_logging(launch_err, "Failed to launch reconnect link")
                                     time.sleep(2)
                                     continue
-                                time.sleep(36)
+                                time.sleep(40)
                                 if self.check_roblox_procs():
                                     self.send_webhook_status("Roblox opened. Loading into the games...", color=0x4aff65)
                                     self.has_sent_disconnected_message = False
@@ -1773,20 +1750,21 @@ class ActionsMixin:
             self.set_title_threadsafe(
                 f"""Coteab Macro {current_ver} (Reconnecting - In Main Menu)""")
             reconnect_start_button = self.config.get("reconnect_start_button", [954, 876])
-            max_clicks = 25
-            failed_clicks = 0
 
-            for _ in range(8):
-                if not self.detection_running: return
+            for _ in range(5):
+                if not self.detection_running: return False
                 self.activate_roblox_window()
-                time.sleep(0.35)
+                time.sleep(0.4)
 
-            for _ in range(max_clicks):
-                if not self.detection_running: return
+            deadline = time.time() + 240
+            click_interval = 4.0
+            while time.time() < deadline:
+                if not self.detection_running: return False
+                self.activate_roblox_window()
+                time.sleep(0.3)
                 self.Global_MouseClick(reconnect_start_button[0], reconnect_start_button[1])
-                time.sleep(0.95)
 
-                # Check reconnect state in the logs
+                # Check if we're now in-game
                 if self.reconnect_logs_state():
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
@@ -1794,13 +1772,10 @@ class ActionsMixin:
                     self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
                     return True  # weii joins!!!!!!!!!!
 
-                print("Still in Main Menu, clicking again...")
-                failed_clicks += 1
+                time.sleep(click_interval)
 
-                # Fallback if stuck in "In Main Menu" screen
-                if failed_clicks >= 25:
-                    print("Fallback: Stuck in 'In Main Menu' for too long. What is this skibidi")
-                    return False
+            self.append_log("Timed out waiting for in-game state after 4 minutes.")
+            return False
 
         except Exception as e:
             self.error_logging(e, "Error in reconnect_check_start_button function.")
@@ -1884,13 +1859,20 @@ class ActionsMixin:
     def check_roblox_procs(self):
         try:
             current_user = psutil.Process().username()
+            current_user_norm = str(current_user or "").strip().lower()
             running_processes = psutil.process_iter(['pid', 'name', 'username'])
             roblox_processes = []
 
             for proc in running_processes:
-                if proc.info['name'] in ['RobloxPlayerBeta.exe', 'Windows10Universal.exe'] and proc.info[
-                    'username'] == current_user:
-                    roblox_processes.append(proc.info)
+                proc_name = str(proc.info.get('name') or "")
+                if proc_name not in ['RobloxPlayerBeta.exe', 'Windows10Universal.exe']:
+                    continue
+
+                proc_user_norm = str(proc.info.get('username') or "").strip().lower()
+                if current_user_norm and proc_user_norm and proc_user_norm != current_user_norm:
+                    continue
+
+                roblox_processes.append(proc.info)
 
             if roblox_processes: return True
 
@@ -2151,6 +2133,7 @@ class ActionsMixin:
                 "merchant tracker": "merchant tracker",
                 "random potion sack": "random potion sack",
                 "gear a": "gear a",
+                "Genr A": "gear a",
                 "gear b": "gear b",
                 "lucky potion": "lucky potion",
                 "void coin": "void coin",
@@ -2387,39 +2370,129 @@ class ActionsMixin:
             return True
         return False
 
+    def close_chat_if_open(self):
+        try:
+            if not self.config.get("auto_chat_close", False): return
+
+            chat_hover = self.config.get("chat_hover_pos", [272, 252])
+            chat_ocr_region = self.config.get("chat_tab_ocr_pos", [341, 83, 210, 40])
+            chat_close = self.config.get("chat_close_button", [174, 40])
+
+            if not (chat_hover and chat_hover[0] and chat_close and chat_close[0]):
+                self.append_log("[WinOcr] You haven't calibrated chat failsafe so auto close chat will not running (WARNING)")
+                return
+
+            for _ in range(3):
+                self.activate_roblox_window()
+                time.sleep(0.2)
+
+            sw = pyautogui.size()
+            autoit.mouse_move(sw.width // 2, sw.height // 2, speed=3)
+            time.sleep(0.85)
+            autoit.mouse_move(chat_hover[0], chat_hover[1], speed=3)
+            time.sleep(0.85)
+
+            chat_detected = False
+            for attempt in range(1, 4):
+                tab_text = self.extract_text_with_easyocr(tuple(chat_ocr_region)).lower()
+                self.append_log(f"[WinOcr] Close Chat OCR Check ({attempt}/3): '{tab_text}'")
+
+                if fuzzy_match_any(tab_text, ["general", "server message"], threshold=0.75):
+                    chat_detected = True
+                    break
+
+                if attempt < 3:
+                    time.sleep(0.45)
+
+            if chat_detected:
+                self.append_log("[WinOcr] Chat is open! Closing it...")
+                autoit.mouse_click("left", chat_close[0], chat_close[1], 1, speed=3)
+                time.sleep(0.45)
+            else:
+                self.append_log("[WinOcr] Chat already closed! Skipping...")
+
+        except Exception as e:
+            self.error_logging(e, "close_chat_if_open error")
+
+
     def activate_roblox_window(self):
-        windows = gw.getAllTitles()
-        roblox_window = None
+        hwnd = None
+        try:
+            hwnds = self._find_roblox_hwnds()
+            if hwnds:
+                hwnd = hwnds[0]
+                self._focus_window_hwnd(hwnd, max_attempts=10, sleep_between=0.2)
+        except Exception as e:
+            print(f"[activate_roblox_window] hwnd path failed: {e}")
 
-        for window in windows:
-            if "Roblox" in window:
-                roblox_window = gw.getWindowsWithTitle(window)[0]
-                break
-
-        if roblox_window:
+        if hwnd is None:
+            # fallback
             try:
-                roblox_window.activate()
+                for title in gw.getAllTitles():
+                    if "Roblox" in title:
+                        win = gw.getWindowsWithTitle(title)[0]
+                        win.activate()
+                        try:
+                            hwnd = win._hWnd
+                        except Exception:
+                            pass
+                        break
             except Exception as e:
-                print(f"Failed to activate window: {e}")
-        else:
+                print(f"[activate_roblox_window] gw fallback failed: {e}")
+
+        if hwnd is None:
             print("Roblox window not found.")
+            return
+
+        # Auto fullscreen
+        if (
+            self.config.get("auto_roblox_fullscreen", False)
+            and not getattr(self, "_roblox_fullscreened", False)
+        ):
+            try:
+                style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+                has_caption = bool(style & win32con.WS_CAPTION)
+                if has_caption:
+                    time.sleep(0.5)
+                    fg = win32gui.GetForegroundWindow()
+                    if fg == hwnd:
+                        import keyboard as kb
+                        kb.press_and_release("f11")
+                        time.sleep(0.3)
+                        self.append_log("[Roblox] Roblox is now on fullscreen.")
+                    else:
+                        self.append_log("[Roblox] Roblox is not in foreground.")
+                self._roblox_fullscreened = True
+            except Exception as e:
+                print(f"[activate_roblox_window] fullscreen failed: {e}")
 
     def _find_roblox_hwnds(self):
         pids = set()
         try:
             current_user = psutil.Process().username()
+            current_user_norm = str(current_user or "").strip().lower()
         except Exception:
             current_user = None
+            current_user_norm = ""
         try:
             for proc in psutil.process_iter(['pid', 'name', 'username']):
                 try:
-                    if proc.info['name'] in ['RobloxPlayerBeta.exe', 'Windows10Universal.exe'] and (
-                            current_user is None or proc.info.get('username') == current_user):
-                        pids.add(proc.info['pid'])
+                    proc_name = str(proc.info.get('name') or "")
+                    if proc_name not in ['RobloxPlayerBeta.exe', 'Windows10Universal.exe']:
+                        continue
+
+                    proc_user_norm = str(proc.info.get('username') or "").strip().lower()
+                    if current_user is not None and current_user_norm and proc_user_norm and proc_user_norm != current_user_norm:
+                        continue
+
+                    pid = proc.info.get('pid')
+                    if pid is not None:
+                        pids.add(pid)
                 except Exception:
                     pass
         except Exception:
             pass
+
         hwnds = []
         try:
             def enum_cb(hwnd, lparam):
@@ -2505,61 +2578,162 @@ class ActionsMixin:
 
     def perform_anti_afk_action(self):
         try:
-            if self.is_fishing_mode_enabled():
+            if not getattr(self, "anti_afk_var", None) or not self.anti_afk_var.get():
                 return
-            if not getattr(self, "anti_afk_var", None) or not self.anti_afk_var.get(): return
-            if not self.check_roblox_procs(): return
-            try:
-                hwnd_before = win32gui.GetForegroundWindow()
-                title_before = win32gui.GetWindowText(hwnd_before)
-            except Exception:
-                hwnd_before = None
-                title_before = ""
-            roblox_hwnds = self._find_roblox_hwnds()
-            if not roblox_hwnds:
-                for t in gw.getAllTitles():
-                    if "Roblox" in (t or ""):
-                        wins = gw.getWindowsWithTitle(t)
-                        if wins:
-                            try:
-                                if hasattr(wins[0], '_hWnd'):
-                                    roblox_hwnds.append(wins[0]._hWnd)
-                                else:
-                                    h = win32gui.FindWindow(None, t)
-                                    if h:
-                                        roblox_hwnds.append(h)
-                            except Exception:
-                                pass
-            if not roblox_hwnds:
-                return
-            target = roblox_hwnds[0]
-            focused = False
-            while self.detection_running and not focused:
-                focused = self._focus_window_hwnd(target, max_attempts=4, sleep_between=0.35)
-                if focused:
-                    break
-                time.sleep(0.35)
-            if not focused:
-                return
-            try:
-                autoit.send("{SPACE 3}")
-            except Exception:
+
+            while self.detection_running:
+                if not getattr(self, "anti_afk_var", None) or not self.anti_afk_var.get():
+                    return
+
+                if not self.check_roblox_procs():
+                    time.sleep(1.0)
+                    continue
+
+                target = None
+                while self.detection_running and not target:
+                    roblox_hwnds = self._find_roblox_hwnds()
+                    if not roblox_hwnds:
+                        for t in gw.getAllTitles():
+                            if "Roblox" in (t or ""):
+                                wins = gw.getWindowsWithTitle(t)
+                                if wins:
+                                    try:
+                                        if hasattr(wins[0], '_hWnd'):
+                                            roblox_hwnds.append(wins[0]._hWnd)
+                                        else:
+                                            h = win32gui.FindWindow(None, t)
+                                            if h:
+                                                roblox_hwnds.append(h)
+                                    except Exception:
+                                        pass
+                    if roblox_hwnds:
+                        target = roblox_hwnds[0]
+                        break
+                    time.sleep(1.0)
+
+                if not self.detection_running:
+                    return
+
                 try:
-                    pyautogui.press("space", presses=3, interval=0.06)
+                    hwnd_before = win32gui.GetForegroundWindow()
                 except Exception:
-                    pass
-            time.sleep(0.15)
-            if hwnd_before and hwnd_before != win32gui.GetForegroundWindow():
+                    hwnd_before = None
                 try:
-                    win32gui.SetForegroundWindow(hwnd_before)
+                    title_before = win32gui.GetWindowText(hwnd_before) if hwnd_before else ""
                 except Exception:
+                    title_before = ""
+
+                was_roblox_focused = bool(hwnd_before and hwnd_before in roblox_hwnds)
+                if not was_roblox_focused and hwnd_before:
                     try:
-                        if title_before:
-                            wins = gw.getWindowsWithTitle(title_before)
-                            if wins:
-                                wins[0].activate()
+                        current_title = win32gui.GetWindowText(hwnd_before)
+                        if "Roblox" in (current_title or ""):
+                            was_roblox_focused = True
                     except Exception:
                         pass
+
+                focused = False
+                while self.detection_running and not focused:
+                    focused = self._focus_window_hwnd(target, max_attempts=4, sleep_between=0.35)
+                    if focused:
+                        break
+                    refreshed_hwnds = self._find_roblox_hwnds()
+                    if refreshed_hwnds:
+                        target = refreshed_hwnds[0]
+                    time.sleep(0.35)
+
+                if not self.detection_running:
+                    return
+                if not focused:
+                    continue
+
+                jumps_done = 0
+                while self.detection_running and jumps_done < 3:
+                    if win32gui.GetForegroundWindow() != target:
+                        focused = False
+                        while self.detection_running and not focused:
+                            focused = self._focus_window_hwnd(target, max_attempts=4, sleep_between=0.35)
+                            if focused:
+                                break
+                            refreshed_hwnds = self._find_roblox_hwnds()
+                            if refreshed_hwnds:
+                                target = refreshed_hwnds[0]
+                            time.sleep(0.35)
+                        if not self.detection_running:
+                            return
+                        if not focused:
+                            continue
+
+                    jump_success = False
+                    try:
+                        autoit.send("{SPACE}")
+                        jump_success = True
+                    except Exception:
+                        pass
+
+                    if not jump_success:
+                        try:
+                            pyautogui.keyDown("space")
+                            time.sleep(0.04)
+                            pyautogui.keyUp("space")
+                            jump_success = True
+                        except Exception:
+                            pass
+
+                    if jump_success:
+                        jumps_done += 1
+                        try:
+                            self.append_log(f"[Anti-AFK] Jump {jumps_done}/3")
+                        except Exception:
+                            pass
+                        time.sleep(0.28)
+                    else:
+                        time.sleep(0.2)
+
+                if jumps_done == 3:
+                    if was_roblox_focused:
+                        return
+
+                    if not hwnd_before:
+                        return
+
+                    attempts = 0
+                    while self.detection_running and attempts < 30:
+                        attempts += 1
+                        try:
+                            if win32gui.GetForegroundWindow() == hwnd_before:
+                                break
+                        except Exception:
+                            pass
+                        try:
+                            win32gui.SetForegroundWindow(hwnd_before)
+                        except Exception:
+                            pass
+                        time.sleep(0.12)
+                        try:
+                            if win32gui.GetForegroundWindow() == hwnd_before:
+                                break
+                        except Exception:
+                            pass
+                        try:
+                            if title_before:
+                                autoit.win_activate(title_before)
+                        except Exception:
+                            pass
+                        time.sleep(0.12)
+                        try:
+                            if win32gui.GetForegroundWindow() == hwnd_before:
+                                break
+                        except Exception:
+                            pass
+                        try:
+                            pyautogui.keyDown('alt')
+                            pyautogui.press('tab')
+                            pyautogui.keyUp('alt')
+                        except Exception:
+                            pass
+                        time.sleep(0.12)
+                    return
         except Exception as e:
             try:
                 self.error_logging(e, "Error in anti-afk")
