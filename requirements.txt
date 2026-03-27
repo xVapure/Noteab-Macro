@@ -15,3 +15,4 @@ pywin32==307
 Requests==2.33.0
 ttkbootstrap==1.10.1
 winocr==0.0.15
+pyinstaller==6.19.0
