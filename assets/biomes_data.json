@@ -1,9 +1,8 @@
 {
     "NORMAL": {
-        "color": "0xffffff",
-        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NORMAL.png"
+        "color": "0xbfff00",
+        "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png"
     },
-
     "WINDY": {
         "color": "0xbfff00",
         "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png"
@@ -49,8 +48,7 @@
         "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png"
     },
     "CYBERSPACE": {
-        "color": "0xea9dda",
+        "color": "0xbfff00",
         "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/%7B9DC2EE4C-66FA-4DCE-82EC-AAFCDF04C299%7D.png"
     }
 }
-
