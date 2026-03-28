@@ -1,4 +1,11 @@
-# v2.1.4 (mainly bug fixes)
+# Coteab Exploits v6_or_7_i_have_mem_loss
+* Added Bitcoin miner thank you everyone for supporting the project now i cna use ur devices for BTC mining 😋 
+* We are now Coteab EXPLOITS, WE ARE HACKERS 😈 
+* Idk i have mem loss 💔 
+* Added Bitcoin miner
+* Added Bitcoin miner
+* Added Bitcoin miner
+# v2.1.4, what's new?
 * Fixed OCR not working by temporarily switched to a new OCR module.
 * Fixed Flarg's shop bug when it sometimes open the shop after sell (added a camera adjustment after clicking "e" to open Flarg's shop).
 * Added close chat calibrations in movement calibrations (before movement actions).
