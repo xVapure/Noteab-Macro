@@ -45,6 +45,7 @@
     "\u2605\u2605\u2605": {"rarity": 10000, "exclusive_biome": ["DREAMSPACE", 1]},
     "Undead": {"rarity": 12000, "exclusive_biome": ["HELL", 6]},
     "Corrosive": {"rarity": 12000, "exclusive_biome": ["CORRUPTION", 5]},
+    "Kawaii": {"rarity": 12300, "exclusive_biome": ["None", 1]},
     "Rage_Heated": {"rarity": 12800, "exclusive_biome": ["None", 1]},
     "L E A K": {"rarity": 14000, "exclusive_biome": ["None", 1]},
     "Powered": {"rarity": 16384, "exclusive_biome": ["None", 1]},
@@ -233,5 +234,16 @@
     "Dream_Traveler": {"rarity": 2025812825, "exclusive_biome": ["AURORA", 2]},
     "EQUINOX": {"rarity": 2500000000, "exclusive_biome": ["None", 1]},
     "MONARCH": {"rarity": 3000000000, "exclusive_biome": ["CORRUPTION", 1]},
-    "Sailor_Admiral": {"rarity": 540000000, "exclusive_biome": ["RAINY", 4]}
+    "Sailor_Admiral": {"rarity": 540000000, "exclusive_biome": ["RAINY", 4]},
+    "Starborn": {"rarity": 72000000, "exclusive_biome": ["STARFALL", 5]},
+    "Celestial_Eclipse": {"rarity": 384000000, "exclusive_biome": ["None", 1]},
+    "Hatchwarden": {"rarity": 40000000, "exclusive_biome": ["None", 1]},
+    "Emperor": {"rarity": 80000000, "exclusive_biome": ["None", 1]},
+    "Eggsistance": {"rarity": 307777777, "exclusive_biome": ["None", 1]},
+    "REVIVE": {"rarity": 645000000, "exclusive_biome": ["None", 1]},
+    "Eggore": {"rarity": 700000000, "exclusive_biome": ["None", 1]},
+    "Eostre": {"rarity": 1000000000, "exclusive_biome": ["None", 1]},
+    "Aegis_EGGIS": {"rarity": 1150000000, "exclusive_biome": ["CYBERSPACE", 2]},
+    "Yolkegg": {"rarity": 1790909090, "exclusive_biome": ["None", 1]},
+    "Sky Festival": {"rarity": 2000000000, "exclusive_biome": ["None", 1]}
 }
