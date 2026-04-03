@@ -249,7 +249,7 @@
     "EQUINOX_youareanidiot": {"rarity": 2500000000, "exclusive_biome": ["None", 1]},
     "Lumenpool_Ramenpool": {"rarity": 630000000, "exclusive_biome": ["RAINY", 4]},
     "Doodle_AbyssalHunter": {"rarity": 400000000, "exclusive_biome": ["None", 1]},
-    "bloated_exe": {"rarity": 67676767, "exclusive_biome": ["None", 1]},
+    "bloatedexe": {"rarity": 67676767, "exclusive_biome": ["None", 1]},
     "Aether_Disappointment": {"rarity": 33333330, "exclusive_biome": ["HEAVEN", 5]},
     "pukeko_Jumping": {"rarity": 31980000, "exclusive_biome": ["None", 1]},
     "VerySmallSewageRat": {"rarity": 20070629, "exclusive_biome": ["None", 1]},
