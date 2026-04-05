@@ -1,3 +1,21 @@
+# v2.1.5 (Easter egg update)
+
+## New features:
+* Added egg collect pathing with 3 routes **(Note: this egg collect feature is heavily fps dependent, if you are constantly have low fps then you're COOKED. Therefore, egg point gaining overnight might not be much as you've expected...) -> Egg path additional feature: Mouse click failsafe**
+* Rare easter eggs from roblox chat using OCR (It has many special restrictions to ensure it won't interfere with other regular macro actions, you can check when it is able to run in which conditions through the info box when its option is enabled)
+* Universal non-vip pathing option added (In Movements section)
+* Egg path & fishing path replay multiplier
+* Egg notifier webhook added to macro internal webhook sender (with silly egg dog thumbnail)
+
+## Bugfixes & Additional changes:
+* Auto merchant overlaps Lime's menu during Easter event (it should close the merchant menu even if it doesn't found Mari) `- Bugfix`
+* Attempted fix at macro reconnection softlock (I got like 40 fishstrap instance opened overnight for no reason - Akito) `- Bugfix`
+* Frontend attempted fix: esc r enter (reset character key combo) somehow oddly stopping macro `- Bugfix`
+* Moved "Close chat before pathing" from "Other Features" Page to "Movements" Page `- Change`
+* Macro will automatically detect new biome (especially event biome like EGGLAND) and add it into "biome_notifier" config (whenever me or C update the biome data list on Github) `- Change`
+* Webview 2 OPTIONAL plugin added with "webview_runtime_fix_optional" folder so macro would load pre-installed webview module (Note: This is meant for user who got black/white screen after open the macro which makes its completely unusable) `- Change`
+
+(Since Crit is busy with his exam rn and this update is solo-developed by myself, expect bugs might occur while u are macroing :heart_hands: )
 
 # v2.1.4, what's new?
 * Fixed OCR not working by temporarily switched to a new OCR module.
