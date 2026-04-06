@@ -92,13 +92,6 @@ export default function OtherFeaturesPage() {
                     checked={config.auto_roblox_fullscreen || false}
                     onChange={(val) => updateConfig("auto_roblox_fullscreen", val)}
                 />
-
-                <ToggleSwitch
-                    label="Close Roblox chat before pathing (DO MACRO CALIBRATION - OPTIONAL)"
-                    description="Automatically close the in-game chat using OCR detection before obby/fishing path sequences"
-                    checked={config.auto_chat_close || false}
-                    onChange={(val) => updateConfig("auto_chat_close", val)}
-                />
             </div>
         </>
     );

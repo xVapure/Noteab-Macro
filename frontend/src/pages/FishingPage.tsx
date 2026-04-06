@@ -115,6 +115,34 @@ export default function FishingPage() {
                     </div>
                 </div>
 
+                <div className="form-row" style={{ marginTop: "15px", marginLeft: "10px", paddingBottom: "10px" }}>
+                    <div className="form-group">
+                        <label className="form-label" style={{ fontWeight: "bold" }}>Fishing Path Playback Multiplier (FPS Compensation)</label>
+                        <p style={{ margin: "2px 0 8px 0", fontSize: "0.85em", color: "var(--text-color)", opacity: 0.8 }}>
+                            If you get stuck or fall short while walking during fishing or fish selling (due to low FPS), increase this (e.g. 1.1 or 1.25). Higher multiplier = character walks for longer (otherwise keep it at 1.0 if you got consistent fps around 60+)
+                        </p>
+                        <input
+                            className="form-input"
+                            type="number"
+                            step="0.01"
+                            min="1.0"
+                            max="2.0"
+                            value={config.fishing_playback_multiplier ?? "1.0"}
+                            onChange={(e) => updateConfig("fishing_playback_multiplier", e.target.value)}
+                            onBlur={(e) => {
+                                let val = parseFloat(e.target.value);
+                                if (isNaN(val) || val < 1.0) updateConfig("fishing_playback_multiplier", "1.0");
+                            }}
+                            style={{ width: "90px" }}
+                        />
+                    </div>
+                </div>
+                {Number(config.fishing_playback_multiplier) < 1 && (
+                    <div className="info-banner" style={{ marginTop: "5px", color: "var(--warning-color, #ffaa00)" }}>
+                        ⚠️ If you set fish path multiplier below 1.0, the macro will automatically default it back to 1.0 :aga:
+                    </div>
+                )}
+
                 <ToggleSwitch
                     label="Fishing failsafe (rejoin if timeout)"
                     description="If no fishing minigame is detected for 60 seconds after the last Start Fishing click, close Roblox so reconnect logic can take over."

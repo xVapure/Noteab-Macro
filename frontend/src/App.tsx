@@ -60,6 +60,9 @@ function App() {
   const startMacro = async () => {
     if (isMacroRunning) return;
     setMacroRunning(true);
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     try {
       if (window.pywebview && window.pywebview.api) {
         await window.pywebview.api.set_biome_detection(true);
@@ -229,6 +232,9 @@ function App() {
 
     const requestUpdateCheck = async () => {
       try {
+        if (config && (config as any).dont_ask_for_update) {
+            return;
+        }
         if (window.pywebview?.api?.get_update_available) {
           const info = await window.pywebview.api.get_update_available();
           if (info && info.version && info.url) {
@@ -398,7 +404,7 @@ function App() {
               onDismiss={() => setUpdateInfo(null)}
               onDontAskAgain={async () => {
                 if (config) {
-                  await saveConfig({ ...config, auto_update_enabled: false });
+                  await saveConfig({ ...config, dont_ask_for_update: true });
                 }
                 setUpdateInfo(null);
               }}

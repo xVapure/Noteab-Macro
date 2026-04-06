@@ -32,6 +32,8 @@ const CALIBRATION_GROUPS: CalibrationGroup[] = [
             { key: "chat_hover_pos", label: "Roblox Chat Box" },
             { key: "chat_tab_ocr_pos", label: "Chat Tab OCR Region (either 'General' or 'Server Message')", isRegion: true },
             { key: "chat_close_button", label: "Roblox Chat Icon (to close chat box)" },
+            { key: "chat_box_ocr_pos", label: "Chat Box OCR Region (to reads text inside Roblox chat)", isRegion: true },
+
         ]
     },
     {
@@ -162,6 +164,8 @@ const MOUSE_ACTION_REQUIREMENTS: MouseActionRequirement[] = [
 
     { page: "Movements", feature: "Auto Complete Basic Obby", calibrations: ["Movements Calibration"] },
     { page: "Movements", feature: "Use Float Aura", calibrations: ["Equip Aura Calibration", "Inventory Click Calibration"] },
+    { page: "Movements", feature: "Easter Egg Collection", calibrations: ["Movements Calibration"] },
+    { page: "Movements", feature: "Easter Egg OCR Special Detection", calibrations: ["Movements Calibration"] },
 
     { page: "Potion Craft", feature: "Potion Auto Craft / Switching", calibrations: ["Potion Crafting Calibration"] },
 

@@ -67,6 +67,13 @@ export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, i
                 <button
                     className={`btn ${isRunning ? "btn-stop" : "btn-start"}`}
                     onClick={onToggle}
+                    tabIndex={-1}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    }}
                 >
                     {isRunning ? "■ Stop (F2)" : "▶ Start (F1)"}
                 </button>
