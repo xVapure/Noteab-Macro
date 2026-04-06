@@ -467,7 +467,9 @@ class CalibrationManager:
                     else:
                         value = [region[0], region[1], region[2], region[3]]
 
-                    if self._tracker and hasattr(self._tracker, 'config'):
+                    _is_virtual = config_key.startswith("egg_click_failsafe_")
+
+                    if not _is_virtual and self._tracker and hasattr(self._tracker, 'config'):
                         self._tracker.config[config_key] = value
                         if self._save_fn:
                             self._save_fn(self._tracker.config)

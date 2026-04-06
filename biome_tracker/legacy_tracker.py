@@ -1,5 +1,3 @@
-
-
 from .mixin_lifecycle import LifecycleMixin
 from .mixin_config import ConfigMixin
 from .mixin_detection import DetectionMixin
@@ -18,4 +16,3 @@ class LegacyBiomeTracker(
     RecorderMixin,
 ):
     pass
-

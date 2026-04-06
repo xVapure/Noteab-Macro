@@ -77,7 +77,12 @@ class RemoteMixin:
             async def on_ready():
                 try:
                     await bot.sync_commands()
-                    print(f"[Remote] Bot online as {bot.user} — slash commands synced.")
+                    success_msg = f"[Remote] Bot online as {bot.user} — slash commands synced. Pycord module loaded :aga:"
+                    print(success_msg)
+                    try:
+                        self.append_log(success_msg)
+                    except Exception:
+                        pass
                 except Exception as e:
                     print(f"[Remote] Failed to sync commands: {e}")
 
@@ -261,7 +266,7 @@ class RemoteMixin:
                             pass
                         continue
 
-                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False):
+                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
                         try:
                             time.sleep(0.35)
                             self.remote_command_queue.put((item_name, amount))
@@ -307,7 +312,7 @@ class RemoteMixin:
                             pass
                         continue
 
-                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False):
+                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
                         try:
                             time.sleep(0.35)
                             self.remote_command_queue.put((item_name, uid))
@@ -392,7 +397,7 @@ class RemoteMixin:
                             pass
                         continue
 
-                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False):
+                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
                         try:
                             time.sleep(0.35)
                             self.remote_command_queue.put((item_name, amount))
@@ -441,17 +446,17 @@ class RemoteMixin:
                             pass
                         continue
 
-                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False):
+                    requested = str(amount or "").lower()
+                    if requested not in ("full", "inventory", "aura"):
+                        requested = "full"
+
+                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or (getattr(self, "_egg_collecting", False) and requested != "full") or ((hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()) and requested != "full"):
                         try:
                             time.sleep(0.35)
                             self.remote_command_queue.put((item_name, amount))
                         except Exception:
                             pass
                         continue
-
-                    requested = str(amount or "").lower()
-                    if requested not in ("full", "inventory", "aura"):
-                        requested = "full"
 
                     if requested == "full":
                         def _screenshot_action():
@@ -547,7 +552,7 @@ class RemoteMixin:
                         pass
                     continue
 
-                if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False):
+                if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
                     try:
                         time.sleep(0.35)
                         self.remote_command_queue.put((item_name, amount))

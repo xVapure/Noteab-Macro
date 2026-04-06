@@ -17,6 +17,10 @@ class DetectionMixin:
                 "color": "0xffffff",
                 "thumbnail_url": "fuck is this for??"
             },
+            "EGGLAND": {
+                "color": "0xd4fc8d",
+                "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/EGGLAND.png"
+            },  
             "WINDY": {
                 "color": "0x9ae5ff",
                 "thumbnail_url": "https://maxstellar.github.io/biome_thumb/WINDY.png"
@@ -152,6 +156,8 @@ class DetectionMixin:
                     return
             if not self.check_roblox_procs():
                 return
+            if getattr(self, "_egg_collecting", False):
+                return
 
             for _ in range(4):
                 self.activate_roblox_window()
@@ -178,8 +184,11 @@ class DetectionMixin:
                     screenshot_dir = os.path.join(os.getcwd(), "images")
                     os.makedirs(screenshot_dir, exist_ok=True)
                     filename = os.path.join(screenshot_dir, f"aura_screenshot_{int(time.time())}.png")
-                    img = pyautogui.screenshot()
-                    img.save(filename)
+                    if not self.is_roblox_focused():
+                        self.append_log("[Aura Screenshot] Roblox not focused, skipping screenshot")
+                    else:
+                        img = pyautogui.screenshot()
+                        img.save(filename)
                     self.send_aura_screenshot_webhook(filename)
                     self.last_aura_screenshot_time = datetime.now()
                     autoit.mouse_click("left", inventory_close_button[0], inventory_close_button[1], 1, speed=3)
@@ -386,6 +395,7 @@ class DetectionMixin:
             self.has_started_once = True
             self._session_window_reset_performed = False
             self.stop_sent = False
+            self.last_egg_collect_time = now
 
             # reset disconnect tracking so the macro doesnt log old disconnect 
             self._disconnect_log_file = None
@@ -421,6 +431,8 @@ class DetectionMixin:
                 (self.anti_afk_loop, "Anti-AFK"),
                 (self.quest_claim_loop, "Quest Claim"),
                 (self.obby_path_loop, "Obby Path"),
+                (self.egg_collect_loop, "Egg Collect"),
+                (self.egg_ocr_check_loop, "Egg OCR Check"),
             ]
 
             for thread_func, name in threads:
@@ -601,6 +613,10 @@ class DetectionMixin:
                 return not any(phrase in line for phrase in excluded_phrases)
             return False
 
+        if getattr(self, "_last_read_log_file_main", None) != log_file_path:
+            self._last_read_log_file_main = log_file_path
+            self.last_position = 0
+
         with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as file:
             file.seek(self.last_position)
             lines = file.readlines()
@@ -614,6 +630,10 @@ class DetectionMixin:
             return []
 
         try:
+            if getattr(self, f"_last_read_log_file_{pos_attr}", None) != log_file_path:
+                setattr(self, f"_last_read_log_file_{pos_attr}", log_file_path)
+                setattr(self, pos_attr, 0)
+                
             pos = getattr(self, pos_attr, 0)
             with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 f.seek(pos)
@@ -726,10 +746,13 @@ class DetectionMixin:
                                         screenshot_dir = os.path.join(os.getcwd(), "images")
                                         os.makedirs(screenshot_dir, exist_ok=True)
                                         filename = os.path.join(screenshot_dir, f"aura_{int(time.time())}.png")
-                                        img = pyautogui.screenshot()
-                                        img.save(filename)
-                                        screenshot_path = filename
-                                        self.append_log(f"[Aura Screenshot] Saved to: {screenshot_path}, exists: {os.path.exists(screenshot_path)}")
+                                        if not self.is_roblox_focused():
+                                            self.append_log("[Aura Screenshot] Roblox not focused, skipping screenshot")
+                                        else:
+                                            img = pyautogui.screenshot()
+                                            img.save(filename)
+                                            screenshot_path = filename
+                                            self.append_log(f"[Aura Screenshot] Saved to: {screenshot_path}, exists: {os.path.exists(screenshot_path)}")
                                 except Exception as e:
                                     self.error_logging(e, "Error taking aura screenshot")
 
@@ -751,10 +774,13 @@ class DetectionMixin:
                                         screenshot_dir = os.path.join(os.getcwd(), "images")
                                         os.makedirs(screenshot_dir, exist_ok=True)
                                         filename = os.path.join(screenshot_dir, f"aura_{int(time.time())}.png")
-                                        img = pyautogui.screenshot()
-                                        img.save(filename)
-                                        screenshot_path = filename
-                                        self.append_log(f"[Aura Screenshot] Saved to: {screenshot_path}, exists: {os.path.exists(screenshot_path)}")
+                                        if not self.is_roblox_focused():
+                                            self.append_log("[Aura Screenshot] Roblox not focused, skipping screenshot")
+                                        else:
+                                            img = pyautogui.screenshot()
+                                            img.save(filename)
+                                            screenshot_path = filename
+                                            self.append_log(f"[Aura Screenshot] Saved to: {screenshot_path}, exists: {os.path.exists(screenshot_path)}")
                                 except Exception as e:
                                     self.error_logging(e, "Error taking aura screenshot")
 
@@ -774,8 +800,29 @@ class DetectionMixin:
             log_lines = self.read_log_file(log_file_path)
 
             for line in reversed(log_lines):
-                for biome in self.biome_data:
-                    if biome in line and "[BloxstrapRPC]" in line:
+                if "[BloxstrapRPC]" in line and '"largeImage"' in line:
+                    match = re.search(r'"largeImage"\s*:\s*\{[^}]*"hoverText"\s*:\s*"([^"]+)"', line)
+                    if match:
+                        biome = match.group(1).strip().upper()
+                        
+                        if biome not in self.biome_data:
+                            print(f"New unlisted biome detected from RPC: {biome}")
+                            try:
+                                self.append_log(f"Auto-loaded new unlisted biome: {biome}")
+                            except Exception: pass
+                            
+                            self.biome_data[biome] = {
+                                "color": "0xffffff",
+                                "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/biome_placeholder.png"
+                            }
+                            
+                        # Set "Message" default for event biome whenever sol dev added to da game 
+                        if biome not in self.config["biome_notifier"] and biome not in rare_biomes and biome != "NORMAL":
+                            self.config["biome_notifier"][biome] = "Message"
+                            try: 
+                                self.save_config()
+                            except Exception: pass
+
                         if biome != self.current_biome:
                             last_biome = self.current_biome
                             self.current_biome = biome
@@ -886,9 +933,13 @@ class DetectionMixin:
                         screenshot_dir = os.path.join(os.getcwd(), "images")
                         os.makedirs(screenshot_dir, exist_ok=True)
                         screenshot_path = os.path.join(screenshot_dir, f"rare_biome_{biome.lower()}_{int(time.time())}.png")
-                        img = pyautogui.screenshot()
-                        img.save(screenshot_path)
-                        self.append_log(f"[Rare Biome Screenshot] Saved screenshot: {screenshot_path}")
+                        if not self.is_roblox_focused():
+                            self.append_log(f"[Rare Biome Screenshot] Roblox not focused, skipping screenshot")
+                            screenshot_path = None
+                        else:
+                            img = pyautogui.screenshot()
+                            img.save(screenshot_path)
+                            self.append_log(f"[Rare Biome Screenshot] Saved screenshot: {screenshot_path}")
                     except Exception as e:
                         self.error_logging(e, "Error taking rare biome screenshot")
                         screenshot_path = None
@@ -1210,7 +1261,8 @@ class DetectionMixin:
         if self.mt_var.get() and datetime.now() - self.last_mt_time >= mt_cooldown and not getattr(self,
                                                                                                     '_br_sc_running',
                                                                                                     False) and not getattr(
-                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
+                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and not getattr(
+                        self, '_egg_collecting', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
                                                                                 datetime.min) and not (self.config.get("enable_idle_mode", False)):
             self.use_merchant_teleporter()
             self.last_mt_time = datetime.now()
@@ -1223,7 +1275,8 @@ class DetectionMixin:
         if self.sc_var.get() and datetime.now() - self.last_sc_time >= sc_cooldown and not getattr(self,
                                                                                                     '_br_sc_running',
                                                                                                     False) and not getattr(
-                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
+                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and not getattr(
+                        self, '_egg_collecting', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
                                                                                 datetime.min) and not (self.config.get("enable_idle_mode", False)):
             self.use_br_sc('strange controller')
             self.last_sc_time = datetime.now()
@@ -1236,7 +1289,8 @@ class DetectionMixin:
         if self.br_var.get() and datetime.now() - self.last_br_time >= br_cooldown and not getattr(self,
                                                                                                     '_br_sc_running',
                                                                                                     False) and not getattr(
-                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
+                        self, '_mt_running', False) and not getattr(self, '_remote_running', False) and not getattr(
+                        self, '_egg_collecting', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
                                                                                 datetime.min) and not (self.config.get("enable_idle_mode", False)):
             self.use_br_sc('biome randomizer')
             self.last_br_time = datetime.now()
@@ -1246,6 +1300,8 @@ class DetectionMixin:
             return
         if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get():
             return 
+        if hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked():
+            return
         inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
         try:
             if self.config.get("enable_idle_mode", False):
@@ -1261,6 +1317,8 @@ class DetectionMixin:
             if not self.check_roblox_procs(): return
             
             for _ in range(4):
+                if not self.detection_running or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
+                    return
                 self.activate_roblox_window()
                 time.sleep(0.8)
             
@@ -1286,9 +1344,12 @@ class DetectionMixin:
                     screenshot_dir = os.path.join(os.getcwd(), "images")
                     os.makedirs(screenshot_dir, exist_ok=True)
                     filename = os.path.join(screenshot_dir, f"aura_screenshot_{int(time.time())}.png")
-                    img = pyautogui.screenshot()
-                    img.save(filename)
-                    self.send_aura_screenshot_webhook(filename)
+                    if not self.is_roblox_focused():
+                        self.append_log("[Aura Screenshot] Roblox not focused, skipping screenshot")
+                    else:
+                        img = pyautogui.screenshot()
+                        img.save(filename)
+                        self.send_aura_screenshot_webhook(filename)
                     self.last_aura_screenshot_time = datetime.now()
                     autoit.mouse_click("left", inventory_close_button[0], inventory_close_button[1], 1, speed=3)
                     time.sleep(0.67)
@@ -1313,13 +1374,31 @@ class DetectionMixin:
 
     def _merchant_teleporter_impl(self):
         if getattr(self, '_br_sc_running', False): return
+        if getattr(self, '_egg_collecting', False): return
         if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
         self._last_merchant_sequence_ran = False
         self._last_merchant_sequence_requires_reset = False
         self._mt_running = True
+        fishing_override = bool(getattr(self, "_fishing_br_sc_override", False))
         try:
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
-                "enable_potion_crafting") or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"): return
+            def _cancelled():
+                # When called from fishing.py loop only check
+                # ^ truly critical conditions to avoid concurrent state aborts (dev note) ^
+                if fishing_override:
+                    return (
+                        not self.detection_running
+                        or self.reconnecting_state
+                    )
+                return (
+                    not self.detection_running
+                    or self.reconnecting_state
+                    or self.auto_pop_state
+                    or self.on_auto_merchant_state
+                    or self.config.get("enable_potion_crafting")
+                    or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE")
+                )
+
+            if _cancelled(): return
 
             if hasattr(self, 'last_merchant_interaction') and self.last_merchant_interaction:
                 merchant_cooldown_time = 300
@@ -1337,8 +1416,7 @@ class DetectionMixin:
             inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
 
             for _ in range(4):
-                if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
-                    "enable_potion_crafting") or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"): return
+                if _cancelled(): return
                 self.activate_roblox_window()
                 time.sleep(0.3)
 
@@ -1359,8 +1437,7 @@ class DetectionMixin:
             time.sleep(0.23)
             self.Global_MouseClick(items_tab[0], items_tab[1])
             time.sleep(0.24 + inventory_click_delay)
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
-                "enable_potion_crafting") or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"): return
+            if _cancelled(): return
 
             self.Global_MouseClick(search_bar[0], search_bar[1])
             time.sleep(0.23)
@@ -1368,8 +1445,7 @@ class DetectionMixin:
             time.sleep(0.23)
             self.Global_MouseClick(search_bar[0], search_bar[1])
             time.sleep(0.27 + inventory_click_delay)
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
-                "enable_potion_crafting") or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"): return
+            if _cancelled(): return
             autoit.send("teleport")
             time.sleep(0.4 + inventory_click_delay)
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
@@ -1387,21 +1463,18 @@ class DetectionMixin:
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
             time.sleep(0.4 + inventory_click_delay)
 
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
-                "enable_potion_crafting") or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"): return
+            if _cancelled(): return
 
             time.sleep(0.17 + inventory_click_delay)
             self.Global_MouseClick(amount_box[0], amount_box[1])
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
-                "enable_potion_crafting") or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"): return
+            if _cancelled(): return
             autoit.send("^{a}")
             time.sleep(0.15 + inventory_click_delay)
             autoit.send("{BACKSPACE}")
             time.sleep(0.15 + inventory_click_delay)
             autoit.send('1')
             time.sleep(0.14 + inventory_click_delay)
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
-                "enable_potion_crafting") or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"): return
+            if _cancelled(): return
             autoit.mouse_click("left", use_button[0], use_button[1], 3)
             time.sleep(0.23 + inventory_click_delay)
 
@@ -1411,8 +1484,7 @@ class DetectionMixin:
             merchant_completed = bool(self.Merchant_Handler())
             self._last_merchant_sequence_requires_reset = merchant_completed
 
-            if not self.detection_running or self.reconnecting_state or self.auto_pop_state or self.on_auto_merchant_state or self.config.get(
-                "enable_potion_crafting") or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"): return
+            if _cancelled(): return
 
             time.sleep(0.33 + inventory_click_delay)
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])

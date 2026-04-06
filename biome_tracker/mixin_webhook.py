@@ -527,3 +527,47 @@ class WebhookMixin:
                     pass
         except Exception as e:
             self.error_logging(e, "Error in send_macro_summary")
+
+    def send_egg_ocr_webhook(self, egg_name, aura_rarity, discord_user_id="", screenshot_path=None):
+        try:
+            urls = self.get_webhook_list()
+            if not urls: return
+            icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
+            current_utc_time = datetime.now(timezone.utc)
+            current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
+            current_utc_time = str(current_utc_time)
+
+            content = f"<@{discord_user_id}>" if discord_user_id else ""
+
+            embed = {
+                "title": "🥚 Special Easter Egg Found 🥚",
+                "description": f"> ## {egg_name}\n> Possible respective egg aura rarity: **{aura_rarity}**",
+                "color": 0xffd700,
+                "timestamp": current_utc_time,
+                "thumbnail": {"url": "https://i.postimg.cc/FzRsHF7y/eggdoggo.png"},
+                "footer": {
+                    "text": f"Coteab Macro {current_ver}",
+                    "icon_url": icon_url
+                }
+            }
+
+            if screenshot_path and os.path.isfile(screenshot_path):
+                embed["image"] = {"url": f"attachment://{os.path.basename(screenshot_path)}"}
+
+            for webhook_url in urls:
+                try:
+                    embed_copy = dict(embed)
+                    if screenshot_path and os.path.isfile(screenshot_path):
+                        with open(screenshot_path, "rb") as img_file:
+                            files = {"file": (os.path.basename(screenshot_path), img_file, "image/png")}
+                            data = {"payload_json": json.dumps({"content": content, "embeds": [embed_copy]})}
+                            response = requests.post(webhook_url, data=data, files=files, timeout=15)
+                    else:
+                        payload = {"content": content, "embeds": [embed_copy]}
+                        response = requests.post(webhook_url, json=payload, timeout=10)
+                    response.raise_for_status()
+                    self.append_log(f"Egg OCR webhook sent for {egg_name}")
+                except requests.exceptions.RequestException as e:
+                    self.append_log(f"Failed to send egg OCR webhook: {e}")
+        except Exception as e:
+            self.error_logging(e, "Error in send_egg_ocr_webhook")

@@ -114,6 +114,9 @@ class LifecycleMixin:
         self.last_snowman_claim = datetime.min
         self._obby_running = False
         self.last_obby_claim = datetime.min
+        self._egg_collecting = False
+        self._fishing_busy = False
+        self.last_egg_collect_time = datetime.min
         screenshot_dir = os.path.join(os.getcwd(), "images")
         try:
             if os.path.exists(screenshot_dir):

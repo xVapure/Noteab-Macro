@@ -36,10 +36,11 @@ class ConfigMixin:
             "macro_last_start": macro_last_start_val,
             "selected_theme": self.root.style.theme.name if hasattr(self, "root") and self.root is not None and hasattr(self.root, "style") else self.config.get("selected_theme", "solar"),
             "dont_ask_for_update": self.config.get("dont_ask_for_update", False),
-            "auto_update_enabled": self.config.get("auto_update_enabled", True),
+            "auto_update_enabled": self.auto_update_enabled_var.get() if hasattr(self, "auto_update_enabled_var") else self.config.get("auto_update_enabled", True),
             "anti_afk": self.anti_afk_var.get(),
-            "enable_idle_mode": self.config.get("enable_idle_mode", False),
-            "auto_roblox_fullscreen": self.config.get("auto_roblox_fullscreen", False),
+            "enable_idle_mode": self.macro_idle_mode_var.get() if hasattr(self, "macro_idle_mode_var") else self.config.get("enable_idle_mode", False),
+            "auto_roblox_fullscreen": self.auto_roblox_fullscreen_var.get() if hasattr(self, "auto_roblox_fullscreen_var") else self.config.get("auto_roblox_fullscreen", False),
+            "enable_glitch_effect": self.enable_glitch_effect_var.get() if hasattr(self, "enable_glitch_effect_var") else self.config.get("enable_glitch_effect", False),
             "auto_chat_close": self.config.get("auto_chat_close", False),
             "fishing_mode": self.config.get("fishing_mode", False),
 
@@ -99,7 +100,7 @@ class ConfigMixin:
             "aura_detection_screenshot": self.aura_screenshot_var.get(),
             "record_rare_biome": self.record_rarest_biome_var.get(),
             "rare_biome_record_keybind": self.rarest_biome_keybind_var.get(),
-            "rare_biome_screenshot": self.config.get("rare_biome_screenshot", False),
+            "rare_biome_screenshot": self.rare_biome_screenshot_var.get() if hasattr(self, "rare_biome_screenshot_var") else self.config.get("rare_biome_screenshot", False),
 
             # ── Periodical Screenshots ──
             "periodical_aura_screenshot": self.periodical_aura_var.get() if hasattr(self, "periodical_aura_var") else self.config.get("periodical_aura_screenshot", False),
@@ -147,8 +148,10 @@ class ConfigMixin:
             "chat_hover_pos": self.config.get("chat_hover_pos", [272, 252]),
             "chat_tab_ocr_pos": self.config.get("chat_tab_ocr_pos", [341, 83, 210, 40]),
             "chat_close_button": self.config.get("chat_close_button", [174, 40]),
+            "chat_box_ocr_pos": self.config.get("chat_box_ocr_pos", [14, 161, 587, 244]),
             "enable_obby_path": self.enable_obby_var.get() if hasattr(self, "enable_obby_var") else self.config.get("enable_obby_path", False),
             "obby_claim_interval": self.obby_claim_interval_var.get() if hasattr(self, "obby_claim_interval_var") else self.config.get("obby_claim_interval", "15"),
+            "non_vip_movement_path": self.config.get("non_vip_movement_path", False),
 
             # ── Potion Crafting ──
             "potion_last_file": self.config.get("potion_last_file", ""),
@@ -183,7 +186,15 @@ class ConfigMixin:
             "fishing_use_br_sc_every_x_fish": self.config.get("fishing_use_br_sc_every_x_fish", False),
             "fishing_br_sc_every_x_fish": self.config.get("fishing_br_sc_every_x_fish", "30"),
             "fishing_actions_delay_ms": self.config.get("fishing_actions_delay_ms", "100"),
+            "fishing_playback_multiplier": self.config.get("fishing_playback_multiplier", 1.0),
 
+            # ── Easter Egg Path  ──
+            "collect_easter_egg": self.config.get("collect_easter_egg", False),
+            "egg_collect_interval_min": self.config.get("egg_collect_interval_min", "30"),
+            "egg_playback_multiplier": self.config.get("egg_playback_multiplier", 1.0),
+            "egg_ocr_detect_special": self.config.get("egg_ocr_detect_special", False),
+            "egg_ocr_discord_userid": self.config.get("egg_ocr_discord_userid", ""),
+            
             # ── Remote Bot ──
             "remote_access_enabled": self.remote_access_var.get() if hasattr(self, "remote_access_var") else self.config.get("remote_access_enabled", False),
             "remote_bot_token": self.remote_bot_token_var.get() if hasattr(self, "remote_bot_token_var") else self.config.get("remote_bot_token", ""),
@@ -350,6 +361,12 @@ class ConfigMixin:
                 "fishing_use_br_sc_every_x_fish": False,
                 "fishing_br_sc_every_x_fish": "30",
                 "fishing_actions_delay_ms": "100",
+                "fishing_playback_multiplier": 1.0,
+                "collect_easter_egg": False,
+                "egg_collect_interval_min": "30",
+                "egg_playback_multiplier": 1.0,
+                "egg_ocr_detect_special": False,
+                "egg_ocr_discord_userid": "",
                 "float_aura_name": "",
                 "glitched_buff_enable_button": [ 932, 630 ],
                 "glitched_menu_button": [ 41, 651 ],
@@ -420,9 +437,15 @@ class ConfigMixin:
                 "auto_chat_close": False,
                 "enable_obby_path": False,
                 "obby_claim_interval": "15",
+                "collect_easter_egg": False,
+                "egg_collect_interval_sec": "60",
+                "egg_collect_interval_min": "30",
+                "egg_playback_multiplier": 1.0,
+                "egg_ocr_detect_special": False,
                 "merchant_close_button": [ 1086, 342 ],
                 "player_logger": True,
-                "webhook_url": []
+                "webhook_url": [],
+                "non_vip_movement_path": False,
             }
 
             # Override coordinate defaults with the current calibrated values from config.json.
@@ -582,6 +605,10 @@ class ConfigMixin:
             self.auto_reconnect_var.set(config.get("auto_reconnect", False))
             self.player_logger_var.set(config.get("player_logger", True))
             self.anti_afk_var.set(config.get("anti_afk", True))
+            if hasattr(self, "rare_biome_screenshot_var"): self.rare_biome_screenshot_var.set(config.get("rare_biome_screenshot", False))
+            if hasattr(self, "auto_roblox_fullscreen_var"): self.auto_roblox_fullscreen_var.set(config.get("auto_roblox_fullscreen", False))
+            if hasattr(self, "auto_update_enabled_var"): self.auto_update_enabled_var.set(config.get("auto_update_enabled", True))
+            if hasattr(self, "enable_glitch_effect_var"): self.enable_glitch_effect_var.set(config.get("enable_glitch_effect", False))
             self.click_delay_var.set(config.get("inventory_click_delay", "0"))
             auto_buff_glitched = config.get("auto_buff_glitched", {})
             for buff, (enabled, amount) in auto_buff_glitched.items():

@@ -3,7 +3,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any, Callable
-
+import keyboard
 import autoit
 import cv2
 import numpy as np
@@ -152,6 +152,9 @@ def load_fishing_config(raw_config: dict[str, Any] | None = None) -> dict[str, A
         "fishing_use_br_sc_every_x_fish": bool(raw.get("fishing_use_br_sc_every_x_fish", False)),
         "fishing_br_sc_every_x_fish": _coerce_int(raw.get("fishing_br_sc_every_x_fish"), 30, 1, 100000),
         "fishing_actions_delay_ms": _coerce_int(raw.get("fishing_actions_delay_ms"), 100, 0, 5000),
+        "fishing_playback_multiplier": _coerce_float(raw.get("fishing_playback_multiplier"), 1.0, 1.0, 2.0),
+        "non_vip_movement_path": bool(raw.get("non_vip_movement_path", False)),
+        "egg_ocr_detect_special": bool(raw.get("egg_ocr_detect_special", False)),
         # Performance tuning knobs (optional in config.json)
         "fishing_click_burst": _coerce_int(raw.get("fishing_click_burst"), 2, 1, 8),
         "fishing_reel_loop_sleep": _coerce_float(raw.get("fishing_reel_loop_sleep"), 0.004, 0.001, 0.03),
@@ -265,12 +268,17 @@ def _autoit_key_tap(key: str) -> None:
         autoit.send(f"{{{token}}}")
 
 
+# NON-VIP MULTIPLIER
+NON_VIP_WALK_SPEED_MULTIPLIER = 1.22
+_MOVEMENT_KEYS = frozenset({"w", "a", "s", "d"})
+
 def _run_recorded_events(
     *,
     events: list[dict[str, Any]],
     sleep_interruptible: Callable[[float, float], bool],
     should_continue: Callable[[], bool],
     can_run: Callable[[], bool],
+    speed_multiplier: float = 1.0,
 ) -> bool:
     pressed_keys: set[str] = set()
     last_t = 0.0
@@ -281,6 +289,14 @@ def _run_recorded_events(
 
             t = float(ev.get("t", last_t))
             dt = t - last_t
+
+            # normalize time between movement key events for non-VIP walk speed (i made it x1.22)
+            if speed_multiplier > 1.0 and dt > 0:
+                ev_key = str(ev.get("key", "")).lower().strip()
+                ev_type = str(ev.get("type", ""))
+                if ev_type in ("key_down", "key_up") and ev_key in _MOVEMENT_KEYS:
+                    dt *= speed_multiplier
+
             if dt > 0 and not sleep_interruptible(dt, 0.01):
                 return False
 
@@ -318,6 +334,13 @@ def _run_recorded_events(
             except Exception:
                 pass
 
+        for k in ("w", "a", "s", "d", "space"):
+            try:
+                _autoit_key_up(k)
+            except Exception:
+                pass
+            time.sleep(0.02)
+
 
 def _run_pre_fishing_sequence(
     *,
@@ -327,9 +350,17 @@ def _run_pre_fishing_sequence(
     can_run: Callable[[], bool],
     activate_roblox_cb: Callable[[], None] | None = None,
     close_chat_fn: Callable[[], None] | None = None,
+    egg_ocr_check_cb: Callable[[], None] | None = None,
 ) -> bool:
     if not should_continue() or not can_run():
         return False
+
+    if egg_ocr_check_cb is not None and bool(cfg.get("egg_ocr_detect_special", False)):
+        try:
+            egg_ocr_check_cb()
+            print("egg ocr check in fishing done")
+        except Exception as e:
+            print(f"[Fishing] egg_ocr_check_cb error: {e}")
 
     fishing_actions_delay = _get_fishing_actions_delay_seconds(cfg)
     if not _run_respawn_sequence(
@@ -387,15 +418,15 @@ def _run_respawn_sequence(
                 return False
 
     _autoit_key_tap("esc")
-    if not sleep_interruptible(0.5 + action_delay_seconds):
+    if not sleep_interruptible(1.25 + action_delay_seconds):
         return False
 
     _autoit_key_tap("r")
-    if not sleep_interruptible(0.5 + action_delay_seconds):
+    if not sleep_interruptible(0.75 + action_delay_seconds):
         return False
 
     _autoit_key_tap("enter")
-    if not sleep_interruptible(2.0 + action_delay_seconds):
+    if not sleep_interruptible(5.5 + action_delay_seconds):
         return False
 
     return True
@@ -406,6 +437,7 @@ def _run_walk_to_fish_path(
     sleep_interruptible: Callable[[float, float], bool],
     should_continue: Callable[[], bool],
     can_run: Callable[[], bool],
+    speed_multiplier: float = 1.0,
 ) -> bool:
     if not WALK_TO_FISH_EVENTS:
         return False
@@ -414,6 +446,7 @@ def _run_walk_to_fish_path(
         sleep_interruptible=sleep_interruptible,
         should_continue=should_continue,
         can_run=can_run,
+        speed_multiplier=speed_multiplier,
     )
 
 
@@ -422,6 +455,7 @@ def _run_walk_to_sell_fish_path(
     sleep_interruptible: Callable[[float, float], bool],
     should_continue: Callable[[], bool],
     can_run: Callable[[], bool],
+    speed_multiplier: float = 1.0,
 ) -> bool:
     if not WALK_TO_SELL_FISH_EVENTS:
         return True
@@ -430,6 +464,7 @@ def _run_walk_to_sell_fish_path(
         sleep_interruptible=sleep_interruptible,
         should_continue=should_continue,
         can_run=can_run,
+        speed_multiplier=speed_multiplier,
     )
 
 
@@ -479,9 +514,17 @@ def _run_equip_aura_before_movement(
         return False
 
     if first_slot_x > 0:
+        autoit.mouse_move(first_slot_x, first_slot_y, speed=3)
+        if not sleep_interruptible(step_delay): return False
+        try:
+            autoit.mouse_wheel("up", max(1, int(round(5000 / 120.0))))
+        except Exception:
+            pass
+        if not sleep_interruptible(step_delay): return False
         autoit.mouse_click("left", first_slot_x, first_slot_y, 1, speed=3)
-    if not sleep_interruptible(step_delay):
-        return False
+
+
+    if not sleep_interruptible(step_delay): return False
 
     if equip_x > 0:
         autoit.mouse_click("left", equip_x, equip_y, 1, speed=3)
@@ -504,9 +547,24 @@ def _run_sell_fish_sequence(
     should_continue: Callable[[], bool],
     can_run: Callable[[], bool],
     activate_roblox_cb: Callable[[], None] | None = None,
+    close_chat_fn: Callable[[], None] | None = None,
+    set_busy_cb: Callable[[bool], None] | None = None,
+    egg_ocr_check_cb: Callable[[], None] | None = None,
 ) -> bool:
     if fish_sell_count <= 0:
         return True
+    if set_busy_cb is not None:
+        try:
+            set_busy_cb(True)
+        except Exception:
+            pass
+
+    if egg_ocr_check_cb is not None and bool(cfg.get("egg_ocr_detect_special", False)):
+        try:
+            egg_ocr_check_cb()
+        except Exception as e:
+            print(f"[Fishing] egg_ocr_check_cb error in sell sequence: {e}")
+
     fishing_actions_delay = _get_fishing_actions_delay_seconds(cfg)
     if not _run_respawn_sequence(
         sleep_interruptible=sleep_interruptible,
@@ -515,6 +573,14 @@ def _run_sell_fish_sequence(
         action_delay_seconds=fishing_actions_delay,
         activate_roblox_cb=activate_roblox_cb,
     ):
+        return False
+
+    if close_chat_fn is not None:
+        try:
+            close_chat_fn()
+        except Exception as e:
+            print(f"[Fishing] close_chat_fn error before selling: {e}")
+    if not sleep_interruptible(0.2 + fishing_actions_delay):
         return False
 
     collections_x, collections_y = cfg["collections_button"]
@@ -537,10 +603,15 @@ def _run_sell_fish_sequence(
     ):
         return False
 
+    non_vip = bool(cfg.get("non_vip_movement_path", False))
+    _walk_mult = NON_VIP_WALK_SPEED_MULTIPLIER if non_vip else 1.0
+    _playback_mult = float(cfg.get("fishing_playback_multiplier", 1.0))
+    _combined_multiplier = _walk_mult * _playback_mult
     if not _run_walk_to_sell_fish_path(
         sleep_interruptible=sleep_interruptible,
         should_continue=should_continue,
         can_run=can_run,
+        speed_multiplier=_combined_multiplier,
     ):
         return False
 
@@ -589,8 +660,14 @@ def _run_sell_fish_sequence(
 
     if close_shop_x > 0:
         autoit.mouse_click("left", close_shop_x, close_shop_y, 1, speed=3)
-    if not sleep_interruptible(0.6 + fishing_actions_delay):
+    if not sleep_interruptible(0.85 + fishing_actions_delay):
         return False
+
+    if egg_ocr_check_cb is not None and bool(cfg.get("egg_ocr_detect_special", False)):
+        try:
+            egg_ocr_check_cb()
+        except Exception as e:
+            print(f"[Fishing] egg_ocr_check_cb error before final respawn: {e}")
 
     if not _run_respawn_sequence(
         sleep_interruptible=sleep_interruptible,
@@ -621,9 +698,19 @@ def run_fishing_loop(
     activate_roblox_cb: Callable[[], None] | None = None,
     close_chat_fn: Callable[[], None] | None = None,
     runtime_state: dict[str, Any] | None = None,
+    set_fishing_busy_cb: Callable[[bool], None] | None = None,
+    on_f2_pressed_cb: Callable[[], None] | None = None,
+    egg_ocr_check_cb: Callable[[], None] | None = None,
 ) -> None:
     stop_event = stop_event or threading.Event()
     config_provider = config_provider or _load_config_file
+
+    def _set_busy(busy: bool) -> None:
+        if set_fishing_busy_cb is not None:
+            try:
+                set_fishing_busy_cb(busy)
+            except Exception:
+                pass
 
     def _notify_failsafe_timeout() -> None:
         if on_failsafe_timeout is None:
@@ -764,12 +851,14 @@ def run_fishing_loop(
                 next_cfg_refresh_at = now + max(0.2, float(config_refresh_seconds))
 
             if not _can_run():
+                _set_busy(False)
                 was_runnable = False
                 last_start_fishing_click_at = None
                 time.sleep(0.05)
                 continue
 
             if not was_runnable:
+                _set_busy(True)
                 if close_chat_fn is not None:
                     try:
                         close_chat_fn()
@@ -790,6 +879,9 @@ def run_fishing_loop(
                         should_continue=_should_continue,
                         can_run=_can_run,
                         activate_roblox_cb=activate_roblox_cb,
+                        close_chat_fn=close_chat_fn,
+                        set_busy_cb=_set_busy,
+                        egg_ocr_check_cb=egg_ocr_check_cb,
                     ):
                         continue
                     fish_caught_count = 0
@@ -812,6 +904,9 @@ def run_fishing_loop(
                         should_continue=_should_continue,
                         can_run=_can_run,
                         activate_roblox_cb=activate_roblox_cb,
+                        close_chat_fn=close_chat_fn,
+                        set_busy_cb=_set_busy,
+                        egg_ocr_check_cb=egg_ocr_check_cb,
                     ):
                         continue
                     fish_caught_count = 0
@@ -823,15 +918,17 @@ def run_fishing_loop(
                     if should_use_merchant:
                         print(f"{log_prefix} merchant flow triggered after pending selling.")
                         merchant_ran, _ = _run_merchant_sequence_with_state()
-                        fish_caught_since_merchant = 0
+                        if merchant_ran:
+                            fish_caught_since_merchant = 0
                         _persist_runtime_counters()
                         if not merchant_ran:
                             print(f"{log_prefix} merchant flow skipped/failed during fishing.")
 
                     if should_use_br_sc:
                         print(f"{log_prefix} BR/SC flow triggered after pending selling.")
-                        _run_br_sc_sequence()
-                        fish_caught_since_br_sc = 0
+                        br_sc_ran = _run_br_sc_sequence()
+                        if br_sc_ran:
+                            fish_caught_since_br_sc = 0
                         _persist_runtime_counters()
 
                     last_start_fishing_click_at = None
@@ -844,15 +941,17 @@ def run_fishing_loop(
                         f"after {fish_caught_since_merchant} catches."
                     )
                     merchant_ran, _ = _run_merchant_sequence_with_state()
-                    fish_caught_since_merchant = 0
+                    if merchant_ran:
+                        fish_caught_since_merchant = 0
                     _persist_runtime_counters()
                     if not merchant_ran:
                         print(f"{log_prefix} merchant flow skipped/failed during fishing.")
 
                     if should_use_br_sc:
                         print(f"{log_prefix} BR/SC flow triggered after pending merchant.")
-                        _run_br_sc_sequence()
-                        fish_caught_since_br_sc = 0
+                        br_sc_ran = _run_br_sc_sequence()
+                        if br_sc_ran:
+                            fish_caught_since_br_sc = 0
                         _persist_runtime_counters()
 
                     last_start_fishing_click_at = None
@@ -864,8 +963,9 @@ def run_fishing_loop(
                         f"{log_prefix} pending BR/SC flow triggered before fishing path "
                         f"after {fish_caught_since_br_sc} catches."
                     )
-                    _run_br_sc_sequence()
-                    fish_caught_since_br_sc = 0
+                    br_sc_ran = _run_br_sc_sequence()
+                    if br_sc_ran:
+                        fish_caught_since_br_sc = 0
                     _persist_runtime_counters()
 
                     last_start_fishing_click_at = None
@@ -879,6 +979,7 @@ def run_fishing_loop(
                     can_run=_can_run,
                     activate_roblox_cb=activate_roblox_cb,
                     close_chat_fn=close_chat_fn,
+                    egg_ocr_check_cb=egg_ocr_check_cb,
                 ):
                     continue
                 if not _run_equip_aura_before_movement(
@@ -888,18 +989,23 @@ def run_fishing_loop(
                     can_run=_can_run,
                 ):
                     continue
+                _non_vip = bool(cfg.get("non_vip_movement_path", False))
+                _walk_multiplier = NON_VIP_WALK_SPEED_MULTIPLIER if _non_vip else 1.0
+                _playback_mult = float(cfg.get("fishing_playback_multiplier", 1.0))
+                _combined_multiplier = _walk_multiplier * _playback_mult
                 if not _run_walk_to_fish_path(
                     sleep_interruptible=_sleep_interruptible,
                     should_continue=_should_continue,
                     can_run=_can_run,
+                    speed_multiplier=_combined_multiplier,
                 ):
                     continue
                 click_x, click_y = cfg["fishing_click_position"]
                 autoit.mouse_click("left", click_x, click_y, speed=3)
                 last_start_fishing_click_at = time.monotonic()
-                if not _sleep_interruptible(0.25):
-                    continue
+                if not _sleep_interruptible(0.25): continue
                 was_runnable = True
+                _set_busy(False)
 
             if (
                 was_runnable
@@ -919,6 +1025,7 @@ def run_fishing_loop(
                 time.sleep(float(cfg.get("fishing_idle_poll_sleep", 0.004)))
                 continue
 
+            _set_busy(True)
             click_x, click_y = cfg["fishing_click_position"]
             autoit.mouse_click("left", click_x, click_y, speed=3)
             last_start_fishing_click_at = time.monotonic()
@@ -982,6 +1089,7 @@ def run_fishing_loop(
                 sell_after = int(cfg.get("fishing_sell_after_x_fish", 30))
                 sell_count = int(cfg.get("fishing_sell_how_many_fish", 1))
                 if fish_caught_count >= max(1, sell_after):
+                    _set_busy(True)
                     print(
                         f"{log_prefix} selling flow triggered after {fish_caught_count} catches "
                         f"(selling {max(1, sell_count)} fish)."
@@ -993,6 +1101,8 @@ def run_fishing_loop(
                         should_continue=_should_continue,
                         can_run=_can_run,
                         activate_roblox_cb=activate_roblox_cb,
+                        close_chat_fn=close_chat_fn,
+                        set_busy_cb=_set_busy,
                     ):
                         continue
                     fish_caught_count = 0
@@ -1001,33 +1111,38 @@ def run_fishing_loop(
                     if should_use_merchant:
                         print(f"{log_prefix} merchant flow triggered after selling.")
                         merchant_ran, _ = _run_merchant_sequence_with_state()
-                        fish_caught_since_merchant = 0
+                        if merchant_ran:
+                            fish_caught_since_merchant = 0
                         _persist_runtime_counters()
                         if not merchant_ran:
                             print(f"{log_prefix} merchant flow skipped/failed during fishing.")
 
                     if should_use_br_sc:
                         print(f"{log_prefix} BR/SC flow triggered after selling.")
-                        _run_br_sc_sequence()
-                        fish_caught_since_br_sc = 0
+                        br_sc_ran = _run_br_sc_sequence()
+                        if br_sc_ran:
+                            fish_caught_since_br_sc = 0
                         _persist_runtime_counters()
 
                     was_runnable = False
                     last_start_fishing_click_at = None
+                    _set_busy(False)
                     continue
 
             if should_use_merchant:
                 print(f"{log_prefix} merchant flow triggered after {fish_caught_since_merchant} catches.")
                 merchant_ran, merchant_requires_reset = _run_merchant_sequence_with_state()
-                fish_caught_since_merchant = 0
+                if merchant_ran:
+                    fish_caught_since_merchant = 0
                 _persist_runtime_counters()
                 if not merchant_ran:
                     print(f"{log_prefix} merchant flow skipped/failed during fishing.")
 
                 if should_use_br_sc:
                     print(f"{log_prefix} BR/SC flow triggered after merchant.")
-                    _run_br_sc_sequence()
-                    fish_caught_since_br_sc = 0
+                    br_sc_ran = _run_br_sc_sequence()
+                    if br_sc_ran:
+                        fish_caught_since_br_sc = 0
                     should_use_br_sc = False
                     _persist_runtime_counters()
 
@@ -1040,15 +1155,25 @@ def run_fishing_loop(
 
             if should_use_br_sc:
                 print(f"{log_prefix} BR/SC flow triggered after {fish_caught_since_br_sc} catches.")
-                _run_br_sc_sequence()
-                fish_caught_since_br_sc = 0
+                br_sc_ran = _run_br_sc_sequence()
+                if br_sc_ran:
+                    fish_caught_since_br_sc = 0
                 _persist_runtime_counters()
 
             start_x, start_y = cfg["fishing_click_position"]
             autoit.mouse_click("left", start_x, start_y, speed=3)
             last_start_fishing_click_at = time.monotonic()
             _sleep_interruptible(0.3)
+            _set_busy(False)
     finally:
+        _set_busy(False)
+        
+        for k in ("w", "a", "s", "d", "space"):
+            try:
+                _autoit_key_up(k)
+            except Exception:
+                pass
+            
         if sct is not None:
             try:
                 sct.close()
@@ -1056,7 +1181,6 @@ def run_fishing_loop(
                 pass
         if print_start_stop:
             print(f"{log_prefix} stopped")
-
 
 def main():
     try:
