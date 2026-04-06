@@ -16,6 +16,14 @@ No need to create if `frontend` folder already exists.
 Run inside the `frontend` folder:
 
 ```bash
+npm install
+```
+
+> This installs all the `node_modules` dependencies. You **must** run this at least once before building, or whenever you delete the `node_modules` folder / clone fresh.
+
+Then build:
+
+```bash
 npm run build
 ```
 
@@ -58,14 +66,68 @@ pip install -r requirements.txt
 pyinstaller --name="CoteabMacro" --noconsole --onefile --icon="lib/official_release.ico" --add-data "lib;lib" --add-data "C:\Users\Akitosama\AppData\Local\Programs\Python\Python312\Lib\site-packages\autoit\lib\AutoItX3_x64.dll;autoit\lib" --collect-all webview --collect-all discord --upx-dir "C:\Users\Akitosama\Documents\upx-5.1.0-win64" main.py
 ```
 
-Replace my name as your current Windows user name, always ensure the AutoIt DLL is installed!
+### Option 1.2: PyInstaller in isolated enviroment (aka venv) (must use Python 3.8-3.14)
 
-> I assume you've installed Python 3.8-3.14, so do `pip install autoit` and it should install the `AutoItX3_x64.dll` for you!
+> This is the recommended method. Using a venv keeps your build dependencies isolated from your system Python (making the macro when compiles to ".exe" in smaller size yippie)
+
+**Step 1:** Fix PowerShell policy (runs this in CMD or powershell, this might prevents "script cannot be loaded" error):
+
+```bash
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
+```
+
+**Step 2:** Create the venv (skip if `venv_build` folder already exists):
+
+```bash
+python -m venv venv_build
+```
+
+**Step 3:** Activate the venv:
+
+```bash
+.\venv_build\Scripts\activate
+```
+
+> You should see `(venv_build)` at the start of your terminal prompt. If you don't, the venv is not active!
+
+**Step 4:** Install all dependencies inside the venv (skip if already installed):
+
+```bash
+pip install -r requirements.txt
+pip install pyinstaller
+```
+
+> This installs everything the macro needs + PyInstaller itself into the venv.
+
+**Step 5:** Build the frontend dist (skip if `lib/dist` is already up to date):
+
+```bash
+cd frontend
+npm run build
+```
+
+> Then copy/move the `frontend/dist` folder into the `lib` folder.
+
+**Step 6:** Compile the EXE:
+
+```bash
+pyinstaller --name="CoteabMacro" --noconsole --onefile --icon="lib/official_release.ico" --add-data "lib;lib" --add-data "venv_build\Lib\site-packages\autoit\lib\AutoItX3_x64.dll;autoit\lib" --collect-all webview --collect-all discord --upx-dir "C:\Users\Akitosama\Documents\upx-5.1.0-win64" main.py
+```
+
+> Replace my user `Akitosama` with your Windows username and your current directory one mine is "C:\Users\Akitosama\Documents\" for example. The compiled EXE will be in `dist/CoteabMacro.exe`.
+
+**Step 7:** Deactivate the venv when done (optional):
+
+```bash
+deactivate
+```
+
+> Make sure AutoIt is installed in the venv! Run `pip install autoit` inside the activated venv if it's missing.
 
 ### Option 2: Nuitka
 
 ```bash
-python -m nuitka main.py --standalone --onefile --windows-console-mode=disable --windows-icon-from-ico=lib/official_release.ico --include-data-dir=lib=lib --include-data-file=C:\Users\Akitosama\AppData\Local\Programs\Python\Python312\Lib\site-packages\autoit\lib\AutoItX3_x64.dll=autoit\lib\AutoItX3_x64.dll --static-libpython=no --remove-output --output-filename=CoteabMacro.exe
+python -m nuitka main.py --onefile --windows-console-mode=disable --windows-icon-from-ico=lib/official_release.ico --include-data-dir=lib=lib --include-data-file=C:\Users\Akitosama\AppData\Local\Programs\Python\Python312\Lib\site-packages\autoit\lib\AutoItX3_x64.dll=autoit\lib\AutoItX3_x64.dll --static-libpython=no --output-filename=CoteabMacro.exe --remove-output --jobs=0 --python-flag=no_docstrings
 ```
 
 ---
