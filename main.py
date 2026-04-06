@@ -4,7 +4,7 @@ import traceback
 import json
 import threading
 from typing import Optional, Any
-import win32gui, win32con
+import win32gui, win32con, win32api
 import webbrowser
 import keyboard
 import webview
@@ -14,27 +14,62 @@ import time
 import psutil
 from datetime import datetime
 import logging
+import shutil
 
 # i added this so we can easily change macro version upon releases without having to change multiple back-end & front-end behaviours
 # for future people that is reading the open source code, hello :p
-current_version = "v2.1.4"
+current_version = "v2.1.5"
 os.environ["COTEAB_MACRO_VERSION"] = current_version
 UPDATE_LATEST_RELEASE_API_URL = "https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest"
 os.environ["COTEAB_UPDATE_API_URL"] = UPDATE_LATEST_RELEASE_API_URL
-os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (
-    "--disable-gpu "
-    "--disable-gpu-compositing "
-    "--disable-software-rasterizer "
-    "--disable-features=HardwareMediaKeyHandling,msWebOOUI,msPdfOOUI "
-    "--no-sandbox "
-)
-os.environ["WEBKIT_DISABLE_COMPOSITING_MODE"] = "1"  # disable gpu for webkit
-_wv2_user_data = os.path.join(
+os.environ["WEBKIT_DISABLE_COMPOSITING_MODE"] = "1" 
+
+_wv2_user_data_base = os.path.join(
     os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
     "CoteabMacro", "WebView2UserData"
 )
+
+try:
+    if os.path.exists(_wv2_user_data_base):
+        for _f in os.listdir(_wv2_user_data_base):
+            try:
+                shutil.rmtree(os.path.join(_wv2_user_data_base, _f), ignore_errors=True)
+            except Exception:
+                pass
+except Exception:
+    pass
+
+_wv2_user_data = os.path.join(_wv2_user_data_base, f"Session_{int(time.time())}")
 os.makedirs(_wv2_user_data, exist_ok=True)
 os.environ["WEBVIEW2_USER_DATA_FOLDER"] = _wv2_user_data
+
+try:
+    _exec_dir = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
+    _runtime_dir = os.path.join(_exec_dir, "webview_runtime_fix_optional")
+    
+    if not os.path.exists(_runtime_dir):
+        os.makedirs(_runtime_dir, exist_ok=True)
+        _readme_path = os.path.join(_runtime_dir, "HOW_TO_FIX_BLANK_SCREEN.txt")
+        with open(_readme_path, "w", encoding="utf-8") as _f:
+            _f.write(
+                "If you having issue of macro only show black/white screen:\n\n"
+                "1. Go to https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH#download\n"
+                "2. Choose 'Fixed Version'\n"
+                "3. Remember to configure 'Select Architecture' as x64 (depends on your PC bit 32-64 bit)\n"
+                "4. Download and extract the .cab file (using 7-Zip or WinRAR)\n"
+                "5. Move the extracted 'Microsoft.WebView2.FixedVersionRuntime...' folder directly into this folder.\n\n"
+                "The macro will automatically detect it on the next launch and should resolve your issue!"
+            )
+
+    if os.path.isdir(_runtime_dir):
+        for _item in os.listdir(_runtime_dir):
+            if _item.lower().startswith("microsoft.webview2") and os.path.isdir(os.path.join(_runtime_dir, _item)):
+                _target_path = os.path.join(_runtime_dir, _item)
+                os.environ["WEBVIEW2_BROWSER_EXECUTABLE_FOLDER"] = _target_path
+                print(f"[Boot] Fixed WebView2 Runtime hooked at: {_target_path}")
+                break
+except Exception as e:
+    print(f"[Boot] Could not configure fixed runtime: {e}")
 
 try: psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
 except Exception: pass
@@ -287,6 +322,10 @@ class Api:
         if bool(self._fishing_runtime_state.get("rejoin_in_progress", False)):
             self._fishing_runtime_state["rejoin_in_progress"] = False
             self._fishing_runtime_state["force_sell_on_next_cycle"] = True
+        if getattr(self._tracker, "_egg_collecting", False):
+            return False
+        if getattr(self._tracker, "_egg_collection_pending", False):
+            return False
         if getattr(self._tracker, "auto_pop_state", False):
             return False
         return True
@@ -426,6 +465,9 @@ class Api:
                         activate_roblox_cb=self._tracker.activate_roblox_window,
                         close_chat_fn=self._tracker.close_chat_if_open,
                         runtime_state=self._fishing_runtime_state,
+                        set_fishing_busy_cb=lambda busy: setattr(self._tracker, "_fishing_busy", busy),
+                        on_f2_pressed_cb=lambda: (self.set_biome_detection(False), self._emit_shortcut("STOP")),
+                        egg_ocr_check_cb=self._tracker._perform_egg_ocr_check,
                     )
                 except Exception as e:
                     print(f"Fishing worker failed: {e}")
@@ -510,7 +552,6 @@ class Api:
 
             popup_w, popup_h = 480, 400
             try:
-                import win32api
                 screen_w = win32api.GetSystemMetrics(0)
                 screen_h = win32api.GetSystemMetrics(1)
                 popup_x = (screen_w - popup_w) // 2
@@ -796,17 +837,6 @@ def launch_app(api_class, tracker: Optional[BiomeTracker] = None) -> BiomeTracke
         print(f"[Webview] edgechromium failed: {e}")
         tracker.append_log(f"edgechromium backend failed: {e} — retrying with default backend...")
         try:
-            window = webview.create_window(
-                title=f"Coteab Macro {current_version}",
-                url=url,
-                js_api=api,
-                width=950,
-                height=550,
-                min_size=(550, 500),
-                resizable=True,
-                frameless=False
-            )
-            api.set_window(window)
             webview.start(debug=False, private_mode=False)
         except Exception as e2:
             print(f"[Webview] Default backend also failed: {e2}")
@@ -851,6 +881,7 @@ def main() -> int:
             return 0
 
         tracker = launch_app(Api, tracker=tracker)
+
         return 0
     except KeyboardInterrupt:
         print("Exited (Keyboard interrupted)")
