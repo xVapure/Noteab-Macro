@@ -257,7 +257,7 @@
     "StarRider_yourdidit": {"rarity": 1234567, "exclusive_biome": ["STARFALL", 5]},
     "Burger": {"rarity": 676767, "exclusive_biome": ["None", 1]},
     "Impeached_IMCRINE": {"rarity": 250000000, "exclusive_biome": ["CORRUPTION", 5]},
-    "A fool's experience": {"rarity": 1000000000, "exclusive_biome": ["None", 1]},
+    "AFoolsExperience": {"rarity": 1000000000, "exclusive_biome": ["None", 1]},
     "P.U.K.E.K.O.G.O.D.": {"rarity": 1000000000, "exclusive_biome": ["None", 1]},
     "Workshop_System": {"rarity": 650000000, "exclusive_biome": ["None", 1]},
     "Surfer_Symphony": {"rarity": 600000000, "exclusive_biome": ["None", 1]},
