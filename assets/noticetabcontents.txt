@@ -14,7 +14,7 @@
 * Macro now can detect the aura that cannot be obtained by rolling or impossible aura to get like "Illusionary" (they will treat as same as global)
 * Fishing should be wait 0.5s to check egg pathing pending state then continue fishing as usual.
 * Before catching fish, the macro will try to close the failed fishing popup first
-* Option for biome custiom has slightly revamped (you can only change its thumbnail and embed color (It meant not to mess up Shayge Glitch Hunt bot)
+* Option for biome custom has slightly revamped (you can only change its thumbnail and embed color (It meant not to mess up Shayge Glitch Hunt bot)
 * Biome popup confirmation bug (macro still ping everyone even if user clicked "Please spare me :sob::wilted_rose:")
 * Attempt fix at autopop doesn't work during fishing when a rare biome is found
 * Attempt fix at config.json bug (It wiped all the current user's config, especially opening new coteab macro version)
