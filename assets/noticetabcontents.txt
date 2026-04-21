@@ -1,3 +1,27 @@
+# v2.1.6 (Mini QoL Update)
+
+## New features:
+* Macro search bar added as "Filter index"
+* Teleport to Limbo using portable crack added (NEW)
+* Eden detection by using OCR is back to replaces fflag detection method (Blames roblox for this one)
+* Merchant detection using OCR (Sustainable during fishing, just make sure to turn on "check merchant on chat every x fishes") <-> One downside is long cooldown (25 minutes) after it found the merchant to prevents duplication merchant ping.
+* Macro calibration preset (More preset coming soon as this macro can get new preset in realtime through Coteab's Github repo)
+* AZERTY keyboard support (EXPERIMENTAL - UNSURE IF IT WORKS MOST FOR AZERTY USERS)
+* ??? (Z29vZGx1Y2thdHNvbHZpbmdteXJpZGRsZWFnYQ==)
+
+## Bugfixes & Additional changes:
+* Macro is now enforced to check if user prompted their discord webhook not right spot (Putting webhook in private server link as an example... maybe don't do that)
+* Macro now can detect the aura that cannot be obtained by rolling or impossible aura to get like "Illusionary" (they will treat as same as global)
+* Fishing should be wait 0.5s to check egg pathing pending state then continue fishing as usual.
+* Before catching fish, the macro will try to close the failed fishing popup first
+* Option for biome custiom has slightly revamped (you can only change its thumbnail and embed color (It meant not to mess up Shayge Glitch Hunt bot)
+* Biome popup confirmation bug (macro still ping everyone even if user clicked "Please spare me :sob::wilted_rose:")
+* Attempt fix at autopop doesn't work during fishing when a rare biome is found
+* Attempt fix at config.json bug (It wiped all the current user's config, especially opening new coteab macro version)
+* Attempt fix at biome/aura roblox logs be broken for some reason
+* Global hotkey (F1/F2 keybind) should properly working now (the bug cause it only start/stop if the macro is active on background) <-> Egg collecting path or fish path when you stop it should exit immediately
+
+
 # v2.1.5 (Easter egg update)
 
 ## New features:
@@ -40,39 +64,3 @@
 * Fixed the issue with rare biomes confirmation popup, it will only popup in the first 1 minute of reconnection now.
 ## Misc changes:
 * Specificed the fishing delay in fishing page is in miliseconds.
-# v2.1.2 (mainly bug fixes)
-## New features:
-- Added mouse drag down move before start Flarg selling because sometimes it clicks on Flarg's dialogue box 😭
-## Bug fixes:
-- Remote access control now works.
-- Attempted a fix at WebView2 bug for some users (the macro black screen).
-- Attempted a fix at anti ghost server detection.
-- Fixed auto add not appearing in potion crafting calibrations.
-- Changed the rare biomes popup when forgetting to turn off macro logic.
-  - Timeout/wait interval: 10s instead of 60s.
-  - No response after timeout: ping for rare biome.
-# v2.1.1 full release (preview)
-## Main features:
-- Added fishing mode (currently only available to VIP/VIP+ Sol's gamepass owners).
-    - Added use BR/SC every x fish.
-    - Added auto merchant + fishing.
-    - Fishing failsafe (must have reconnect to ps enabled, if not the macro will prompt a warning to the user).
-    - Fishing path reworked for the **5th time**, fishing should work in basically ANY regular FPS now.
-    - Added fishing mouse click delay.
-    - Added equip an aura before pathing.
-- Added auto pop in Cyberspace biome.
-- Added default calibrations for `1920*1080 full screen 100% scale` for first time users/users with empty config.
-- Added anti ghost server, basically when using the Coteab auto reconnect feature it will now detect if Sol's RNG put u on it's rejoin mode which leads to ghost servers (enabled when you enable auto reconnect to PS).
-## Systemic changes:
-- Proper back-end and front-end workspace structure for easier codeflow and manipulation.
-    - Macro is now written in typescript, html, css for front-end and the entire back-end structure is written in Python with local JSON data-set handling.
-- Reverted to the traditional `.exe` file type.
-- Auto update now is embedded into the executable file.
-## Misc changes:
-- UI/front-end rework.
-- Reworked and added new developers to credits tab.
-- Calibration guide added.
-## Known issues/bugs:
-- RAC not working.
-
-
