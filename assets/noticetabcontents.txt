@@ -1,3 +1,7 @@
+# v2.1.6-hotfix1, what's new?
+* Attempt fix at autopop doesn't work in rare biomes (credit gummyballer on discord for providing me a clip about this issue)
+* Macro sent a phantom rare biomes that it already found a hours ago in your server (This caused by aura detection where it forces the macro to read the first line of the roblox log annnd I realized this flaw today :skull:)
+
 # v2.1.6 (Mini QoL Update)
 
 ## New features:
