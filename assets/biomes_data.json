@@ -58,5 +58,9 @@
     "CYBERSPACE": {
         "color": "0x0A1A3D",
         "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/CYBERSPACE.png"
+    },
+    "SINGULARITY": { 
+        "color": "0x0A1A3D",
+        "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/CYBERSPACE.png"
     }
 }
