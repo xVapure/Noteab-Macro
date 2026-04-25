@@ -7,6 +7,7 @@
     "Rare": {"rarity": 16, "exclusive_biome": ["None", 1]},
     "Divinus": {"rarity": 32, "exclusive_biome": ["HEAVEN", 5]},
     "Crystallized": {"rarity": 64, "exclusive_biome": ["None", 1]},
+    "Dizzy": {"rarity": 123, "exclusive_biome": ["None", 1]},
     "Rage": {"rarity": 128, "exclusive_biome": ["None", 1]},
     "\u2605": {"rarity": 100, "exclusive_biome": ["DREAMSPACE", 1]},
     "Topaz": {"rarity": 150, "exclusive_biome": ["None", 1]},
@@ -262,5 +263,13 @@
     "Workshop_System": {"rarity": 650000000, "exclusive_biome": ["None", 1]},
     "Surfer_Symphony": {"rarity": 600000000, "exclusive_biome": ["None", 1]},
     "Melodic_Serenade": {"rarity": 77000000, "exclusive_biome": ["None", 1]},
-    "Aquaria": {"rarity": 80000000, "exclusive_biome": ["RAINY", 4]}
+    "Aquaria": {"rarity": 80000000, "exclusive_biome": ["RAINY", 4]},
+    "Vega": {"rarity": 2580000, "exclusive_biome": ["SINGULARITY", 1]},
+    "Astronaut": {"rarity": 6117196, "exclusive_biome": ["SINGULARITY", 1]},
+    "Oculus": {"rarity": 23333340, "exclusive_biome": ["HEAVEN", 5]},
+    "Centurion": {"rarity": 25000000, "exclusive_biome": ["SINGULARITY", 1]},
+    "Projection": {"rarity": 197000000, "exclusive_biome": ["SINGULARITY", 1]},
+    "Virtual_Memory": {"rarity": 232232232, "exclusive_biome": ["CYBERSPACE", 2]},
+    "Gravitational_PointZero": {"rarity": 521121900, "exclusive_biome": ["SINGULARITY", 5]},
+    "ASTRAIOS": {"rarity": 1750000000, "exclusive_biome": ["SINGULARITY", 1]}
 }
