@@ -4,9 +4,9 @@ import traceback
 import json
 import threading
 from typing import Optional, Any
+import ctypes
 import win32gui, win32con, win32api
 import webbrowser
-import keyboard
 import webview
 import os
 import sys
@@ -15,10 +15,33 @@ import psutil
 from datetime import datetime
 import logging
 import shutil
+import urllib.request
+
+try:
+    import numpy
+    import cv2
+    import pyautogui
+except Exception as e:
+    err_text = str(e)
+    if "numpy" in err_text.lower() or "c-extension" in err_text.lower() or "dll" in err_text.lower() or "cv2" in err_text.lower():
+        msg = (
+            "Coteab Macro failed to load required components.\n\n"
+            "This is because your computer is missing the standard 'Visual C++ Redistributable (x64)' (i think so).\n\n"
+            "Please download and install it from Microsoft's official website and try open the macro again!\n\n"
+            f"Error details: {err_text}"
+        )
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, msg, "Missing Windows Component", 0x10 | 0x0)
+        except Exception:
+            pass
+        sys.exit(1)
+    else:
+        raise
 
 # i added this so we can easily change macro version upon releases without having to change multiple back-end & front-end behaviours
 # for future people that is reading the open source code, hello :p
-current_version = "v2.1.5"
+current_version = "v2.1.6-hotfix1"
 os.environ["COTEAB_MACRO_VERSION"] = current_version
 UPDATE_LATEST_RELEASE_API_URL = "https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest"
 os.environ["COTEAB_UPDATE_API_URL"] = UPDATE_LATEST_RELEASE_API_URL
@@ -28,48 +51,17 @@ _wv2_user_data_base = os.path.join(
     os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
     "CoteabMacro", "WebView2UserData"
 )
-
 try:
     if os.path.exists(_wv2_user_data_base):
         for _f in os.listdir(_wv2_user_data_base):
-            try:
-                shutil.rmtree(os.path.join(_wv2_user_data_base, _f), ignore_errors=True)
-            except Exception:
-                pass
+            try: shutil.rmtree(os.path.join(_wv2_user_data_base, _f), ignore_errors=True)
+            except Exception: pass
 except Exception:
     pass
 
 _wv2_user_data = os.path.join(_wv2_user_data_base, f"Session_{int(time.time())}")
 os.makedirs(_wv2_user_data, exist_ok=True)
 os.environ["WEBVIEW2_USER_DATA_FOLDER"] = _wv2_user_data
-
-try:
-    _exec_dir = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
-    _runtime_dir = os.path.join(_exec_dir, "webview_runtime_fix_optional")
-    
-    if not os.path.exists(_runtime_dir):
-        os.makedirs(_runtime_dir, exist_ok=True)
-        _readme_path = os.path.join(_runtime_dir, "HOW_TO_FIX_BLANK_SCREEN.txt")
-        with open(_readme_path, "w", encoding="utf-8") as _f:
-            _f.write(
-                "If you having issue of macro only show black/white screen:\n\n"
-                "1. Go to https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH#download\n"
-                "2. Choose 'Fixed Version'\n"
-                "3. Remember to configure 'Select Architecture' as x64 (depends on your PC bit 32-64 bit)\n"
-                "4. Download and extract the .cab file (using 7-Zip or WinRAR)\n"
-                "5. Move the extracted 'Microsoft.WebView2.FixedVersionRuntime...' folder directly into this folder.\n\n"
-                "The macro will automatically detect it on the next launch and should resolve your issue!"
-            )
-
-    if os.path.isdir(_runtime_dir):
-        for _item in os.listdir(_runtime_dir):
-            if _item.lower().startswith("microsoft.webview2") and os.path.isdir(os.path.join(_runtime_dir, _item)):
-                _target_path = os.path.join(_runtime_dir, _item)
-                os.environ["WEBVIEW2_BROWSER_EXECUTABLE_FOLDER"] = _target_path
-                print(f"[Boot] Fixed WebView2 Runtime hooked at: {_target_path}")
-                break
-except Exception as e:
-    print(f"[Boot] Could not configure fixed runtime: {e}")
 
 try: psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
 except Exception: pass
@@ -81,59 +73,72 @@ from biome_tracker.config import (
     save_config,
     normalize_auto_pop_biomes,
 )
-from biome_tracker.core import BiomeTracker
-from biome_tracker.base_support import CalibrationManager, rare_biomes
 
-def get_base_path():
-    return sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.dirname(os.path.abspath(__file__))
-
+def get_base_path(): return sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.dirname(os.path.abspath(__file__))
 
 def _get_frontend_dist_dirs() -> list[str]:
     base_path = get_base_path()
     if getattr(sys, "frozen", False):
         return [os.path.join(base_path, "lib", "dist")]
+
     return [
         os.path.join(base_path, "frontend", "dist"),
         os.path.join(base_path, "lib", "dist"),
     ]
 
 
-def get_frontend_entry_url() -> str:
+def get_frontend_entry_data():
+    # I have temporarily  this frontend url load for the source code (since it will overrides your current index.html if you try to customize frontend layout)
+    # frontend_url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/assets/index.html"
+    # try:
+    #     req = urllib.request.Request(frontend_url, headers={'User-Agent': 'Mozilla/5.0'})
+    #     with urllib.request.urlopen(req, timeout=4) as response:
+    #         html_content = response.read().decode('utf-8')
+    #         if html_content and len(html_content) > 1000:
+    #             print("Fetched frontend entry from GitHub")
+    #             return {"html": html_content}
+    # except Exception as e:
+    #     print(f"Failed to fetch frontend from GitHub: {e}, falling back to local files.")
+
     for dist_dir in _get_frontend_dist_dirs():
         index_file = os.path.join(dist_dir, "index.html")
         if os.path.exists(index_file):
             try:
-                cache_bust = int(os.path.getmtime(index_file))
-                return f"{index_file}?v={cache_bust}"
+                with open(index_file, "r", encoding="utf-8") as f:
+                    return {"html": f.read()}
             except Exception:
-                return index_file
+                pass
+            
+    return {"url": "http://localhost:5173"}
+
+ 
+def get_frontend_entry_url():
+    for dist_dir in _get_frontend_dist_dirs():
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.exists(index_file):
+            abs_path = os.path.abspath(index_file).replace("\\", "/")
+            return f"file:///{abs_path}"
     return "http://localhost:5173"
 
 
-def _read_cli_value(flag: str, default: str = "") -> str:
+def _read_cli_value(flag, default=""):
     try:
-        if flag not in sys.argv:
-            return default
+        if flag not in sys.argv: return default
         idx = sys.argv.index(flag)
-        if idx + 1 >= len(sys.argv):
-            return default
+        if idx + 1 >= len(sys.argv): return default
         return str(sys.argv[idx + 1]).strip()
     except Exception:
         return default
 
 
-def _read_config_bool(config_data: Any, key: str, default: bool) -> bool:
+def _cfg_bool(cfg, key, default=False):
     try:
-        if not isinstance(config_data, dict):
-            return bool(default)
-        value = config_data.get(key, default)
-        if isinstance(value, str):
-            normalized = value.strip().lower()
-            if normalized in {"1", "true", "yes", "on"}:
-                return True
-            if normalized in {"0", "false", "no", "off", ""}:
-                return False
-        return bool(value)
+        if not isinstance(cfg, dict): return bool(default)
+        val = cfg.get(key, default)
+        if isinstance(val, str):
+            val = val.strip().lower()
+            return val in ("1", "true", "yes", "on")
+        return bool(val)
     except Exception:
         return bool(default)
 
@@ -142,7 +147,9 @@ class Api:
     def __init__(self, tracker=None):
         self._tracker = tracker
         self._window = None
-        self._calib_mgr = CalibrationManager()
+        self._calib_mgr = None
+
+        # fishing mode stuff
         self._fishing_stop_event = threading.Event()
         self._fishing_thread = None
         self._fishing_lock = threading.Lock()
@@ -154,11 +161,16 @@ class Api:
             "force_sell_on_next_cycle": False,
             "merchant_requires_reset": False,
         }
+
+        # rare biome pop up confirmation
         self._biome_confirm_evt = threading.Event()
         self._biome_confirm_result = None
 
     def set_window(self, window):
         self._window = window
+        if self._calib_mgr is None:
+            from biome_tracker.base_support import CalibrationManager
+            self._calib_mgr = CalibrationManager()
         self._calib_mgr.set_refs(
             window=window,
             tracker=self._tracker,
@@ -167,52 +179,53 @@ class Api:
         )
 
     def get_config(self):
-        if self._tracker and hasattr(self._tracker, 'config') and isinstance(self._tracker.config, dict) and self._tracker.config:
-            return self._tracker.config
+        t = self._tracker
+        if t and isinstance(getattr(t, 'config', None), dict) and t.config:
+            return t.config
         return load_config()
 
     def save_config(self, config_data):
         prev_anti_afk = False
-        if self._tracker and hasattr(self._tracker, "config") and isinstance(self._tracker.config, dict):
+        if self._tracker and isinstance(getattr(self._tracker, "config", None), dict):
             prev_anti_afk = bool(self._tracker.config.get("anti_afk", False))
 
-        normalized_config = dict(config_data) if isinstance(config_data, dict) else dict(self.get_config())
-        biome_names = []
-        if self._tracker and hasattr(self._tracker, "biome_data") and isinstance(self._tracker.biome_data, dict):
-            biome_names = list(self._tracker.biome_data.keys())
-        normalized_config["auto_pop_biomes"] = normalize_auto_pop_biomes(normalized_config, biome_names=biome_names)
-        if (
-            _read_config_bool(normalized_config, "fishing_failsafe_rejoin", False)
-            and not _read_config_bool(normalized_config, "auto_reconnect", False)
-        ):
-            normalized_config["fishing_failsafe_rejoin"] = False
+        cfg = dict(config_data) if isinstance(config_data, dict) else dict(self.get_config())
 
-        save_config(normalized_config)
+        # normalize auto pop biomes with whatever biome list we have
+        biome_names = []
+        if self._tracker and isinstance(getattr(self._tracker, "biome_data", None), dict):
+            biome_names = list(self._tracker.biome_data.keys())
+        cfg["auto_pop_biomes"] = normalize_auto_pop_biomes(cfg, biome_names=biome_names)
+
+
+        if _cfg_bool(cfg, "fishing_failsafe_rejoin") and not _cfg_bool(cfg, "auto_reconnect"):
+            cfg["fishing_failsafe_rejoin"] = False
+
+        save_config(cfg)
         if self._tracker:
-            if not hasattr(self._tracker, "config") or not isinstance(self._tracker.config, dict):
+            if not isinstance(getattr(self._tracker, "config", None), dict):
                 self._tracker.config = {}
-            self._tracker.config.update(normalized_config)
-            if 'webhook_url' in normalized_config:
-                self._tracker.webhook_urls = normalized_config['webhook_url']
+            self._tracker.config.update(cfg)
+
+            # sync webhook urls to the tracker
+            if 'webhook_url' in cfg:
+                self._tracker.webhook_urls = cfg['webhook_url']
                 try:
                     if hasattr(self._tracker, "refresh_active_webhook_channels"):
                         self._tracker.refresh_active_webhook_channels(force=True)
                 except Exception:
                     pass
+
             if self._tracker.detection_running:
+                # hot-swap fishing mode
                 if self._is_fishing_mode_enabled():
                     self._start_fishing_worker()
                 else:
                     self._stop_fishing_worker()
 
-                # Trigger anti-AFK immediately when toggled ON at runtime.
-                if (not prev_anti_afk) and bool(self._tracker.config.get("anti_afk", False)):
+                if not prev_anti_afk and self._tracker.config.get("anti_afk", False):
                     try:
-                        threading.Thread(
-                            target=self._tracker.perform_anti_afk_action,
-                            name="Anti-AFK Immediate",
-                            daemon=True,
-                        ).start()
+                        threading.Thread(target=self._tracker.perform_anti_afk_action, daemon=True).start()
                     except Exception:
                         pass
 
@@ -222,26 +235,22 @@ class Api:
                 return {"success": False, "error": "Window not available"}
 
             result = self._window.create_file_dialog(
-                webview.FileDialog.OPEN,
-                allow_multiple=False,
+                webview.FileDialog.OPEN, allow_multiple=False,
                 file_types=("JSON Files (*.json)",),
             )
-
             if not result:
                 return {"success": False, "error": "No file selected"}
 
-            file_path = result[0] if isinstance(result, (list, tuple)) else result
-
-            with open(file_path, "r", encoding="utf-8") as f:
+            path = result[0] if isinstance(result, (list, tuple)) else result
+            with open(path, "r", encoding="utf-8") as f:
                 imported = json.loads(f.read())
-
             if not isinstance(imported, dict):
                 return {"success": False, "error": "Invalid config file: must be a JSON object"}
 
             save_config(imported)
 
             if self._tracker:
-                if not hasattr(self._tracker, "config") or not isinstance(self._tracker.config, dict):
+                if not isinstance(getattr(self._tracker, "config", None), dict):
                     self._tracker.config = {}
                 self._tracker.config.update(imported)
                 if 'webhook_url' in imported:
@@ -249,8 +258,7 @@ class Api:
                 try:
                     if hasattr(self._tracker, "refresh_active_webhook_channels"):
                         self._tracker.refresh_active_webhook_channels(force=True)
-                except Exception:
-                    pass
+                except Exception: pass
 
             return {"success": True, "config": imported}
         except json.JSONDecodeError:
@@ -299,148 +307,143 @@ class Api:
     def get_macro_version(self):
         return current_version
 
-    def _is_fishing_mode_enabled(self) -> bool:
-        if not self._tracker or not hasattr(self._tracker, "config"):
-            return False
-        cfg = getattr(self._tracker, "config", {})
-        if not isinstance(cfg, dict):
-            return False
-        if bool(cfg.get("enable_idle_mode", False)):
-            return False
+    def _is_fishing_mode_enabled(self):
+        cfg = getattr(self._tracker, "config", None) if self._tracker else None
+        if not isinstance(cfg, dict): return False
+        if cfg.get("enable_idle_mode", False): return False
         return bool(cfg.get("fishing_mode", False))
 
-    def _fishing_can_run(self) -> bool:
-        if not self._tracker:
-            return False
-        if not getattr(self._tracker, "detection_running", False):
-            return False
-        if not self._is_fishing_mode_enabled():
-            return False
-        if getattr(self._tracker, "reconnecting_state", False):
+    def _fishing_can_run(self):
+        t = self._tracker
+        if not t or not getattr(t, "detection_running", False): return False
+        if not self._is_fishing_mode_enabled(): return False
+
+        # pause during reconnect, but mark that we need to sell when we come back
+        if getattr(t, "reconnecting_state", False):
             self._fishing_runtime_state["rejoin_in_progress"] = True
             return False
-        if bool(self._fishing_runtime_state.get("rejoin_in_progress", False)):
+        if self._fishing_runtime_state.get("rejoin_in_progress"):
             self._fishing_runtime_state["rejoin_in_progress"] = False
             self._fishing_runtime_state["force_sell_on_next_cycle"] = True
-        if getattr(self._tracker, "_egg_collecting", False):
-            return False
-        if getattr(self._tracker, "_egg_collection_pending", False):
-            return False
-        if getattr(self._tracker, "auto_pop_state", False):
-            return False
+
+        _STALE_TIMEOUT = 240
+        now = time.time()
+        blocking_flags = ("_egg_collecting", "_egg_collection_pending", "auto_pop_state")
+        any_blocking = False
+
+        for flag_name in blocking_flags:
+            if getattr(t, flag_name, False):
+                ts_key = f"_fishing_block_ts_{flag_name}"
+                first_seen = self._fishing_runtime_state.get(ts_key, 0)
+                if first_seen == 0:
+                    self._fishing_runtime_state[ts_key] = now
+                    any_blocking = True
+                elif (now - first_seen) >= _STALE_TIMEOUT:
+                    setattr(t, flag_name, False)
+                    self._fishing_runtime_state[ts_key] = 0
+                    try:
+                        t.append_log(
+                            f"[FishingMode] Force cleared stale '{flag_name}' flag "
+                            f"after {_STALE_TIMEOUT}s — was blocking fishing."
+                        )
+                    except Exception: pass
+                else:
+                    any_blocking = True
+            else:
+                ts_key = f"_fishing_block_ts_{flag_name}"
+                if self._fishing_runtime_state.get(ts_key, 0): self._fishing_runtime_state[ts_key] = 0
+
+        if any_blocking: return False
         return True
 
-    def _fishing_config_provider(self) -> dict[str, Any]:
-        if self._tracker and hasattr(self._tracker, "config") and isinstance(self._tracker.config, dict):
-            return dict(self._tracker.config)
+    def _fishing_config_provider(self):
+        t = self._tracker
+        if t and isinstance(getattr(t, "config", None), dict):
+            return dict(t.config)
         return load_config()
 
-    def _on_fishing_failsafe_timeout(self) -> None:
-        if not self._tracker:
-            return
-        current_biome = str(getattr(self._tracker, "current_biome", "") or "").upper().strip()
-        if current_biome in rare_biomes:
-            setattr(self._tracker, "_pending_fishing_failsafe_rejoin", True)
+    def _on_fishing_failsafe_timeout(self):
+        if not self._tracker: return
+        biome = str(getattr(self._tracker, "current_biome", "") or "").upper().strip()
+
+        # dont kill roblox during a rare biome lol, wait for it to end
+        from biome_tracker.base_support import rare_biomes
+        if biome in rare_biomes:
+            self._tracker._pending_fishing_failsafe_rejoin = True
             try:
-                self._tracker.append_log(
-                    f"[FishingMode] Failsafe timed out during rare biome {current_biome}; delaying rejoin until the biome ends."
-                )
+                self._tracker.append_log(f"[FishingMode] Failsafe timed out during {biome}; delaying rejoin.")
                 self._tracker.send_webhook_status(
-                    f"Fishing failsafe timed out during {current_biome}. Rejoin is delayed until the rare biome ends.",
+                    f"Fishing failsafe timed out during {biome}. Rejoin delayed until biome ends.",
                     color=0xffcc00,
                 )
-            except Exception:
-                pass
+            except Exception: pass
             return
-        try:
-            self._tracker.terminate_roblox_processes()
-        except Exception as e:
-            print(f"Fishing failsafe close Roblox failed: {e}")
 
-        cfg = self._fishing_config_provider()
-        if not bool(cfg.get("auto_reconnect", False)):
+        try: self._tracker.terminate_roblox_processes()
+        except Exception as e: print(f"Fishing failsafe close Roblox failed: {e}")
+
+        if not self._fishing_config_provider().get("auto_reconnect", False):
             self._emit_fishing_failsafe_warning(
-                "Fishing failsafe timeout: Roblox was closed after 60 seconds without a minigame. "
-                "Enable Private Server reconnection in Misc so it can recover automatically."
+                "Fishing failsafe timeout: Roblox closed after 60s with no minigame. "
+                "Enable PS reconnect in Misc so it can recover automatically."
             )
 
-    def _run_fishing_br_sc_sequence(self) -> bool:
-        if not self._tracker:
-            return False
-
-        tracker = self._tracker
-        prior_override = bool(getattr(tracker, "_fishing_br_sc_override", False))
-        setattr(tracker, "_fishing_br_sc_override", True)
-        ran_any = False
-
+    def _run_fishing_br_sc_sequence(self):
+        if not self._tracker: return False
+        t = self._tracker
+        old_override = getattr(t, "_fishing_br_sc_override", False)
+        t._fishing_br_sc_override = True
+        ran = False
         try:
-            try:
-                tracker.activate_roblox_window()
-            except Exception:
-                pass
+            try: t.activate_roblox_window()
+            except Exception: pass
 
             try:
-                tracker._use_br_sc_impl("strange controller")
-                tracker.last_sc_time = datetime.now()
-                ran_any = True
+                t._use_br_sc_impl("strange controller")
+                t.last_sc_time = datetime.now()
+                ran = True
             except Exception as e:
-                print(f"Fishing BR/SC strange controller step failed: {e}")
-
+                print(f"Fishing SC step failed: {e}")
             try:
-                tracker._use_br_sc_impl("biome randomizer")
-                tracker.last_br_time = datetime.now()
-                ran_any = True
+                t._use_br_sc_impl("biome randomizer")
+                t.last_br_time = datetime.now()
+                ran = True
             except Exception as e:
-                print(f"Fishing BR/SC biome randomizer step failed: {e}")
+                print(f"Fishing BR step failed: {e}")
         except Exception as e:
             print(f"Fishing BR/SC sequence failed: {e}")
         finally:
-            setattr(tracker, "_fishing_br_sc_override", prior_override)
+            t._fishing_br_sc_override = old_override
+        return ran
 
-        return ran_any
-
-    def _run_fishing_merchant_sequence(self) -> bool:
-        if not self._tracker:
-            return False
-
-        tracker = self._tracker
-        if isinstance(self._fishing_runtime_state, dict):
-            self._fishing_runtime_state["merchant_requires_reset"] = False
-        prior_override = bool(getattr(tracker, "_fishing_br_sc_override", False))
-        setattr(tracker, "_fishing_br_sc_override", True)
-        ran_any = False
-
+    def _run_fishing_merchant_sequence(self):
+        if not self._tracker: return False
+        t = self._tracker
+        self._fishing_runtime_state["merchant_requires_reset"] = False
+        old_override = getattr(t, "_fishing_br_sc_override", False)
+        t._fishing_br_sc_override = True
+        ran = False
         try:
-            try:
-                tracker.activate_roblox_window()
-            except Exception:
-                pass
+            try: t.activate_roblox_window()
+            except Exception: pass
 
-            merchant_impl = getattr(tracker, "_merchant_teleporter_impl", None)
-            if not callable(merchant_impl):
-                print(
-                    "Fishing merchant sequence skipped: full auto-merchant implementation "
-                    "('_merchant_teleporter_impl') is unavailable."
-                )
+            merchant_fn = getattr(t, "_merchant_teleporter_impl", None)
+            if not callable(merchant_fn):
+                print("Fishing merchant sequence skipped: _merchant_teleporter_impl unavailable")
                 return False
 
-            # Use the full merchant implementation so fishing mode preserves
-            # merchant teleporter, merchant detection/buy, webhook, and limbo logic.
-            merchant_impl()
-            ran_any = bool(getattr(tracker, "_last_merchant_sequence_ran", False))
-            merchant_requires_reset = bool(
-                getattr(tracker, "_last_merchant_sequence_requires_reset", False)
+            # reuse the same merchant logic so we get buy, webhook, limbo, everything
+            merchant_fn()
+            ran = bool(getattr(t, "_last_merchant_sequence_ran", False))
+            self._fishing_runtime_state["merchant_requires_reset"] = bool(
+                getattr(t, "_last_merchant_sequence_requires_reset", False)
             )
-            if isinstance(self._fishing_runtime_state, dict):
-                self._fishing_runtime_state["merchant_requires_reset"] = merchant_requires_reset
-            if ran_any:
-                tracker.last_mt_time = datetime.now()
+            if ran: t.last_mt_time = datetime.now()
         except Exception as e:
-            print(f"Fishing merchant teleporter sequence failed: {e}")
+            print(f"Fishing merchant sequence failed: {e}")
         finally:
-            setattr(tracker, "_fishing_br_sc_override", prior_override)
-
-        return ran_any
+            t._fishing_br_sc_override = old_override
+        return ran
 
     def _start_fishing_worker(self) -> None:
         if not self._tracker:
@@ -468,6 +471,7 @@ class Api:
                         set_fishing_busy_cb=lambda busy: setattr(self._tracker, "_fishing_busy", busy),
                         on_f2_pressed_cb=lambda: (self.set_biome_detection(False), self._emit_shortcut("STOP")),
                         egg_ocr_check_cb=self._tracker._perform_egg_ocr_check,
+                        merchant_ocr_check_cb=getattr(self._tracker, "_scheduled_merchant_ocr_check", None),
                     )
                 except Exception as e:
                     print(f"Fishing worker failed: {e}")
@@ -484,9 +488,8 @@ class Api:
             if not t or not t.is_alive():
                 self._fishing_thread = None
 
-    def set_biome_detection(self, enabled: bool):
-        if not self._tracker:
-            return
+    def set_biome_detection(self, enabled):
+        if not self._tracker: return
         if enabled:
             if not self._tracker.detection_running:
                 threading.Thread(target=self._tracker.start_detection, daemon=True).start()
@@ -494,51 +497,41 @@ class Api:
                 self._start_fishing_worker()
             else:
                 self._stop_fishing_worker()
-                try:
-                    self._tracker.start_potion_crafting()
-                except Exception:
-                    pass
+                try: self._tracker.start_potion_crafting()
+                except Exception: pass
         else:
             self._stop_fishing_worker()
             self._tracker.stop_detection()
-
-        # Push the new status to the frontend
         self._emit_macro_status()
 
+    # --- frontend event emitters (JS bridge) ---
+
+    def _safe_eval_js(self, js_code):
+        if not self._window: return
+        try:
+            self._window.evaluate_js(js_code)
+        except Exception: pass
+
     def _emit_macro_status(self):
-        status = self.get_macro_status()
-        if self._window:
-            self._window.evaluate_js(f'if(window.onMacroStatus) window.onMacroStatus("{status}");')
-            
+        self._safe_eval_js(f'if(window.onMacroStatus) window.onMacroStatus("{self.get_macro_status()}");')
+
     def _emit_config_update(self):
-        if self._window:
-            self._window.evaluate_js(f'if(window.onConfigUpdated) window.onConfigUpdated();')
+        self._safe_eval_js('if(window.onConfigUpdated) window.onConfigUpdated();')
 
-    def _emit_biome_update(self, biome: str):
-        if self._window:
-            self._window.evaluate_js(f'if(window.onBiomeUpdate) window.onBiomeUpdate("{biome}");')
+    def _emit_biome_update(self, biome):
+        self._safe_eval_js(f'if(window.onBiomeUpdate) window.onBiomeUpdate("{biome}");')
 
-    def _emit_shortcut(self, key: str):
-        if self._window:
-            self._window.evaluate_js(f'if(window.onShortcutEvent) window.onShortcutEvent("{key}");')
+    def _emit_shortcut(self, key):
+        self._safe_eval_js(f'if(window.onShortcutEvent) window.onShortcutEvent("{key}");')
 
-    def _emit_update_available(self, version: str, url: str):
-        if self._window:
-            self._window.evaluate_js(
-                f'if(window.onUpdateAvailable) window.onUpdateAvailable("{version}", "{url}");'
-            )
+    def _emit_update_available(self, version, url):
+        self._safe_eval_js(f'if(window.onUpdateAvailable) window.onUpdateAvailable("{version}", "{url}");')
 
-    def _emit_update_status(self, status: str):
-        if self._window:
-            self._window.evaluate_js(
-                f'if(window.onUpdateStatus) window.onUpdateStatus("{status}");'
-            )
+    def _emit_update_status(self, status):
+        self._safe_eval_js(f'if(window.onUpdateStatus) window.onUpdateStatus("{status}");')
 
-    def _emit_fishing_failsafe_warning(self, message: str):
-        if self._window:
-            self._window.evaluate_js(
-                f"if(window.onFishingFailsafeWarning) window.onFishingFailsafeWarning({json.dumps(str(message))});"
-            )
+    def _emit_fishing_failsafe_warning(self, msg):
+        self._safe_eval_js(f"if(window.onFishingFailsafeWarning) window.onFishingFailsafeWarning({json.dumps(str(msg))});")
 
     def _request_biome_confirm(self, biome: str):
         self._biome_confirm_evt.clear()
@@ -546,10 +539,7 @@ class Api:
         popup_window = None
         try:
             print(f"[BiomeConfirm] Spawning independent popup for biome: {biome}")
-            base = self._get_frontend_url()
-            sep = "&" if "?" in base else "?"
-            url = f"{base}{sep}window=biome_confirm&biome={biome}"
-
+            fe = get_frontend_entry_data()
             popup_w, popup_h = 480, 400
             try:
                 screen_w = win32api.GetSystemMetrics(0)
@@ -559,17 +549,36 @@ class Api:
             except Exception:
                 popup_x, popup_y = 300, 200
 
-            popup_window = webview.create_window(
-                title=f"⚠️ Rare Biome Detected — {biome} ⚠️",
-                url=url,
-                js_api=self,
-                width=popup_w,
-                height=popup_h,
-                x=popup_x,
-                y=popup_y,
-                resizable=False,
-                on_top=True,
-            )
+            win_kwargs = {
+                "title": f"\u26a0\ufe0f Rare Biome Detected \u2014 {biome} \u26a0\ufe0f",
+                "js_api": self,
+                "width": popup_w,
+                "height": popup_h,
+                "x": popup_x,
+                "y": popup_y,
+                "resizable": False,
+            }
+
+            if "html" in fe:
+                injected_script = f'''<script>
+                const _OrigSearchParams = window.URLSearchParams;
+                window.URLSearchParams = class extends _OrigSearchParams {{
+                    constructor(init) {{
+                        if (init === window.location.search || !init) {{
+                            init = "?window=biome_confirm&biome={biome}";
+                        }}
+                        super(init);
+                    }}
+                }};
+                </script>'''
+                html = fe["html"].replace("<head>", f"<head>{injected_script}", 1)
+                win_kwargs["html"] = html
+            else:
+                base = fe["url"]
+                sep = "&" if "?" in base else "?"
+                win_kwargs["url"] = f"{base}{sep}window=biome_confirm&biome={biome}"
+
+            popup_window = webview.create_window(**win_kwargs)
 
             try:
                 def _flash():
@@ -657,20 +666,26 @@ class Api:
         if self._tracker and hasattr(self._tracker, 'send_webhook_status'):
             self._tracker.send_webhook_status(status, color)
 
-    def test_webhook(self, url: str) -> bool:
-         return True
+    def check_winocr_status(self):
+        try:
+            import winocr
+            return {"installed": True, "version": getattr(winocr, "__version__", "unknown")}
+        except ImportError:
+            return {"installed": False, "version": None}
+        except Exception as e:
+            return {"installed": False, "version": None, "error": str(e)}
 
-    def get_recorder_status(self) -> bool:
-         return getattr(self._tracker, "_is_recording", False) if self._tracker else False
+    def test_webhook(self, url): return True  # placeholder
+
+    def get_recorder_status(self):
+        return getattr(self._tracker, "_is_recording", False) if self._tracker else False
 
     def start_macro_recording(self):
-         if self._tracker:
-             self._tracker.start_recording_path()
+        if self._tracker: self._tracker.start_recording_path()
 
     def stop_macro_recording(self):
-         if self._tracker:
-             return self._tracker.stop_recording_path("obby", save_dir="paths")
-         return "No tracker"
+        if self._tracker: return self._tracker.stop_recording_path("obby", save_dir="paths")
+        return "No tracker"
 
     def stop_macro_recording_potion(self, name: str):
          if self._tracker:
@@ -681,21 +696,41 @@ class Api:
          return get_frontend_entry_url()
 
     def _open_recorder(self, mode: str = "obby"):
-         base = self._get_frontend_url()
-         sep = "&" if "?" in base else "?"
-         url = f"{base}{sep}window=recorder"
+         fe = get_frontend_entry_data()
+         query = "window=recorder"
          if mode == "potion":
-             url += "&mode=potion"
+             query += "&mode=potion"
          title = "Potion Recorder" if mode == "potion" else "Obby Recorder"
-         webview.create_window(
-             title=title,
-             url=url,
-             js_api=self,
-             width=380,
-             height=320,
-             resizable=True,
-             on_top=True,
-         )
+
+         win_kwargs = {
+             "title": title,
+             "js_api": self,
+             "width": 380,
+             "height": 320,
+             "resizable": True,
+             "on_top": True,
+         }
+
+         if "html" in fe:
+             injected_script = f'''<script>
+             const _OrigSearchParams = window.URLSearchParams;
+             window.URLSearchParams = class extends _OrigSearchParams {{
+                 constructor(init) {{
+                     if (init === window.location.search || !init) {{
+                         init = "?{query}";
+                     }}
+                     super(init);
+                 }}
+             }};
+             </script>'''
+             html = fe["html"].replace("<head>", f"<head>{injected_script}", 1)
+             win_kwargs["html"] = html
+         else:
+             base = fe["url"]
+             sep = "&" if "?" in base else "?"
+             win_kwargs["url"] = f"{base}{sep}{query}"
+
+         webview.create_window(**win_kwargs)
 
     def open_recorder_window(self):
          self._open_recorder("obby")
@@ -732,6 +767,32 @@ class Api:
          if self._tracker:
              return self._tracker.replay_path_recording(name, save_dir="crafting_files_do_not_open")
          return "No tracker"
+
+    def test_aura_keybind(self):
+         if self._tracker:
+             def test_record():
+                 try:
+                    keybind = self._tracker.aura_record_keybind_var.get()
+                    if not keybind: return
+                    keys = [key.strip() for key in keybind.split('+')]
+                    time.sleep(2)
+                    pyautogui.hotkey(*keys)
+                 except Exception as e:
+                    print(f"Error testing aura keybind: {e}")
+             threading.Thread(target=test_record, daemon=True).start()
+
+    def test_biome_keybind(self):
+         if self._tracker:
+             def test_record():
+                 try:
+                    keybind = self._tracker.rarest_biome_keybind_var.get()
+                    if not keybind: return
+                    keys = [key.strip() for key in keybind.split('+')]
+                    time.sleep(2)
+                    pyautogui.hotkey(*keys)
+                 except Exception as e:
+                    print(f"Error testing biome keybind: {e}")
+             threading.Thread(target=test_record, daemon=True).start()
 
     def align_camera(self):
          if self._tracker:
@@ -781,7 +842,7 @@ class Api:
             return False
 
 
-def launch_app(api_class, tracker: Optional[BiomeTracker] = None) -> BiomeTracker:
+def launch_app(api_class, tracker=None):
     tracker = tracker or BiomeTracker()
     api = api_class(tracker)
     tracker.on_stats_update = api._emit_config_update
@@ -789,120 +850,257 @@ def launch_app(api_class, tracker: Optional[BiomeTracker] = None) -> BiomeTracke
     tracker.on_update_available = api._emit_update_available
     tracker.on_update_status = api._emit_update_status
     tracker.on_biome_confirm_request = api._request_biome_confirm
+    tracker.on_status_change = lambda status: api._emit_macro_status()
 
-    url = get_frontend_entry_url()
+    fe = get_frontend_entry_data()
+    win_args = {
+        "title": f"Coteab Macro {current_version}",
+        "js_api": api,
+        "width": 985, "height": 550,
+        "min_size": (550, 500),
+        "resizable": True, "frameless": False
+    }
+    if "html" in fe: win_args["html"] = fe["html"]
+    else: win_args["url"] = fe["url"]
 
-    window = webview.create_window(
-        title=f"Coteab Macro {current_version}",
-        url=url,
-        js_api=api,
-        width=950,
-        height=550,
-        min_size=(550, 500),
-        resizable=True,
-        frameless=False
-    )
+    window = webview.create_window(**win_args)
     api.set_window(window)
 
-    # Register global F1/F2 hotkeys (work even when app is not focused)
-    def on_f1():
-        if not api._tracker.detection_running:
-            api.set_biome_detection(True)
-            api._emit_shortcut("START")
+    # F1 = start, F2 = stop
+    _VK_F1 = 0x70
+    _VK_F2 = 0x71
+    _hotkey_stop = threading.Event()
+    _user32 = ctypes.windll.user32
 
-    def on_f2():
-        if api._tracker.detection_running:
-            api.set_biome_detection(False)
-            api._emit_shortcut("STOP")
-
-    keyboard.add_hotkey('f1', on_f1, suppress=False)
-    keyboard.add_hotkey('f2', on_f2, suppress=False)
-
-
-    class _WebviewLogHandler(logging.Handler):
-        def emit(self, record):
+    def _hotkey_poll_loop():
+        f1_was = False
+        f2_was = False
+        while not _hotkey_stop.is_set():
             try:
-                tracker.append_log(f"[pywebview] {record.getMessage()}")
+                f1_now = bool(_user32.GetAsyncKeyState(_VK_F1) & 0x8000)
+                f2_now = bool(_user32.GetAsyncKeyState(_VK_F2) & 0x8000)
+
+                if f1_now and not f1_was:
+                    def _do_start():
+                        try:
+                            if not api._tracker.detection_running:
+                                api.set_biome_detection(True)
+                                api._emit_shortcut("START")
+                        except Exception:
+                            pass
+                    threading.Thread(target=_do_start, daemon=True).start()
+
+                if f2_now and not f2_was:
+                    def _do_stop():
+                        try:
+                            if api._tracker.detection_running:
+                                api.set_biome_detection(False)
+                                api._emit_shortcut("STOP")
+                        except Exception:
+                            pass
+                    threading.Thread(target=_do_stop, daemon=True).start()
+
+                f1_was = f1_now
+                f2_was = f2_now
             except Exception:
                 pass
-    _wv_handler = _WebviewLogHandler()
-    _wv_handler.setLevel(logging.WARNING)
-    logging.getLogger("pywebview").addHandler(_wv_handler)
+            _hotkey_stop.wait(0.05)
 
+    _hotkey_thread = threading.Thread(target=_hotkey_poll_loop, name="HotkeyPoll", daemon=True)
+    _hotkey_thread.start()
 
+    class _WvLog(logging.Handler):
+        def emit(self, record):
+            try: tracker.append_log(f"[pywebview] {record.getMessage()}")
+            except Exception: pass
+    logging.getLogger("pywebview").addHandler(_WvLog())
+
+    # try edgechromium first, fall back to whatever else is available
     try:
-        tracker.append_log("Starting pywebview with edgechromium")
+        tracker.append_log("Starting pywebview (edgechromium)")
         webview.start(debug=False, gui="edgechromium", private_mode=False)
     except Exception as e:
         print(f"[Webview] edgechromium failed: {e}")
-        tracker.append_log(f"edgechromium backend failed: {e} — retrying with default backend...")
-        try:
-            webview.start(debug=False, private_mode=False)
+        tracker.append_log(f"edgechromium failed: {e}, retrying default...")
+        try: webview.start(debug=False, private_mode=False)
         except Exception as e2:
             print(f"[Webview] Default backend also failed: {e2}")
             tracker.append_log(f"Default backend also failed: {e2}")
 
     return tracker
 
+_LOADING_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f172a;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; overflow: hidden; color: #e2e8f0;
+  }
+  .wrap { text-align: center; }
+  .spinner {
+    width: 38px; height: 38px; margin: 0 auto 18px;
+    border: 3px solid rgba(255,255,255,0.08);
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h1 { font-size: 17px; font-weight: 600; margin-bottom: 6px; color: #f1f5f9; }
+  p  { font-size: 12px; color: #64748b; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="spinner"></div>
+    <h1>Tysm for using Coteab Macro!!</h1>
+    <p>Loading macro dependencies plss wait :3 (it should be quick)\u2026</p>
+  </div>
+</body>
+</html>
+"""
 
-def bind_global_hotkeys(tracker: BiomeTracker) -> None:
-    _ = tracker
+def stop_app(tracker):
+    if tracker and getattr(tracker, "detection_running", False): tracker.stop_detection()
 
-
-def stop_app(tracker: Optional[BiomeTracker]) -> None:
-    if tracker is not None and getattr(tracker, "detection_running", False):
-        tracker.stop_detection()
-
-
-def main() -> int:
+def main():
     ensure_workspace_files()
-
     tracker = None
+    api = Api(tracker=None)
     try:
-        tracker = BiomeTracker()
-        is_finalize_launch = "--coteab-finalize-update" in sys.argv
+        win_args = {
+            "title": f"Coteab Macro {current_version}",
+            "js_api": api,
+            "html": _LOADING_HTML,
+            "width": 985, "height": 550,
+            "min_size": (550, 500),
+            "resizable": True, "frameless": False,
+        }
+        loading_window = webview.create_window(**win_args)
+        api._window = loading_window
 
-        canonical_target = _read_cli_value("--coteab-target", "CoteabMacro.exe")
-        old_pid_raw = _read_cli_value("--coteab-old-pid", "")
+        def _background_init():
+            nonlocal tracker
+            try:
+                from biome_tracker.core import BiomeTracker
+                tracker = BiomeTracker()
+                canonical = _read_cli_value("--coteab-target", "CoteabMacro.exe")
+                old_pid_raw = _read_cli_value("--coteab-old-pid", "")
+                try: old_pid = int(old_pid_raw) if old_pid_raw else None
+                except Exception: old_pid = None
+
+                if tracker.maybe_self_rename_to_canonical_exe(canonical, old_pid=old_pid):
+                    loading_window.destroy()
+                    return
+
+                if _cfg_bool(getattr(tracker, "config", {}), "auto_update_enabled", True):
+                    if tracker.apply_startup_auto_update():
+                        loading_window.destroy()
+                        return
+
+
+                api._tracker = tracker
+                tracker.on_stats_update = api._emit_config_update
+                tracker.on_biome_update = api._emit_biome_update
+                tracker.on_update_available = api._emit_update_available
+                tracker.on_update_status = api._emit_update_status
+                tracker.on_biome_confirm_request = api._request_biome_confirm
+                tracker.on_status_change = lambda status: api._emit_macro_status()
+                api.set_window(loading_window)
+
+                fe = get_frontend_entry_data()
+                if "html" in fe:
+                    loading_window.load_html(fe["html"])
+                else:
+                    loading_window.load_url(fe["url"])
+
+            except Exception as exc:
+                print(f"Background init error: {exc}")
+                traceback.print_exc()
+
+        # ---- F1/F2 hotkeys ----
+        _VK_F1 = 0x70
+        _VK_F2 = 0x71
+        _hotkey_stop = threading.Event()
+        _user32 = ctypes.windll.user32
+
+        def _hotkey_poll_loop():
+            f1_was = False
+            f2_was = False
+            while not _hotkey_stop.is_set():
+                try:
+                    if api._tracker is None:
+                        _hotkey_stop.wait(0.2)
+                        continue
+
+                    f1_now = bool(_user32.GetAsyncKeyState(_VK_F1) & 0x8000)
+                    f2_now = bool(_user32.GetAsyncKeyState(_VK_F2) & 0x8000)
+
+                    if f1_now and not f1_was:
+                        def _do_start():
+                            try:
+                                if not api._tracker.detection_running:
+                                    api.set_biome_detection(True)
+                                    api._emit_shortcut("START")
+                            except Exception:
+                                pass
+                        threading.Thread(target=_do_start, daemon=True).start()
+
+                    if f2_now and not f2_was:
+                        def _do_stop():
+                            try:
+                                if api._tracker.detection_running:
+                                    api.set_biome_detection(False)
+                                    api._emit_shortcut("STOP")
+                            except Exception:
+                                pass
+                        threading.Thread(target=_do_stop, daemon=True).start()
+
+                    f1_was = f1_now
+                    f2_was = f2_now
+                except Exception:
+                    pass
+                _hotkey_stop.wait(0.05)
+
+        threading.Thread(target=_hotkey_poll_loop, name="HotkeyPoll", daemon=True).start()
+
+        class _WvLog(logging.Handler):
+            def emit(self, record):
+                try:
+                    if tracker: tracker.append_log(f"[pywebview] {record.getMessage()}")
+                except Exception: pass
+        logging.getLogger("pywebview").addHandler(_WvLog())
+
         try:
-            old_pid = int(old_pid_raw) if old_pid_raw else None
-        except Exception:
-            old_pid = None
-
-        if tracker.maybe_self_rename_to_canonical_exe(canonical_target, old_pid=old_pid):
-            return 0
-
-        auto_update_enabled = _read_config_bool(
-            getattr(tracker, "config", {}),
-            "auto_update_enabled",
-            True,
-        )
-        if auto_update_enabled and tracker.apply_startup_auto_update():
-            return 0
-
-        tracker = launch_app(Api, tracker=tracker)
+            webview.start(func=_background_init, debug=False, gui="edgechromium", private_mode=False)
+        except Exception as e:
+            print(f"[Webview] edgechromium failed: {e}")
+            try: webview.start(func=_background_init, debug=False, private_mode=False)
+            except Exception as e2:
+                print(f"[Webview] Default backend also failed: {e2}")
 
         return 0
+
     except KeyboardInterrupt:
-        print("Exited (Keyboard interrupted)")
+        print("Exited (Ctrl+C)")
         return 130
     except Exception as exc:
         print(f"Fatal error: {exc}")
         traceback.print_exc()
         return 1
     finally:
-        try:
-            stop_app(tracker)
-        except Exception:
-            pass
-        try:
-            sync_config()
-        except Exception:
-            pass
-        try:
-            keyboard.unhook_all()
-        except Exception:
-            pass
+        try: stop_app(tracker)
+        except Exception: pass
+        try: sync_config()
+        except Exception: pass
+        try: _hotkey_stop.set()
+        except Exception: pass
 
 
 if __name__ == "__main__":
