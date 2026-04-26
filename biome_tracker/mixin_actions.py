@@ -24,6 +24,21 @@ class ActionsMixin:
         except Exception as e:
             self.error_logging(e, "Error in initialize_paths_and_files")
 
+    def _safe_type_text(self, text):
+        text = str(text)
+        if not self.config.get("azerty_mode", False):
+            autoit.send(text)
+            return
+        try:
+            import win32clipboard
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
+            win32clipboard.CloseClipboard()
+            autoit.send("^v")
+        except Exception:
+            autoit.send(text)
+
     def extract_text_with_easyocr(self, region):
         try:
             x, y, width, height = region
@@ -547,46 +562,6 @@ class ActionsMixin:
         except Exception:
             pass
 
-    def _teleport_crack_impl(self):
-        try:
-            if self.config.get("enable_idle_mode", False):
-                return
-            if not self.detection_running or self.reconnecting_state:
-                return
-            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
-            inventory_menu = self.config.get("inventory_menu", [36, 535])
-            items_tab = self.config.get("items_tab", [1272, 329])
-            search_bar = self.config.get("search_bar", [855, 358])
-            first_item_slot = self.config.get("first_item_inventory_slot_pos", [845, 460])
-            use_button = self.config.get("use_button", [710, 573])
-            inventory_close = self.config.get("inventory_close_button", [1418, 298])
-            amount_box = self.config.get("amount_box", [954, 429])
-
-            self.activate_roblox_window()
-            time.sleep(0.15)
-            self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
-            time.sleep(0.3 + float(self.click_delay_var.get()))
-            self.Global_MouseClick(items_tab[0], items_tab[1])
-            time.sleep(0.3 + float(self.click_delay_var.get()))
-            self.Global_MouseClick(search_bar[0], search_bar[1])
-            time.sleep(0.3 + float(self.click_delay_var.get()))
-            self.Global_MouseClick(amount_box[0], amount_box[1], click=2)
-            time.sleep(0.3 + float(self.click_delay_var.get()))
-            keyboard.send("ctrl+a")
-            time.sleep(0.06 + float(self.click_delay_var.get()))
-            keyboard.send("backspace")
-            time.sleep(0.3 + float(self.click_delay_var.get()))
-            autoit.send("crack")
-            time.sleep(0.45 + float(self.click_delay_var.get()))
-            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
-            time.sleep(0.25 + float(self.click_delay_var.get()))
-            self.Global_MouseClick(use_button[0], use_button[1])
-            time.sleep(0.3 + float(self.click_delay_var.get()))
-            self.Global_MouseClick(inventory_close[0], inventory_close[1])
-            time.sleep(0.2 + float(self.click_delay_var.get()))
-        except Exception as e:
-            self.error_logging(e, "Error in _teleport_crack_impl")
-
     def _make_player_embed(self, kind, name, pid, ts_iso, duration_text=None, join_biome=None, left_biome=None):
         color = 3066993 if kind == "join" else 15158332
         title = "Player Joined" if kind == "join" else "Player Left"
@@ -889,22 +864,33 @@ class ActionsMixin:
                 return
             autoit.mouse_up("right")
             try:
-                autoit.mouse_wheel("up", max(1, int(round(5000 / 120.0))))
+                autoit.send("{I down}")
             except Exception:
-                try:
-                    pyautogui.scroll(5000)
-                except Exception:
-                    pass
-            if not self._sleep_with_cancel(3.0):
+                pass
+            if not self._sleep_with_cancel(4.0):
+                try: autoit.send("{I up}")
+                except: pass
                 return
             try:
-                autoit.mouse_wheel("down", max(1, int(round(1500 / 120.0))))
+                autoit.send("{I up}")
             except Exception:
-                try:
-                    pyautogui.scroll(-1500)
-                except Exception:
-                    pass
-            if not self._sleep_with_cancel(0.2):
+                pass
+            if not self._sleep_with_cancel(0.3):
+                return
+
+            try:
+                autoit.send("{O down}")
+            except Exception:
+                pass
+            if not self._sleep_with_cancel(0.85):
+                try: autoit.send("{O up}")
+                except: pass
+                return
+            try:
+                autoit.send("{O up}")
+            except Exception:
+                pass
+            if not self._sleep_with_cancel(0.3):
                 return
 
             # 4.5 Equip Float Aura if enabled
@@ -936,10 +922,10 @@ class ActionsMixin:
                                 if not self._sleep_with_cancel(0.5 + inventory_click_delay):
                                     return
                                 try:
-                                    autoit.send(aura_name)
+                                    self._safe_type_text(aura_name)
                                 except Exception:
                                     try:
-                                        keyboard.write(aura_name.lower())
+                                        self._safe_type_text(aura_name.lower())
                                     except Exception:
                                         pass
                                 if not self._sleep_with_cancel(0.8 + inventory_click_delay):
@@ -987,13 +973,47 @@ class ActionsMixin:
             self.error_logging(e, f"Failed to load obby macro from {json_file_path}")
             return
 
-        events = data.get("events", [])
-        if not events:
+        if isinstance(data, dict) and "events" in data:
+            all_events = data["events"]
+        elif isinstance(data, list):
+            all_events = data
+        else:
+            print("[Obby] obby.json has unexpected format. Skipping.")
             return
-        events.sort(key=lambda ev: ev.get("t", 0.0))
 
-        start_time = time.perf_counter()
-        pressed_keys = set()
+        _ALLOWED_KEYS = {"w", "a", "s", "d", "space"}
+        events = [
+            e for e in all_events
+            if e.get("type") in ("key_down", "key_up") and e.get("key", "").lower() in _ALLOWED_KEYS
+        ]
+        if not events:
+            print("[Obby] No movement events found in obby.json.")
+            return
+
+        events.sort(key=lambda ev: ev.get("t", 0.0))
+        _KEY_MAP = {"space": "SPACE", "enter": "ENTER", "esc": "ESC", "shift": "SHIFT"}
+
+        def _to_autoit(k):
+            norm = k.strip().lower()
+            mapped = _KEY_MAP.get(norm)
+            if mapped:
+                return mapped
+            if len(norm) == 1 and norm.isalpha():
+                return norm.upper()
+            return norm.upper()
+
+        def _key_down(k):
+            token = _to_autoit(k)
+            if token:
+                autoit.send(f"{{{token} down}}")
+
+        def _key_up(k):
+            token = _to_autoit(k)
+            if token:
+                autoit.send(f"{{{token} up}}")
+
+        non_vip = bool(self.config.get("non_vip_movement_path", False))
+        speed_multiplier = 1.22 if non_vip else 1.0
 
         def _cancelled():
             return (
@@ -1005,81 +1025,59 @@ class ActionsMixin:
                 or self.auto_pop_state
             )
 
-        def _release_all():
-            if pressed_keys:
-                print(f"[Obby] Releasing {len(pressed_keys)} stuck keys...")
-                for k in list(pressed_keys):
-                    try:
-                        keyboard.release(k)
-                    except Exception:
-                        pass
-                pressed_keys.clear()
+        pressed_keys = set()
+        base_t = events[0].get("t", 0.0)
+        start_wall = time.perf_counter()
 
-        for ev in events:
-            if _cancelled():
-                print("[Obby] Cancelled during macro playback.")
-                _release_all()
-                return
+        print(f"[Obby] Playback ({len(events)} events, speed_mult={speed_multiplier:.2f})...")
 
-            t = float(ev.get("t", 0.0))
-            target_time = start_time + t
-            now = time.perf_counter()
+        try:
+            for ev in events:
+                if _cancelled():
+                    print("[Obby] Cancelled during playback.")
+                    return
 
-            if target_time > now:
-                diff = target_time - now
-                if diff > 0.02:
-                    sleep_ms = int((diff - 0.015) * 1000)
-                    chunks = sleep_ms // 50
-                    for _ in range(chunks):
-                        if _cancelled():
-                            print("[Obby] Cancelled during sleep.")
-                            _release_all()
-                            return
-                        time.sleep(0.05)
-                    rem = (sleep_ms % 50) / 1000.0
-                    if rem > 0:
-                        time.sleep(rem)
-                        if _cancelled():
-                            print("[Obby] Cancelled during sleep.")
-                            _release_all()
-                            return
-                
-                while time.perf_counter() < target_time:
+                ev_t = float(ev.get("t", base_t)) - base_t
+                if speed_multiplier != 1.0:
+                    ev_t *= speed_multiplier
+                target_wall = start_wall + ev_t
+
+                while True:
+                    now = time.perf_counter()
+                    if now >= target_wall:
+                        break
+                    remaining = target_wall - now
                     if _cancelled():
                         print("[Obby] Cancelled during wait.")
-                        _release_all()
                         return
-                    time.sleep(0.001)
+                    if remaining > 0.002:
+                        time.sleep(min(remaining * 0.5, 0.005))
 
-            typ = ev.get("type")
-            try:
-                if typ == "mouse_move":
-                    autoit.mouse_move(int(ev["x"]), int(ev["y"]), 0)
-                elif typ == "mouse_down":
-                    b = ev.get("button", "left")
-                    autoit.mouse_down(b)
-                elif typ == "mouse_up":
-                    b = ev.get("button", "left")
-                    autoit.mouse_up(b)
-                elif typ == "mouse_wheel":
-                    delta = int(ev.get("delta", 0))
-                    if delta != 0:
-                        mouse.wheel(delta)
-                elif typ == "key_down":
-                    k = ev.get("key")
-                    if k and k not in ("f1", "f2", "f3", "f4"):
-                        keyboard.press(k)
+                typ = str(ev.get("type", ""))
+                k = str(ev.get("key", "")).lower().strip()
+                try:
+                    if typ == "key_down" and k:
+                        _key_down(k)
                         pressed_keys.add(k)
-                elif typ == "key_up":
-                    k = ev.get("key")
-                    if k and k not in ("f1", "f2", "f3", "f4"):
-                        keyboard.release(k)
+                    elif typ == "key_up" and k:
+                        _key_up(k)
                         pressed_keys.discard(k)
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
-        _release_all()
-        print("[Obby] Macro finished.")
+            print("[Obby] Macro finished successfully yatta")
+        finally:
+            for key_name in list(pressed_keys):
+                try:
+                    _key_up(key_name)
+                except Exception:
+                    pass
+            for k in ("w", "a", "s", "d", "space"):
+                try:
+                    _key_up(k)
+                except Exception:
+                    pass
+                time.sleep(0.02)
 
     # ── Easter Egg Collection ─────────────────────────────────────────
     def egg_collect_loop(self):
@@ -1128,31 +1126,41 @@ class ActionsMixin:
                     time.sleep(2)
                     continue
 
-                self._egg_collecting = True
+                self._egg_collection_pending = True
                 try:
-                    time.sleep(3.5)
-                    if self.is_fishing_mode_enabled():
-                        close_btn = self.config.get("fishing_close_button_pos", [1113, 342])
-                        if close_btn and close_btn[0]:
-                            self.activate_roblox_window()
-                            time.sleep(0.3)
-                            try:
-                                autoit.mouse_click("left", close_btn[0], close_btn[1], 1, speed=3)
-                            except Exception:
-                                self.Global_MouseClick(close_btn[0], close_btn[1])
-                            time.sleep(1.0)
-                    self._perform_egg_collect_impl()
+                    self._action_scheduler.enqueue_action(self._scheduled_egg_collect, name="egg_collect", priority=4)
+                    while getattr(self, "_egg_collection_pending", False) and self.detection_running:
+                        time.sleep(1)
                 except Exception as e:
-                    self.error_logging(e, "Error in egg_collect_loop execution")
-                finally:
-                    self._egg_collecting = False
                     self._egg_collection_pending = False
-
-                self.last_egg_collect_time = datetime.now()
+                    self._egg_collecting = False
+                    self.error_logging(e, "Error enqueueing egg collect")
 
             except Exception as e:
                 self.error_logging(e, "Error in egg_collect_loop")
             time.sleep(1)
+
+    def _scheduled_egg_collect(self):
+        try:
+            self._egg_collecting = True
+            time.sleep(3.5)
+            if self.is_fishing_mode_enabled():
+                close_btn = self.config.get("fishing_close_button_pos", [1113, 342])
+                if close_btn and close_btn[0]:
+                    self.activate_roblox_window()
+                    time.sleep(0.3)
+                    try:
+                        autoit.mouse_click("left", close_btn[0], close_btn[1], 1, speed=3)
+                    except Exception:
+                        self.Global_MouseClick(close_btn[0], close_btn[1])
+                    time.sleep(1.0)
+            self._perform_egg_collect_impl()
+        except Exception as e:
+            self.error_logging(e, "Error in _scheduled_egg_collect execution")
+        finally:
+            self._egg_collecting = False
+            self._egg_collection_pending = False
+            self.last_egg_collect_time = datetime.now()
 
     def _perform_egg_collect_impl(self):
         try:
@@ -1222,6 +1230,445 @@ class ActionsMixin:
         ("Either Royal Egg or Hatch Egg",        "a special egg has spawned", "1 in 80,000,000 / 1 in 40,000,000"),
     ]
 
+    def eden_ocr_check_loop(self):
+        last_check = time.monotonic()
+        while self.detection_running:
+            try:
+                if not self.config.get("eden_detection", False):
+                    time.sleep(2)
+                    continue
+
+                try:
+                    interval_min = float(self.config.get("eden_check_interval", "5"))
+                except Exception:
+                    interval_min = 5.0
+
+                interval_sec = max(60.0, interval_min * 60.0)
+
+                if (time.monotonic() - last_check) < interval_sec:
+                    time.sleep(2)
+                    continue
+
+                if getattr(self, "_eden_checking_pending", False) or getattr(self, "_eden_checking", False):
+                    time.sleep(2)
+                    continue
+
+                try:
+                    pending_high_priority = False
+                    for item in list(self._action_scheduler._pq.queue):
+                        qname = str(item[2]).lower()
+                        if "br" in qname or "sc" in qname or "merchant" in qname or "portable" in qname:
+                            pending_high_priority = True
+                            break
+                    if pending_high_priority:
+                        time.sleep(2)
+                        continue
+                except Exception:
+                    pass
+
+                if (self.reconnecting_state or
+                    self.auto_pop_state or
+                    getattr(self, "_egg_collecting", False) or
+                    getattr(self, "_obby_running", False) or
+                    getattr(self, "_br_sc_running", False) or
+                    getattr(self, "_mt_running", False) or
+                    getattr(self, "on_auto_merchant_state", False) or
+                    getattr(self, "_auto_merchant_running", False) or
+                    getattr(self, "_fishing_busy", False) or
+                    self._is_fishing_blocked()):
+                    time.sleep(2)
+                    continue
+
+                current_biome = str(getattr(self, "current_biome", "") or "").upper().strip()
+                if current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"):
+                    time.sleep(2)
+                    continue
+
+                if (getattr(self, "enable_potion_crafting_var", None)
+                    and self.enable_potion_crafting_var.get()):
+                    time.sleep(2)
+                    continue
+
+                if not self.check_roblox_procs():
+                    time.sleep(2)
+                    continue
+
+                self._eden_checking_pending = True
+                last_check = time.monotonic()
+                try:
+                    self._action_scheduler.enqueue_action(self._scheduled_eden_ocr_check, name="eden_ocr", priority=4)
+                    while getattr(self, "_eden_checking_pending", False) and self.detection_running:
+                        time.sleep(1)
+                except Exception as e:
+                    self._eden_checking_pending = False
+                    self._eden_checking = False
+                    self.error_logging(e, "Error enqueueing eden ocr")
+
+            except Exception as e:
+                self.error_logging(e, "Error in eden_ocr_check_loop")
+            time.sleep(1)
+
+    def _scheduled_eden_ocr_check(self):
+        try:
+            self._eden_checking = True
+            print("[Eden ocr] Starting eden ocr check")
+            chat_box_region = self.config.get("chat_box_ocr_pos", [0, 0, 0, 0])
+            if not chat_box_region or len(chat_box_region) < 4: return
+            if chat_box_region[2] <= 0 or chat_box_region[3] <= 0: return
+
+            chat_hover = self.config.get("chat_hover_pos", [272, 252])
+            chat_ocr_region = self.config.get("chat_tab_ocr_pos", [341, 83, 210, 40])
+            chat_close = self.config.get("chat_close_button", [174, 40])
+
+            if not (chat_hover and chat_hover[0] and chat_close and chat_close[0]): return
+
+            for _ in range(3):
+                self.activate_roblox_window()
+                time.sleep(0.15)
+
+            sw = pyautogui.size()
+            autoit.mouse_move(sw.width // 2, sw.height // 2, speed=3)
+            time.sleep(0.6)
+            autoit.mouse_move(chat_hover[0], chat_hover[1], speed=3)
+            time.sleep(0.6)
+
+            # Check if chat is already open
+            chat_is_open = False
+            for attempt in range(1, 3):
+                tab_text = self.extract_text_with_easyocr(tuple(chat_ocr_region)).lower()
+                if fuzzy_match_any(tab_text, ["general", "server message"], threshold=0.8):
+                    chat_is_open = True
+                    break
+                if attempt < 2:
+                    time.sleep(0.35)
+
+            if not chat_is_open:
+                autoit.mouse_click("left", chat_close[0], chat_close[1], 1, speed=3)
+                time.sleep(0.8)
+
+                autoit.mouse_move(chat_hover[0], chat_hover[1], speed=3)
+                time.sleep(0.5)
+
+                for attempt in range(1, 3):
+                    tab_text = self.extract_text_with_easyocr(tuple(chat_ocr_region)).lower()
+                    if fuzzy_match_any(tab_text, ["general", "server message"], threshold=0.8):
+                        chat_is_open = True
+                        break
+                    if attempt < 2:
+                        time.sleep(0.35)
+
+            if not chat_is_open:
+                self.append_log("[EdenOCR] Could not confirm chat is open. Skipping OCR check.")
+                return
+
+            text = self.extract_text_with_easyocr(tuple(chat_box_region)).lower()
+            if not text: return
+            
+            _PLAYER_TAGS = [
+                "[fan]", "[vip]", "[vip+]", "[donator]", "[contributor]",
+                "[cm]", "[dev]", "[moderator]", "[admin]", "[owner]",
+                "[og]", "[tester]", "[youtuber]", "[rolls]"
+            ]
+            _TAG_LOOKBACK = 100
+
+            def _is_player_message(match_pos: int) -> bool:
+                start = max(0, match_pos - _TAG_LOOKBACK)
+                prefix = text[start:match_pos]
+                return any(tag in prefix for tag in _PLAYER_TAGS)
+
+            _EDEN_FUZZY_THRESHOLD = 0.8
+            fuzzy_target = "devourer of the void, eden has appeared"
+
+            found_eden = False
+            
+            exact_pos = text.find(fuzzy_target)
+            if exact_pos != -1:
+                if not _is_player_message(exact_pos):
+                    found_eden = True
+                else:
+                    print("[eden ocr] meh u aint slick lil bro")
+                    self.append_log("[Eden OCR] 'Eden' exact string detected but it's just some random player trolling shit")
+            else:
+                win_len = len(fuzzy_target)
+                if win_len <= len(text):
+                    for i in range(len(text) - win_len + 1):
+                        window = text[i:i + win_len]
+                        ratio = difflib.SequenceMatcher(None, fuzzy_target, window).ratio()
+                        if ratio >= _EDEN_FUZZY_THRESHOLD:
+                            if not _is_player_message(i):
+                                found_eden = True
+                            else:
+                                print("[eden ocr] STOP TRYING THIS DOGSHIT")
+                                self.append_log("[Eden OCR] 'Eden' fuzzy string detected but it's just some random player trolling shit")
+                            break
+
+            if not found_eden: return
+
+            # Skip if eden recently found to prevent spam
+            _EDEN_OCR_COOLDOWN_SEC = 2400 # 40 mins
+            last_eden_time = getattr(self, "_last_eden_ocr_found_time", 0)
+            now = time.monotonic()
+            if (now - last_eden_time) < _EDEN_OCR_COOLDOWN_SEC: return
+            self._last_eden_ocr_found_time = now
+
+            print(f"[EdenOCR] Eden spawn detected!")
+            self.append_log(f"[EdenOCR] Eden spawn detected!")
+
+            should_ping = self.config.get("ping_eden", False)
+            discord_user_id = str(self.config.get("eden_user_id", "")).strip() if should_ping else ""
+            screenshot_path = None
+            
+            try:
+                if self.is_roblox_focused():
+                    x, y, w, h = int(chat_box_region[0]), int(chat_box_region[1]), int(chat_box_region[2]), int(chat_box_region[3])
+                    img = pyautogui.screenshot(region=(x, y, w, h))
+                    screenshot_dir = os.path.join(os.getcwd(), "images")
+                    os.makedirs(screenshot_dir, exist_ok=True)
+                    screenshot_path = os.path.join(screenshot_dir, f"eden_ocr_{int(time.time())}.png")
+                    img.save(screenshot_path)
+            except Exception as e:
+                print(f"[EdenOCR] Failed to take chat screenshot: {e}")
+                screenshot_path = None
+
+            try:
+                self.send_eden_ocr_webhook(discord_user_id, screenshot_path=screenshot_path)
+            except Exception as e:
+                print(f"[EdenOCR] Failed to send webhook: {e}")
+
+        except Exception as e:
+            self.error_logging(e, "Error in _scheduled_eden_ocr_check")
+        finally:
+            try:
+                chat_close = self.config.get("chat_close_button", [174, 40])
+                if chat_close and chat_close[0]:
+                    autoit.mouse_click("left", chat_close[0], chat_close[1], 1, speed=3)
+            except Exception:
+                pass
+            self._eden_checking = False
+            self._eden_checking_pending = False
+
+
+    def merchant_ocr_check_loop(self):
+        last_check = time.monotonic()
+        while self.detection_running:
+            try:
+                if not self.config.get("merchant_ocr", False):
+                    time.sleep(2)
+                    continue
+
+                try:
+                    interval_sec = float(self.config.get("merchant_ocr_interval", "60"))
+                except Exception:
+                    interval_sec = 60.0
+
+                interval_sec = max(2.0, interval_sec)
+
+                if (time.monotonic() - last_check) < interval_sec:
+                    time.sleep(2)
+                    continue
+
+                if getattr(self, "_merchant_checking_pending", False) or getattr(self, "_merchant_checking", False):
+                    time.sleep(2)
+                    continue
+
+                try:
+                    pending_high_priority = False
+                    for item in list(self._action_scheduler._pq.queue):
+                        qname = str(item[2]).lower()
+                        if "br" in qname or "sc" in qname or "merchant" in qname or "portable" in qname or "eden_ocr" in qname or "egg_ocr" in qname:
+                            pending_high_priority = True
+                            break
+                    if pending_high_priority:
+                        time.sleep(2)
+                        continue
+                except Exception:
+                    pass
+
+                if (self.reconnecting_state or
+                    self.auto_pop_state or
+                    getattr(self, "_egg_collecting", False) or
+                    getattr(self, "_obby_running", False) or
+                    getattr(self, "_br_sc_running", False) or
+                    getattr(self, "_mt_running", False) or
+                    getattr(self, "on_auto_merchant_state", False) or
+                    getattr(self, "_auto_merchant_running", False) or
+                    getattr(self, "_fishing_busy", False) or
+                    self._is_fishing_blocked()):
+                    time.sleep(2)
+                    continue
+
+                current_biome = str(getattr(self, "current_biome", "") or "").upper().strip()
+                if current_biome in ("GLITCHED", "CYBERSPACE", "DREAMSPACE"):
+                    time.sleep(2)
+                    continue
+                    
+                if (getattr(self, "enable_potion_crafting_var", None)
+                    and self.enable_potion_crafting_var.get()):
+                    time.sleep(2)
+                    continue
+
+                if not self.check_roblox_procs():
+                    time.sleep(2)
+                    continue
+
+                self._merchant_checking_pending = True
+                last_check = time.monotonic()
+                try:
+                    self._action_scheduler.enqueue_action(self._scheduled_merchant_ocr_check, name="merchant_ocr", priority=4)
+                    while getattr(self, "_merchant_checking_pending", False) and self.detection_running:
+                        time.sleep(1)
+                except Exception as e:
+                    self._merchant_checking_pending = False
+                    self._merchant_checking = False
+                    self.error_logging(e, "Error enqueueing merchant ocr")
+
+            except Exception as e:
+                self.error_logging(e, "Error in merchant_ocr_check_loop")
+            time.sleep(1)
+
+    def _scheduled_merchant_ocr_check(self):
+        try:
+            self._merchant_checking = True
+            print("[Merchant OCR] Starting merchant ocr check")
+            chat_box_region = self.config.get("chat_box_ocr_pos", [0, 0, 0, 0])
+            if not chat_box_region or len(chat_box_region) < 4: return
+            if chat_box_region[2] <= 0 or chat_box_region[3] <= 0: return
+
+            chat_hover = self.config.get("chat_hover_pos", [272, 252])
+            chat_ocr_region = self.config.get("chat_tab_ocr_pos", [341, 83, 210, 40])
+            chat_close = self.config.get("chat_close_button", [174, 40])
+
+            if not (chat_hover and chat_hover[0] and chat_close and chat_close[0]): return
+
+            for _ in range(3):
+                self.activate_roblox_window()
+                time.sleep(0.15)
+
+            sw = pyautogui.size()
+            autoit.mouse_move(sw.width // 2, sw.height // 2, speed=3)
+            time.sleep(0.6)
+            autoit.mouse_move(chat_hover[0], chat_hover[1], speed=3)
+            time.sleep(0.6)
+
+            # Check if chat is already open
+            chat_is_open = False
+            for attempt in range(1, 3):
+                tab_text = self.extract_text_with_easyocr(tuple(chat_ocr_region)).lower()
+                if fuzzy_match_any(tab_text, ["general", "server message"], threshold=0.8):
+                    chat_is_open = True
+                    break
+                if attempt < 2:
+                    time.sleep(0.35)
+
+            if not chat_is_open:
+                autoit.mouse_click("left", chat_close[0], chat_close[1], 1, speed=3)
+                time.sleep(0.8)
+
+                autoit.mouse_move(chat_hover[0], chat_hover[1], speed=3)
+                time.sleep(0.5)
+
+                for attempt in range(1, 3):
+                    tab_text = self.extract_text_with_easyocr(tuple(chat_ocr_region)).lower()
+                    if fuzzy_match_any(tab_text, ["general", "server message"], threshold=0.8):
+                        chat_is_open = True
+                        break
+                    if attempt < 2:
+                        time.sleep(0.35)
+
+            if not chat_is_open:
+                self.append_log("[Merchant OCR] Could not confirm chat is open. Skipping OCR check.")
+                return
+
+            text = self.extract_text_with_easyocr(tuple(chat_box_region)).lower()
+            if not text: return
+            
+            _PLAYER_TAGS = [
+                "[fan]", "[vip]", "[vip+]", "[donator]", "[contributor]",
+                "[cm]", "[dev]", "[moderator]", "[admin]", "[owner]",
+                "[og]", "[tester]", "[youtuber]", "[rolls]"
+            ]
+            _TAG_LOOKBACK = 100
+
+            def _is_player_message(match_pos: int) -> bool:
+                start = max(0, match_pos - _TAG_LOOKBACK)
+                prefix = text[start:match_pos]
+                return any(tag in prefix for tag in _PLAYER_TAGS)
+
+            _MARI_FUZZY = "[merchant]: mari has arrived on the island..."
+            _JESTER_FUZZY = "[merchant]: jester has arrived on the island!!"
+            _RIN_FUZZY = "[merchant]: rin has arrived on the island!!"
+            _NON_MERCHANT_NAMES = {"lime"}
+            found_merchant = ""
+
+            for target in [_MARI_FUZZY, _JESTER_FUZZY, _RIN_FUZZY]:
+                expected_name = target.split(":")[1].strip().split(" ")[0].lower()
+                exact_pos = text.find(target)
+                if exact_pos != -1:
+                    if not _is_player_message(exact_pos):
+                        found_merchant = expected_name
+                        break
+                else:
+                    win_len = len(target)
+                    if win_len <= len(text):
+                        for i in range(len(text) - win_len + 1):
+                            window = text[i:i + win_len]
+                            ratio = difflib.SequenceMatcher(None, target, window).ratio()
+                            if ratio >= 0.8:
+                                if not _is_player_message(i):
+                                    try:
+                                        actual_name = window.split(":")[1].strip().split(" ")[0].lower()
+                                    except (IndexError, AttributeError):
+                                        actual_name = ""
+                                    if actual_name in _NON_MERCHANT_NAMES: break  # just gottta skip non-merchant NPC name like lime
+                                    name_ratio = difflib.SequenceMatcher(None, expected_name, actual_name).ratio()
+                                    if name_ratio >= 0.6: found_merchant = expected_name
+                                break
+
+            if not found_merchant: return
+
+            # Skip if merchant recently found
+            _MERCHANT_OCR_COOLDOWN_SEC = 1500 # 25 mins
+            last_merchant_time = getattr(self, "_last_merchant_ocr_found_time", 0)
+            now = time.monotonic()
+            if (now - last_merchant_time) < _MERCHANT_OCR_COOLDOWN_SEC: return
+            self._last_merchant_ocr_found_time = now
+
+            print(f"[Merchant OCR] {found_merchant.title()} spawn detected!")
+            self.append_log(f"[Merchant OCR] {found_merchant.title()} spawn detected!")
+            screenshot_path = None
+            try:
+                if self.is_roblox_focused():
+                    x, y, w, h = int(chat_box_region[0]), int(chat_box_region[1]), int(chat_box_region[2]), int(chat_box_region[3])
+                    img = pyautogui.screenshot(region=(x, y, w, h))
+                    screenshot_dir = os.path.join(os.getcwd(), "images")
+                    os.makedirs(screenshot_dir, exist_ok=True)
+                    screenshot_path = os.path.join(screenshot_dir, f"merchant_ocr_{int(time.time())}.png")
+                    img.save(screenshot_path)
+            except Exception as e:
+                print(f"[Merchant OCR] Failed to take chat screenshot: {e}")
+                screenshot_path = None
+
+            try:
+                if hasattr(self, "send_merchant_webhook"):
+                    self.send_merchant_webhook(found_merchant.title(), screenshot_path=screenshot_path, source='ocr')
+                    if hasattr(self, "last_merchant_sent"): self.last_merchant_sent[(found_merchant.title(), 'ocr')] = time.time()
+
+            except Exception as e:
+                print(f"[Merchant OCR] Failed to send webhook: {e}")
+
+        except Exception as e:
+            self.error_logging(e, "Error in _scheduled_merchant_ocr_check")
+        finally:
+            try:
+                chat_close = self.config.get("chat_close_button", [174, 40])
+                if chat_close and chat_close[0]:
+                    autoit.mouse_click("left", chat_close[0], chat_close[1], 1, speed=3)
+            except Exception:
+                pass
+            self._merchant_checking = False
+            self._merchant_checking_pending = False
+
+
     def egg_ocr_check_loop(self):
         last_check = time.monotonic()
         while self.detection_running:
@@ -1235,7 +1682,19 @@ class ActionsMixin:
                     time.sleep(1)
                     continue
 
-                # Don't check during these states
+                try:
+                    pending_high_priority = False
+                    for item in list(self._action_scheduler._pq.queue):
+                        qname = str(item[2]).lower()
+                        if "br" in qname or "sc" in qname or "merchant" in qname or "portable" in qname:
+                            pending_high_priority = True
+                            break
+                    if pending_high_priority:
+                        time.sleep(2)
+                        continue
+                except Exception:
+                    pass
+
                 if (self.reconnecting_state or
                     self.auto_pop_state or
                     getattr(self, "_egg_collecting", False) or
@@ -1424,6 +1883,13 @@ class ActionsMixin:
 
         except Exception as e:
             self.error_logging(e, "Error in _perform_egg_ocr_check")
+        finally:
+            try:
+                chat_close = self.config.get("chat_close_button", [174, 40])
+                if chat_close and chat_close[0]:
+                    autoit.mouse_click("left", chat_close[0], chat_close[1], 1, speed=3)
+            except Exception:
+                pass
 
     def perform_quest_reroll(self, quest_index):
         try:
@@ -1528,7 +1994,6 @@ class ActionsMixin:
 
 
     def _potion_thread_launcher(self, file_name, potions_directory="crafting_files_do_not_open", stop_after=None, cancel_if=None):
-        """Replicate Rust run_potion_macro: prep sequence then replay loop."""
         try:
             final_name = file_name if file_name.endswith(".json") else f"{file_name}.json"
             path = os.path.join(os.getcwd(), potions_directory, final_name)
@@ -1599,7 +2064,7 @@ class ActionsMixin:
                 autoit.send("{BACKSPACE}")
                 time.sleep(0.6 + inventory_click_delay)
                 if potion_name:
-                    autoit.send(potion_name)
+                    self._safe_type_text(potion_name)
                     time.sleep(0.6 + inventory_click_delay)
                 autoit.send("{ENTER}")
                 time.sleep(1.5 + inventory_click_delay)
@@ -2360,6 +2825,117 @@ class ActionsMixin:
         time.sleep(0.335)
         autoit.mouse_click("left", x, y, click, speed=3)
 
+    def use_portable_crack(self):
+        try:
+            self._action_scheduler.enqueue_action(self._teleport_crack_impl, name="teleport_crack", priority=8)
+        except Exception:
+            try:
+                self._teleport_crack_impl()
+            except Exception:
+                pass
+
+    def _teleport_crack_impl(self):
+        self._portable_crack_running = True
+        fishing_override = bool(getattr(self, "_fishing_br_sc_override", False))
+        try:
+            def _cancelled():
+                if fishing_override:
+                    return (
+                        not self.detection_running
+                        or self.reconnecting_state
+                    )
+                return (
+                    not self.detection_running
+                    or self.reconnecting_state
+                    or self.auto_pop_state
+                    or self.on_auto_merchant_state
+                    or self._is_fishing_blocked()
+                    or self.config.get("enable_potion_crafting")
+                    or getattr(self, "_egg_collecting", False)
+                    or (getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get())
+                )
+
+            def _do_sleep(seconds):
+                if fishing_override:
+                    time.sleep(max(0.0, seconds))
+                    return not _cancelled()
+                return self._sleep_with_cancel(seconds)
+
+            if _cancelled(): return
+            if not _do_sleep(1.3): return
+
+            inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
+            inventory_menu = self.config.get("inventory_menu", [36, 535])
+            items_tab = self.config.get("items_tab", [1272, 329])
+            search_bar = self.config.get("search_bar", [855, 358])
+            first_item_slot = self.config.get("first_item_inventory_slot_pos", [845, 460])
+            amount_box = self.config.get("amount_box", [594, 570])
+            use_button = self.config.get("use_button", [710, 573])
+            inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
+
+            for _ in range(3):
+                if _cancelled(): return
+                self.activate_roblox_window()
+                if not _do_sleep(0.15): return
+
+            self.append_log("Using Portable Crack")
+
+            self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
+            if not _do_sleep(0.2 + inventory_click_delay): return
+            self.Global_MouseClick(items_tab[0], items_tab[1])
+            if not _do_sleep(0.23): return
+            self.Global_MouseClick(items_tab[0], items_tab[1])
+            if not _do_sleep(0.23): return
+            self.Global_MouseClick(search_bar[0], search_bar[1])
+            if not _do_sleep(0.2 + inventory_click_delay): return
+            if _cancelled(): return
+
+            self.Global_MouseClick(search_bar[0], search_bar[1])
+            if not _do_sleep(0.23): return
+            self.Global_MouseClick(search_bar[0], search_bar[1])
+            if not _do_sleep(0.23): return
+            self.Global_MouseClick(search_bar[0], search_bar[1])
+            if not _do_sleep(0.2 + inventory_click_delay): return
+            if _cancelled(): return
+            self._safe_type_text("crack")
+            if not _do_sleep(0.4 + inventory_click_delay): return
+            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
+            if not _do_sleep(0.4 + inventory_click_delay): return
+            try:
+                if not self._ocr_first_slot_matches("crack"):
+                    self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
+                    _do_sleep(0.15 + inventory_click_delay)
+                    return
+            except Exception:
+                pass
+            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
+            if not _do_sleep(0.4 + inventory_click_delay): return
+            self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
+            if not _do_sleep(0.3 + inventory_click_delay): return
+
+            if _cancelled(): return
+            self.Global_MouseClick(amount_box[0], amount_box[1])
+            if not _do_sleep(0.16 + inventory_click_delay): return
+            autoit.send("^{a}")
+            if not _do_sleep(0.13 + inventory_click_delay): return
+            autoit.send("{BACKSPACE}")
+            if not _do_sleep(0.13 + inventory_click_delay): return
+            self._safe_type_text('1')
+            if not _do_sleep(0.13 + inventory_click_delay): return
+
+            if _cancelled(): return
+            self.Global_MouseClick(use_button[0], use_button[1])
+            if not _do_sleep(0.22 + inventory_click_delay): return
+
+            if _cancelled(): return
+            self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
+            _do_sleep(0.22 + inventory_click_delay)
+
+        except Exception as e:
+            self.error_logging(e, "Error in _teleport_crack_impl function.")
+        finally:
+            self._portable_crack_running = False
+
     def use_br_sc(self, item_name):
         try:
             self._action_scheduler.enqueue_action(lambda: self._use_br_sc_impl(item_name), name=f"use_br_sc:{item_name}", priority=6)
@@ -2448,7 +3024,7 @@ class ActionsMixin:
                 return
             if _cancelled():
                 return
-            autoit.send(item_name)
+            self._safe_type_text(item_name)
             if not _do_sleep(0.4 + inventory_click_delay):
                 return
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
@@ -2479,7 +3055,7 @@ class ActionsMixin:
             autoit.send("{BACKSPACE}")
             if not _do_sleep(0.13 + inventory_click_delay):
                 return
-            autoit.send('1')
+            self._safe_type_text('1')
             if not _do_sleep(0.13 + inventory_click_delay):
                 return
 
@@ -2705,11 +3281,14 @@ class ActionsMixin:
 
                     print(f"Detected item text: {item_text} | Corrected: {corrected_item_name}")
 
-                    for item_name, (enabled, quantity, rebuy) in auto_buy_items.items():
+                    for item_name, item_vals in auto_buy_items.items():
+                        enabled = item_vals[0] if len(item_vals) > 0 else False
+                        quantity = int(item_vals[1]) if len(item_vals) > 1 else 1
+                        
                         if enabled and corrected_item_name == item_name.lower():
                             purchased_count = purchased_items.get(item_name, 0)
 
-                            if rebuy or purchased_count == 0:
+                            if purchased_count == 0:
                                 self.append_log(
                                     f"[Merchant Detection - {merchant_name}] - Item {item_name} found. Proceeding to buy {quantity}")
 
@@ -2717,7 +3296,7 @@ class ActionsMixin:
                                 purchase_button = self.config["purchase_button"]
 
                                 autoit.mouse_click("left", *purchase_amount_button)
-                                autoit.send(str(quantity))
+                                self._safe_type_text(str(quantity))
                                 if not self._sleep_with_cancel(0.23):
                                     return
 
@@ -3250,20 +3829,15 @@ class ActionsMixin:
         self.auto_pop_state = True
         target_biome = self.current_biome
         try:
-            if not target_biome or target_biome == "NORMAL":
-                return
-            if self.config.get("enable_idle_mode", False):
-                return
-            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get():
-                return
+            if not target_biome or target_biome == "NORMAL": return
+            if self.config.get("enable_idle_mode", False): return
+            if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
 
             biome_entry = self._get_auto_pop_biome_entry(target_biome)
-            if not biome_entry.get("enabled", False):
-                return
+            if not biome_entry.get("enabled", False): return
 
             buffs_to_use = self._build_auto_pop_buffs_to_use(biome_entry.get("buffs", {}))
-            if not buffs_to_use:
-                return
+            if not buffs_to_use: return
 
             inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
             warp_enabled = any(buff in ("Warp Potion", "Transcendent Potion") for buff, _ in buffs_to_use)
@@ -3275,11 +3849,24 @@ class ActionsMixin:
                 or bool(getattr(self, "_br_sc_running", False))
                 or bool(getattr(self, "_egg_collecting", False))
             ):
-                time.sleep(0.3)
+                self.append_log(f"[Auto Pop] Waiting for other actions to finish before popping buffs")
+                wait_deadline = time.monotonic() + 50
+                while time.monotonic() < wait_deadline:
+                    if not self.detection_running or self.reconnecting_state: return
+                    if self.current_biome != target_biome: return
+                    still_busy = (
+                        bool(getattr(self, "_fishing_busy", False))
+                        or bool(getattr(self, "on_auto_merchant_state", False))
+                        or bool(getattr(self, "_mt_running", False))
+                        or bool(getattr(self, "_br_sc_running", False))
+                        or bool(getattr(self, "_egg_collecting", False))
+                    )
+                    if not still_busy: break
+                    time.sleep(0.55)
+                time.sleep(0.5)
 
             for buff, amount in buffs_to_use:
-                if not self.detection_running or self.reconnecting_state:
-                    return
+                if not self.detection_running or self.reconnecting_state: return
                 if self.current_biome != target_biome:
                     self.append_log(f"[Auto Pop] Biome changed to {self.current_biome}, stopping auto pop...")
                     self.send_webhook_status(
@@ -3288,8 +3875,7 @@ class ActionsMixin:
                     )
                     return
 
-                self.append_log(f"[Auto Pop] Using {buff} x{amount} in {target_biome}")
-                self.send_webhook_status(f"Using x{amount} {buff} in {target_biome}", color=0x34ebab)
+                self.append_log(f"[Auto Pop] Preparing {buff} x{amount} in {target_biome}")
 
                 additional_wait_time = 0
                 if buff == "Oblivion Potion":
@@ -3328,7 +3914,7 @@ class ActionsMixin:
                     time.sleep(0.15 + inventory_click_delay)
                     return
 
-                keyboard.write(buff.lower())
+                self._safe_type_text(buff.lower())
                 time.sleep(0.22 + inventory_click_delay)
                 self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
                 time.sleep(0.22 + inventory_click_delay)
@@ -3351,11 +3937,15 @@ class ActionsMixin:
                 time.sleep(0.285 + inventory_click_delay)
                 autoit.send("{BACKSPACE}")
                 time.sleep(0.285 + inventory_click_delay)
-                autoit.send(str(amount))
+                self._safe_type_text(str(amount))
                 time.sleep(0.285 + inventory_click_delay)
 
                 self.Global_MouseClick(use_button[0], use_button[1])
                 time.sleep(0.3 + inventory_click_delay)
+
+                self.append_log(f"[Auto Pop] Used {buff} x{amount} in {target_biome}")
+                self.send_webhook_status(f"Used x{amount} {buff} in {target_biome}", color=0x34ebab)
+
                 self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
                 time.sleep(0.32 + inventory_click_delay)
 

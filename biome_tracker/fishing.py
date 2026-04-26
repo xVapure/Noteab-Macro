@@ -8,6 +8,8 @@ import autoit
 import cv2
 import numpy as np
 import pyautogui
+import win32clipboard
+
 try:
     import mss
 except Exception:
@@ -52,6 +54,20 @@ AUTOIT_KEY_MAP = {
     "up": "UP",
     "down": "DOWN",
 }
+
+def _safe_type_text(text: str, cfg: dict[str, Any] | None = None) -> None:
+    text = str(text)
+    if cfg and cfg.get("azerty_mode", False):
+        try:
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
+            win32clipboard.CloseClipboard()
+            autoit.send("^v")
+            return
+        except Exception:
+            pass
+    autoit.send(text)
 
 WALK_TO_FISH_EVENTS: list[dict[str, Any]] = [{"type":"key_down","x":0,"y":0,"button":"","key":"w","delta":0,"t":0.7391250133514404},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":0.741126298904419},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":0.9960780143737793},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.026473045349121},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.0575404167175293},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.1038482189178467},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.1342198848724365},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.165168046951294},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.1959125995635986},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.226245641708374},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.2579402923583984},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.2890980243682861},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.3357858657836914},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.3669459819793701},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.3978071212768555},{"type":"key_down","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.4294638633728027},{"type":"key_up","x":0,"y":0,"button":"","key":"a","delta":0,"t":1.4381849765777588},{"type":"key_up","x":0,"y":0,"button":"","key":"w","delta":0,"t":8.1}]
 WALK_TO_SELL_FISH_EVENTS: list[dict[str, Any]] = [{"t": 0.6193469999998342, "type": "key_down", "key": "a"}, {"t": 0.6597596999999951, "type": "key_down", "key": "w"}, {"t": 0.6727883999992628, "type": "key_up", "key": "w"}, {"t": 0.7120463999999629, "type": "key_down", "key": "w"}, {"t": 0.9642282000004343, "type": "key_down", "key": "w"}, {"t": 0.9950336999991123, "type": "key_down", "key": "w"}, {"t": 1.0267604999989999, "type": "key_down", "key": "w"}, {"t": 1.0575645999997505, "type": "key_down", "key": "w"}, {"t": 1.0888541999993322, "type": "key_down", "key": "w"}, {"t": 1.1230503999995562, "type": "key_down", "key": "w"}, {"t": 1.1543273999996018, "type": "key_down", "key": "w"}, {"t": 1.1854724000004353, "type": "key_down", "key": "w"}, {"t": 1.2166502999989461, "type": "key_down", "key": "w"}, {"t": 1.2478993000004266, "type": "key_down", "key": "w"}, {"t": 1.2791823000006843, "type": "key_down", "key": "w"}, {"t": 1.3102110999989236, "type": "key_down", "key": "w"}, {"t": 1.3416887000003044, "type": "key_down", "key": "w"}, {"t": 1.372850899999321, "type": "key_down", "key": "w"}, {"t": 1.4039627999991353, "type": "key_down", "key": "w"}, {"t": 1.4352505999995628, "type": "key_down", "key": "w"}, {"t": 1.4664444999998523, "type": "key_down", "key": "w"}, {"t": 1.4976069000003918, "type": "key_down", "key": "w"}, {"t": 1.5290093000003253, "type": "key_down", "key": "w"}, {"t": 1.559990800000378, "type": "key_down", "key": "w"}, {"t": 1.5913504999989527, "type": "key_down", "key": "w"}, {"t": 1.6258340000003955, "type": "key_down", "key": "w"}, {"t": 1.6567837999991752, "type": "key_down", "key": "w"}, {"t": 1.6878660000002128, "type": "key_down", "key": "w"}, {"t": 1.7193091999997705, "type": "key_down", "key": "w"}, {"t": 1.7503789999991568, "type": "key_down", "key": "w"}, {"t": 1.7817417999995087, "type": "key_down", "key": "w"}, {"t": 1.812794400000712, "type": "key_down", "key": "w"}, {"t": 1.844162999999753, "type": "key_down", "key": "w"}, {"t": 1.875336499999321, "type": "key_down", "key": "w"}, {"t": 1.9066161999999167, "type": "key_down", "key": "w"}, {"t": 1.937760900000285, "type": "key_down", "key": "w"}, {"t": 1.96885839999959, "type": "key_down", "key": "w"}, {"t": 2.0002492999992683, "type": "key_down", "key": "w"}, {"t": 2.031333999999333, "type": "key_down", "key": "w"}, {"t": 2.062613899999633, "type": "key_down", "key": "w"}, {"t": 2.0937567000000854, "type": "key_down", "key": "w"}, {"t": 2.12815159999991, "type": "key_down", "key": "w"}, {"t": 2.159322699999393, "type": "key_down", "key": "w"}, {"t": 2.1907281000003422, "type": "key_down", "key": "w"}, {"t": 2.2218591999990167, "type": "key_down", "key": "w"}, {"t": 2.2530986000001576, "type": "key_down", "key": "w"}, {"t": 2.284298700000363, "type": "key_down", "key": "w"}, {"t": 2.3153827999994974, "type": "key_down", "key": "w"}, {"t": 2.3466623000003892, "type": "key_down", "key": "w"}, {"t": 2.3778927999992447, "type": "key_down", "key": "w"}, {"t": 2.4088914999992994, "type": "key_down", "key": "w"}, {"t": 2.4401868999993894, "type": "key_down", "key": "w"}, {"t": 2.471325999998953, "type": "key_down", "key": "w"}, {"t": 2.5026333999994677, "type": "key_down", "key": "w"}, {"t": 2.533809900000051, "type": "key_down", "key": "w"}, {"t": 2.5650354999997944, "type": "key_down", "key": "w"}, {"t": 2.5965634000003774, "type": "key_down", "key": "w"}, {"t": 2.6305186999998114, "type": "key_down", "key": "w"}, {"t": 2.6620552000003954, "type": "key_down", "key": "w"}, {"t": 2.692920100000265, "type": "key_down", "key": "w"}, {"t": 2.72429000000011, "type": "key_down", "key": "w"}, {"t": 2.755670500000633, "type": "key_down", "key": "w"}, {"t": 2.78684819999944, "type": "key_down", "key": "w"}, {"t": 2.818274900000688, "type": "key_down", "key": "w"}, {"t": 2.849293299999772, "type": "key_down", "key": "w"}, {"t": 2.8805269000004046, "type": "key_down", "key": "w"}, {"t": 2.911636599999838, "type": "key_down", "key": "w"}, {"t": 2.942870099999709, "type": "key_down", "key": "w"}, {"t": 2.9745170999995025, "type": "key_down", "key": "w"}, {"t": 3.0053002999993623, "type": "key_down", "key": "w"}, {"t": 3.0363990000005288, "type": "key_down", "key": "w"}, {"t": 3.0679503999999724, "type": "key_down", "key": "w"}, {"t": 3.099046499999531, "type": "key_down", "key": "w"}, {"t": 3.133262499999546, "type": "key_down", "key": "w"}, {"t": 3.1645451999993384, "type": "key_down", "key": "w"}, {"t": 3.195627400000376, "type": "key_down", "key": "w"}, {"t": 3.2268208999994386, "type": "key_down", "key": "w"}, {"t": 3.2581417999990663, "type": "key_down", "key": "w"}, {"t": 3.296984099999463, "type": "key_down", "key": "w"}, {"t": 3.320476700000654, "type": "key_down", "key": "w"}, {"t": 3.3516098000000056, "type": "key_down", "key": "w"}, {"t": 3.3829000999994605, "type": "key_down", "key": "w"}, {"t": 3.414121300000261, "type": "key_down", "key": "w"}, {"t": 3.445333699999537, "type": "key_down", "key": "w"}, {"t": 3.4765504999995755, "type": "key_down", "key": "w"}, {"t": 3.5078064999997878, "type": "key_down", "key": "w"}, {"t": 3.5390580000002956, "type": "key_down", "key": "w"}, {"t": 3.5703704000006837, "type": "key_down", "key": "w"}, {"t": 3.6014764999999898, "type": "key_down", "key": "w"}, {"t": 3.635601100000713, "type": "key_down", "key": "w"}, {"t": 3.666815399999905, "type": "key_down", "key": "w"}, {"t": 3.698049799999353, "type": "key_down", "key": "w"}, {"t": 3.7293470000004163, "type": "key_down", "key": "w"}, {"t": 3.760607300000629, "type": "key_down", "key": "w"}, {"t": 3.791690199999721, "type": "key_down", "key": "w"}, {"t": 3.823153999999704, "type": "key_down", "key": "w"}, {"t": 3.854187599999932, "type": "key_down", "key": "w"}, {"t": 3.8855776000000333, "type": "key_down", "key": "w"}, {"t": 3.916821999999229, "type": "key_down", "key": "w"}, {"t": 3.947911799999929, "type": "key_down", "key": "w"}, {"t": 3.979176599999846, "type": "key_down", "key": "w"}, {"t": 4.010453999999299, "type": "key_down", "key": "w"}, {"t": 4.041500799999994, "type": "key_down", "key": "w"}, {"t": 4.072852100000091, "type": "key_down", "key": "w"}, {"t": 4.104022399998939, "type": "key_down", "key": "w"}, {"t": 4.138394399999015, "type": "key_down", "key": "w"}, {"t": 4.169658599999821, "type": "key_down", "key": "w"}, {"t": 4.202726999999868, "type": "key_down", "key": "w"}, {"t": 4.2340526999996655, "type": "key_down", "key": "w"}, {"t": 4.265096699999049, "type": "key_down", "key": "w"}, {"t": 4.296333700000105, "type": "key_down", "key": "w"}, {"t": 4.327540599999338, "type": "key_down", "key": "w"}, {"t": 4.358830900000612, "type": "key_down", "key": "w"}, {"t": 4.390067700000145, "type": "key_down", "key": "w"}, {"t": 4.42125329999908, "type": "key_down", "key": "w"}, {"t": 4.45258769999964, "type": "key_down", "key": "w"}, {"t": 4.48373729999912, "type": "key_down", "key": "w"}, {"t": 4.515447600000698, "type": "key_down", "key": "w"}, {"t": 4.546121400000629, "type": "key_down", "key": "w"}, {"t": 4.577334999999948, "type": "key_down", "key": "w"}, {"t": 4.608623699999953, "type": "key_down", "key": "w"}, {"t": 4.642644999999902, "type": "key_down", "key": "w"}, {"t": 4.6740092, "type": "key_down", "key": "w"}, {"t": 4.705390299999635, "type": "key_down", "key": "w"}, {"t": 4.736487199999829, "type": "key_down", "key": "w"}, {"t": 4.768060200000036, "type": "key_down", "key": "w"}, {"t": 4.79895949999991, "type": "key_down", "key": "w"}, {"t": 4.830198800000289, "type": "key_down", "key": "w"}, {"t": 4.861402599999565, "type": "key_down", "key": "w"}, {"t": 4.892606899999009, "type": "key_down", "key": "w"}, {"t": 4.923649700000169, "type": "key_down", "key": "w"}, {"t": 4.955197400000543, "type": "key_down", "key": "w"}, {"t": 4.98626669999976, "type": "key_down", "key": "w"}, {"t": 5.017413199999282, "type": "key_down", "key": "w"}, {"t": 5.048671700000341, "type": "key_down", "key": "w"}, {"t": 5.07975549999901, "type": "key_down", "key": "w"}, {"t": 5.111202000000048, "type": "key_down", "key": "w"}, {"t": 5.145361299999422, "type": "key_down", "key": "w"}, {"t": 5.176747699999396, "type": "key_down", "key": "w"}, {"t": 5.207782899999074, "type": "key_down", "key": "w"}, {"t": 5.239155900000696, "type": "key_down", "key": "w"}, {"t": 5.270378900000651, "type": "key_down", "key": "w"}, {"t": 5.301812199999404, "type": "key_down", "key": "w"}, {"t": 5.332697300000291, "type": "key_down", "key": "w"}, {"t": 5.36438950000047, "type": "key_down", "key": "w"}, {"t": 5.395104400000491, "type": "key_down", "key": "w"}, {"t": 5.42637300000024, "type": "key_down", "key": "w"}, {"t": 5.457555499999216, "type": "key_down", "key": "w"}, {"t": 5.488868599999478, "type": "key_down", "key": "w"}, {"t": 5.520106500000111, "type": "key_down", "key": "w"}, {"t": 5.551268799999889, "type": "key_down", "key": "w"}, {"t": 5.582484500000646, "type": "key_down", "key": "w"}, {"t": 5.613801600000443, "type": "key_down", "key": "w"}, {"t": 5.647874399999637, "type": "key_down", "key": "w"}, {"t": 5.679281799999444, "type": "key_down", "key": "w"}, {"t": 5.7104615999996895, "type": "key_down", "key": "w"}, {"t": 5.74157170000035, "type": "key_down", "key": "w"}, {"t": 5.7729507999993075, "type": "key_down", "key": "w"}, {"t": 5.804234499999438, "type": "key_down", "key": "w"}, {"t": 5.8352063999991515, "type": "key_down", "key": "w"}, {"t": 5.866506599999411, "type": "key_down", "key": "w"}, {"t": 5.897771899999498, "type": "key_down", "key": "w"}, {"t": 5.928989000000001, "type": "key_down", "key": "w"}, {"t": 5.960458800000197, "type": "key_down", "key": "w"}, {"t": 5.991408699999738, "type": "key_down", "key": "w"}, {"t": 6.022537700000612, "type": "key_down", "key": "w"}, {"t": 6.053936199999953, "type": "key_down", "key": "w"}, {"t": 6.085071499999685, "type": "key_down", "key": "w"}, {"t": 6.116341099999772, "type": "key_down", "key": "w"}, {"t": 6.15089049999915, "type": "key_down", "key": "w"}, {"t": 6.181583100000353, "type": "key_down", "key": "w"}, {"t": 6.212923299999602, "type": "key_down", "key": "w"}, {"t": 6.244282899999234, "type": "key_down", "key": "w"}, {"t": 6.275380499999301, "type": "key_down", "key": "w"}, {"t": 6.306665500000236, "type": "key_down", "key": "w"}, {"t": 6.3378520000005665, "type": "key_down", "key": "w"}, {"t": 6.369061499999589, "type": "key_down", "key": "w"}, {"t": 6.400289999999586, "type": "key_down", "key": "w"}, {"t": 6.431366400000115, "type": "key_down", "key": "w"}, {"t": 6.462889500000529, "type": "key_down", "key": "w"}, {"t": 6.49381270000049, "type": "key_down", "key": "w"}, {"t": 6.525106600000072, "type": "key_down", "key": "w"}, {"t": 6.556317900000067, "type": "key_down", "key": "w"}, {"t": 6.587588500000493, "type": "key_down", "key": "w"}, {"t": 6.618935299999066, "type": "key_down", "key": "w"}, {"t": 6.653086899999835, "type": "key_down", "key": "w"}, {"t": 6.684172299999773, "type": "key_down", "key": "w"}, {"t": 6.6913057999991, "type": "key_up", "key": "w"}, {"t": 6.707602599999518, "type": "key_up", "key": "a"}, {"t": 7.5361897999991925, "type": "key_down", "key": "d"}, {"t": 7.623953799999072, "type": "key_up", "key": "d"}, {"t": 7.80212500000016, "type": "key_down", "key": "d"}, {"t": 7.872129999999743, "type": "key_up", "key": "d"}, {"t": 8.742754900000364, "type": "key_down", "key": "w"}, {"t": 9.000408199999583, "type": "key_down", "key": "w"}, {"t": 9.025709100000313, "type": "key_down", "key": "w"}, {"t": 9.05721369999992, "type": "key_down", "key": "w"}, {"t": 9.088090499999453, "type": "key_down", "key": "w"}, {"t": 9.119410600000265, "type": "key_down", "key": "w"}, {"t": 9.150680900000225, "type": "key_down", "key": "w"}, {"t": 9.185271599999396, "type": "key_down", "key": "w"}, {"t": 9.215967899999669, "type": "key_down", "key": "w"}, {"t": 9.24732849999964, "type": "key_down", "key": "w"}, {"t": 9.278765600000042, "type": "key_down", "key": "w"}, {"t": 9.309823300000062, "type": "key_down", "key": "w"}, {"t": 9.341039200000523, "type": "key_down", "key": "w"}, {"t": 9.372143399999914, "type": "key_down", "key": "w"}, {"t": 9.40364849999969, "type": "key_down", "key": "w"}, {"t": 9.434679199999664, "type": "key_down", "key": "w"}, {"t": 9.465984700000263, "type": "key_down", "key": "w"}, {"t": 9.49708880000071, "type": "key_down", "key": "w"}, {"t": 9.528302999999141, "type": "key_down", "key": "w"}, {"t": 9.559484299999895, "type": "key_down", "key": "w"}, {"t": 9.590852799999993, "type": "key_down", "key": "w"}, {"t": 9.622187700000723, "type": "key_down", "key": "w"}, {"t": 9.653162799999336, "type": "key_down", "key": "w"}, {"t": 9.687520199999199, "type": "key_down", "key": "w"}, {"t": 9.718865099999675, "type": "key_down", "key": "w"}, {"t": 9.749952399999529, "type": "key_down", "key": "w"}, {"t": 9.781281300000046, "type": "key_down", "key": "w"}, {"t": 9.812294199999087, "type": "key_down", "key": "w"}, {"t": 9.84373659999983, "type": "key_down", "key": "w"}, {"t": 9.87474839999959, "type": "key_down", "key": "w"}, {"t": 9.906169699999737, "type": "key_down", "key": "w"}, {"t": 9.937127400000463, "type": "key_down", "key": "w"}, {"t": 9.968458100000134, "type": "key_down", "key": "w"}, {"t": 9.999548499999946, "type": "key_down", "key": "w"}, {"t": 10.030921399998988, "type": "key_down", "key": "w"}, {"t": 10.06202470000062, "type": "key_down", "key": "w"}, {"t": 10.093436900000597, "type": "key_down", "key": "w"}, {"t": 10.124556999999186, "type": "key_down", "key": "w"}, {"t": 10.155609400000685, "type": "key_down", "key": "w"}, {"t": 10.190108900000268, "type": "key_down", "key": "w"}, {"t": 10.221244200000001, "type": "key_down", "key": "w"}, {"t": 10.252412100000583, "type": "key_down", "key": "w"}, {"t": 10.283616599999732, "type": "key_down", "key": "w"}, {"t": 10.314863499999774, "type": "key_down", "key": "w"}, {"t": 10.346077300000616, "type": "key_down", "key": "w"}, {"t": 10.377274000000398, "type": "key_down", "key": "w"}, {"t": 10.408574400000361, "type": "key_down", "key": "w"}, {"t": 10.439787799999976, "type": "key_down", "key": "w"}, {"t": 10.471979399999327, "type": "key_down", "key": "w"}, {"t": 10.503160500000376, "type": "key_down", "key": "w"}, {"t": 10.506223000000318, "type": "key_down", "key": "a"}, {"t": 10.760075599999254, "type": "key_down", "key": "a"}, {"t": 10.79137350000019, "type": "key_down", "key": "a"}, {"t": 10.82228699999905, "type": "key_down", "key": "a"}, {"t": 10.853508899999724, "type": "key_down", "key": "a"}, {"t": 10.884953499999028, "type": "key_down", "key": "a"}, {"t": 10.916021099999853, "type": "key_down", "key": "a"}, {"t": 10.94753370000035, "type": "key_down", "key": "a"}, {"t": 10.978636100000585, "type": "key_down", "key": "a"}, {"t": 11.009694299998955, "type": "key_down", "key": "a"}, {"t": 11.040936800000054, "type": "key_down", "key": "a"}, {"t": 11.072365899999568, "type": "key_down", "key": "a"}, {"t": 11.103381400000217, "type": "key_down", "key": "a"}, {"t": 11.134686699999293, "type": "key_down", "key": "a"}, {"t": 11.165795700000672, "type": "key_down", "key": "a"}, {"t": 11.200234199999613, "type": "key_down", "key": "a"}, {"t": 11.231370600000446, "type": "key_down", "key": "a"}, {"t": 11.2625551000001, "type": "key_down", "key": "a"}, {"t": 11.293824399999721, "type": "key_down", "key": "a"}, {"t": 11.325045800000225, "type": "key_down", "key": "a"}, {"t": 11.356440499999735, "type": "key_down", "key": "a"}, {"t": 11.387499799999205, "type": "key_down", "key": "a"}, {"t": 11.418791699999929, "type": "key_down", "key": "a"}, {"t": 11.450135600000067, "type": "key_down", "key": "a"}, {"t": 11.48105410000062, "type": "key_down", "key": "a"}, {"t": 11.512485799999922, "type": "key_down", "key": "a"}, {"t": 11.543878700000278, "type": "key_down", "key": "a"}, {"t": 11.574648100000559, "type": "key_down", "key": "a"}, {"t": 11.58372369999961, "type": "key_up", "key": "a"}, {"t": 11.59377189999941, "type": "key_up", "key": "w"}, {"t": 12.047159499999907, "type": "key_down", "key": "s"}, {"t": 12.154938100000436, "type": "key_up", "key": "s"}, {"t": 12.629220200000418, "type": "key_down", "key": "space"}, {"t": 12.655512100000124, "type": "key_down", "key": "w"}, {"t": 12.814489700000195, "type": "key_up", "key": "space"}, {"t": 12.910129899999447, "type": "key_down", "key": "w"}, {"t": 12.941546399999424, "type": "key_down", "key": "w"}, {"t": 12.955445999999938, "type": "key_up", "key": "w"}, {"t": 13.489220299999943, "type": "key_down", "key": "w"}, {"t": 13.561029799999233, "type": "key_up", "key": "w"}, {"t": 14.412931999999273, "type": "key_down", "key": "s"}, {"t": 14.54973980000068, "type": "key_up", "key": "s"}, {"t": 14.839802999998938, "type": "key_down", "key": "w"}, {"t": 14.910316199999215, "type": "key_down", "key": "space"}, {"t": 15.074401100000614, "type": "key_up", "key": "space"}, {"t": 15.173085799999171, "type": "key_up", "key": "w"}, {"t": 16.141198299999814, "type": "key_down", "key": "w"}, {"t": 16.39598979999937, "type": "key_down", "key": "w"}, {"t": 16.427140699999654, "type": "key_down", "key": "w"}, {"t": 16.458206899998913, "type": "key_down", "key": "w"}, {"t": 16.489464399999633, "type": "key_down", "key": "w"}, {"t": 16.52102709999963, "type": "key_down", "key": "w"}, {"t": 16.552005199999257, "type": "key_down", "key": "w"}, {"t": 16.583117899999706, "type": "key_down", "key": "w"}, {"t": 16.61437239999941, "type": "key_down", "key": "w"}, {"t": 16.645790999999008, "type": "key_down", "key": "w"}, {"t": 16.676585400000477, "type": "key_down", "key": "w"}, {"t": 16.70833870000024, "type": "key_down", "key": "w"}, {"t": 16.74216460000025, "type": "key_down", "key": "w"}, {"t": 16.773395199999868, "type": "key_down", "key": "w"}, {"t": 16.80488089999926, "type": "key_down", "key": "w"}, {"t": 16.835984800000006, "type": "key_down", "key": "w"}, {"t": 16.865132999999332, "type": "key_up", "key": "w"}, {"t": 17.111777399999482, "type": "key_down", "key": "s"}, {"t": 17.258736100000533, "type": "key_up", "key": "s"}, {"t": 17.57201990000067, "type": "key_down", "key": "w"}, {"t": 17.600325699999303, "type": "key_down", "key": "space"}, {"t": 17.763527900000554, "type": "key_up", "key": "space"}, {"t": 19.05178150000029, "type": "key_down", "key": "e"}, {"t": 19.179535499999474, "type": "key_up", "key": "e"}, {"t": 19.239933900000324, "type": "key_down", "key": "e"}, {"t": 19.329591399999117, "type": "key_up", "key": "e"}, {"t": 19.339571599999545, "type": "key_up", "key": "w"}, {"t": 19.498178499999995, "type": "mouse_down", "button": "right", "x": 960, "y": 540}, {"t": 19.657035899999755, "type": "mouse_move", "x": 960, "y": 543}, {"t": 19.66508149999936, "type": "mouse_move", "x": 960, "y": 549}, {"t": 19.672360599999593, "type": "mouse_move", "x": 958, "y": 554}, {"t": 19.680141799999546, "type": "mouse_move", "x": 956, "y": 564}, {"t": 19.688101199999437, "type": "mouse_move", "x": 952, "y": 585}, {"t": 19.696390400000382, "type": "mouse_move", "x": 948, "y": 605}, {"t": 19.70351540000047, "type": "mouse_move", "x": 954, "y": 600}, {"t": 19.711599399999614, "type": "mouse_move", "x": 954, "y": 612}, {"t": 19.719616500000484, "type": "mouse_move", "x": 960, "y": 613}, {"t": 19.727283300000636, "type": "mouse_move", "x": 963, "y": 614}, {"t": 19.735356999999567, "type": "mouse_move", "x": 969, "y": 630}, {"t": 19.74369850000039, "type": "mouse_move", "x": 971, "y": 639}, {"t": 19.751249900000403, "type": "mouse_move", "x": 973, "y": 644}, {"t": 19.75937370000065, "type": "mouse_move", "x": 976, "y": 636}, {"t": 19.76750279999942, "type": "mouse_move", "x": 978, "y": 629}, {"t": 19.775386999999682, "type": "mouse_move", "x": 977, "y": 621}, {"t": 19.785911299999498, "type": "mouse_move", "x": 978, "y": 605}, {"t": 19.79182849999961, "type": "mouse_move", "x": 973, "y": 584}, {"t": 19.79901179999979, "type": "mouse_move", "x": 961, "y": 545}, {"t": 19.805711699998938, "type": "mouse_move", "x": 965, "y": 562}, {"t": 19.813381899999513, "type": "mouse_move", "x": 962, "y": 555}, {"t": 19.820118499999808, "type": "mouse_move", "x": 961, "y": 547}, {"t": 19.83409070000016, "type": "mouse_move", "x": 960, "y": 545}, {"t": 19.971601199998986, "type": "mouse_move", "x": 960, "y": 543}, {"t": 19.99255970000013, "type": "mouse_move", "x": 960, "y": 544}, {"t": 20.006362199999785, "type": "mouse_move", "x": 960, "y": 544}, {"t": 20.03479250000055, "type": "mouse_move", "x": 960, "y": 543}, {"t": 20.048661099999663, "type": "mouse_move", "x": 961, "y": 543}, {"t": 20.06219670000064, "type": "mouse_up", "button": "right", "x": 960, "y": 543}]
@@ -149,6 +165,8 @@ def load_fishing_config(raw_config: dict[str, Any] | None = None) -> dict[str, A
         "merchant_teleporter": bool(raw.get("merchant_teleporter", False)),
         "fishing_use_merchant_every_x_fish": bool(raw.get("fishing_use_merchant_every_x_fish", False)),
         "fishing_merchant_every_x_fish": _coerce_int(raw.get("fishing_merchant_every_x_fish"), 30, 1, 100000),
+        "fishing_use_merchant_ocr_every_x_fish": bool(raw.get("fishing_use_merchant_ocr_every_x_fish", False)),
+        "fishing_merchant_ocr_every_x_fish_amt": _coerce_int(raw.get("fishing_merchant_ocr_every_x_fish_amt"), 30, 1, 100000),
         "fishing_use_br_sc_every_x_fish": bool(raw.get("fishing_use_br_sc_every_x_fish", False)),
         "fishing_br_sc_every_x_fish": _coerce_int(raw.get("fishing_br_sc_every_x_fish"), 30, 1, 100000),
         "fishing_actions_delay_ms": _coerce_int(raw.get("fishing_actions_delay_ms"), 100, 0, 5000),
@@ -503,7 +521,7 @@ def _run_equip_aura_before_movement(
         return False
 
     try:
-        autoit.send(aura_name)
+        _safe_type_text(aura_name, cfg)
     except Exception:
         pass
     if not sleep_interruptible(step_delay):
@@ -695,6 +713,7 @@ def run_fishing_loop(
     on_failsafe_timeout: Callable[[], None] | None = None,
     run_br_sc_sequence_cb: Callable[[], bool] | None = None,
     run_merchant_sequence_cb: Callable[[], bool] | None = None,
+    merchant_ocr_check_cb: Callable[[], None] | None = None,
     activate_roblox_cb: Callable[[], None] | None = None,
     close_chat_fn: Callable[[], None] | None = None,
     runtime_state: dict[str, Any] | None = None,
@@ -758,7 +777,7 @@ def run_fishing_loop(
             time.sleep(min(poll, remaining))
         return _should_continue() and _can_run()
 
-    def _get_due_actions() -> tuple[bool, int, bool, bool]:
+    def _get_due_actions() -> tuple[bool, int, bool, bool, bool]:
         sell_after = max(1, int(cfg.get("fishing_sell_after_x_fish", 30)))
         should_sell = bool(cfg.get("fishing_enable_selling", False)) and (fish_caught_count >= sell_after)
         sell_count = max(1, int(cfg.get("fishing_sell_how_many_fish", 1)))
@@ -767,11 +786,15 @@ def run_fishing_loop(
         merchant_after = max(1, int(cfg.get("fishing_merchant_every_x_fish", 30)))
         should_use_merchant = use_merchant_every_x and (fish_caught_since_merchant >= merchant_after)
 
+        use_merchant_ocr_every_x = bool(cfg.get("fishing_use_merchant_ocr_every_x_fish", False))
+        merchant_ocr_after = max(1, int(cfg.get("fishing_merchant_ocr_every_x_fish_amt", 30)))
+        should_use_merchant_ocr = use_merchant_ocr_every_x and (fish_caught_since_merchant_ocr >= merchant_ocr_after)
+
         use_br_sc_every_x = bool(cfg.get("fishing_use_br_sc_every_x_fish", False))
         br_sc_after = max(1, int(cfg.get("fishing_br_sc_every_x_fish", 30)))
         should_use_br_sc = use_br_sc_every_x and (fish_caught_since_br_sc >= br_sc_after)
 
-        return should_sell, sell_count, should_use_merchant, should_use_br_sc
+        return should_sell, sell_count, should_use_merchant, should_use_br_sc, should_use_merchant_ocr
 
     cfg = load_fishing_config(config_provider())
     next_cfg_refresh_at = time.monotonic()
@@ -812,6 +835,7 @@ def run_fishing_loop(
 
     fish_caught_count = _state_counter("fish_caught_count")
     fish_caught_since_merchant = _state_counter("fish_caught_since_merchant")
+    fish_caught_since_merchant_ocr = _state_counter("fish_caught_since_merchant_ocr")
     fish_caught_since_br_sc = _state_counter("fish_caught_since_br_sc")
     _set_state_flag("merchant_requires_reset", False)
 
@@ -820,6 +844,7 @@ def run_fishing_loop(
             return
         runtime_state_dict["fish_caught_count"] = max(0, int(fish_caught_count))
         runtime_state_dict["fish_caught_since_merchant"] = max(0, int(fish_caught_since_merchant))
+        runtime_state_dict["fish_caught_since_merchant_ocr"] = max(0, int(fish_caught_since_merchant_ocr))
         runtime_state_dict["fish_caught_since_br_sc"] = max(0, int(fish_caught_since_br_sc))
 
     _persist_runtime_counters()
@@ -890,7 +915,7 @@ def run_fishing_loop(
                     was_runnable = False
                     continue
 
-                should_sell, sell_count, should_use_merchant, should_use_br_sc = _get_due_actions()
+                should_sell, sell_count, should_use_merchant, should_use_br_sc, should_use_merchant_ocr = _get_due_actions()
 
                 if should_sell:
                     print(
@@ -913,7 +938,7 @@ def run_fishing_loop(
                     _persist_runtime_counters()
 
                     # Re-evaluate counters after selling because merchant/BRSC counters are independent.
-                    _, _, should_use_merchant, should_use_br_sc = _get_due_actions()
+                    _, _, should_use_merchant, should_use_br_sc, should_use_merchant_ocr = _get_due_actions()
 
                     if should_use_merchant:
                         print(f"{log_prefix} merchant flow triggered after pending selling.")
@@ -923,6 +948,18 @@ def run_fishing_loop(
                         _persist_runtime_counters()
                         if not merchant_ran:
                             print(f"{log_prefix} merchant flow skipped/failed during fishing.")
+                            
+                    if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
+                        print(f"{log_prefix} merchant OCR triggered after pending selling.")
+                        try:
+                            _set_busy(True)
+                            merchant_ocr_check_cb()
+                        except Exception as e:
+                            print(f"{log_prefix} merchant OCR check failure: {e}")
+                        finally:
+                            _set_busy(False)
+                            fish_caught_since_merchant_ocr = 0
+                            _persist_runtime_counters()
 
                     if should_use_br_sc:
                         print(f"{log_prefix} BR/SC flow triggered after pending selling.")
@@ -949,6 +986,33 @@ def run_fishing_loop(
 
                     if should_use_br_sc:
                         print(f"{log_prefix} BR/SC flow triggered after pending merchant.")
+                        br_sc_ran = _run_br_sc_sequence()
+                        if br_sc_ran:
+                            fish_caught_since_br_sc = 0
+                        _persist_runtime_counters()
+
+                    last_start_fishing_click_at = None
+                    was_runnable = False
+                    continue
+                    
+                if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
+                    print(
+                        f"{log_prefix} pending merchant OCR flow triggered before fishing path "
+                        f"after {fish_caught_since_merchant_ocr} catches."
+                    )
+                    try:
+                        _set_busy(True)
+                        merchant_ocr_check_cb()
+                    except Exception as e:
+                        print(f"{log_prefix} merchant OCR check failure: {e}")
+                    finally:
+                        _set_busy(False)
+                        fish_caught_since_merchant_ocr = 0
+                        _persist_runtime_counters()
+                        
+                        
+                    if should_use_br_sc:
+                        print(f"{log_prefix} BR/SC flow triggered after merchant OCR.")
                         br_sc_ran = _run_br_sc_sequence()
                         if br_sc_ran:
                             fish_caught_since_br_sc = 0
@@ -1000,6 +1064,13 @@ def run_fishing_loop(
                     speed_multiplier=_combined_multiplier,
                 ):
                     continue
+                
+                close_x, close_y = cfg["fishing_close_button_pos"]
+                for _ in range(3):
+                    autoit.mouse_click("left", close_x, close_y, speed=3)
+                    if not _sleep_interruptible(0.15): break
+                if not _sleep_interruptible(0.3): continue
+
                 click_x, click_y = cfg["fishing_click_position"]
                 autoit.mouse_click("left", click_x, click_y, speed=3)
                 last_start_fishing_click_at = time.monotonic()
@@ -1071,8 +1142,13 @@ def run_fishing_loop(
 
             fish_caught_count += 1
             fish_caught_since_merchant += 1
+            fish_caught_since_merchant_ocr += 1
             fish_caught_since_br_sc += 1
             _persist_runtime_counters()
+
+            _set_busy(False)
+            if not _sleep_interruptible(0.42): continue
+            _set_busy(True)
 
             if not _should_continue() or not _can_run():
                 continue
@@ -1080,6 +1156,10 @@ def run_fishing_loop(
             use_merchant_every_x = bool(cfg.get("fishing_use_merchant_every_x_fish", False))
             merchant_after = max(1, int(cfg.get("fishing_merchant_every_x_fish", 30)))
             should_use_merchant = use_merchant_every_x and (fish_caught_since_merchant >= merchant_after)
+
+            use_merchant_ocr_every_x = bool(cfg.get("fishing_use_merchant_ocr_every_x_fish", False))
+            merchant_ocr_after = max(1, int(cfg.get("fishing_merchant_ocr_every_x_fish_amt", 30)))
+            should_use_merchant_ocr = use_merchant_ocr_every_x and (fish_caught_since_merchant_ocr >= merchant_ocr_after)
 
             use_br_sc_every_x = bool(cfg.get("fishing_use_br_sc_every_x_fish", False))
             br_sc_after = max(1, int(cfg.get("fishing_br_sc_every_x_fish", 30)))
@@ -1117,6 +1197,16 @@ def run_fishing_loop(
                         if not merchant_ran:
                             print(f"{log_prefix} merchant flow skipped/failed during fishing.")
 
+                    if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
+                        print(f"{log_prefix} merchant OCR triggered after selling.")
+                        try:
+                            merchant_ocr_check_cb()
+                        except Exception as e:
+                            print(f"{log_prefix} merchant OCR check failure: {e}")
+                        finally:
+                            fish_caught_since_merchant_ocr = 0
+                            _persist_runtime_counters()
+
                     if should_use_br_sc:
                         print(f"{log_prefix} BR/SC flow triggered after selling.")
                         br_sc_ran = _run_br_sc_sequence()
@@ -1138,6 +1228,16 @@ def run_fishing_loop(
                 if not merchant_ran:
                     print(f"{log_prefix} merchant flow skipped/failed during fishing.")
 
+                if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
+                    print(f"{log_prefix} merchant OCR triggered after merchant flow.")
+                    try:
+                        merchant_ocr_check_cb()
+                    except Exception as e:
+                        print(f"{log_prefix} merchant OCR check failure: {e}")
+                    finally:
+                        fish_caught_since_merchant_ocr = 0
+                        _persist_runtime_counters()
+
                 if should_use_br_sc:
                     print(f"{log_prefix} BR/SC flow triggered after merchant.")
                     br_sc_ran = _run_br_sc_sequence()
@@ -1152,6 +1252,16 @@ def run_fishing_loop(
                     was_runnable = False
                     last_start_fishing_click_at = None
                     continue
+
+            if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
+                print(f"{log_prefix} merchant OCR triggered after {fish_caught_since_merchant_ocr} catches.")
+                try:
+                    merchant_ocr_check_cb()
+                except Exception as e:
+                    print(f"{log_prefix} merchant OCR check failure: {e}")
+                finally:
+                    fish_caught_since_merchant_ocr = 0
+                    _persist_runtime_counters()
 
             if should_use_br_sc:
                 print(f"{log_prefix} BR/SC flow triggered after {fish_caught_since_br_sc} catches.")

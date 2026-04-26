@@ -89,8 +89,10 @@ class LifecycleMixin:
         self.last_br_time = datetime.min
         self.last_sc_time = datetime.min
         self.last_mt_time = datetime.min
+        self.last_crack_time = datetime.min
         self.on_auto_merchant_state = False
         self._br_sc_running = False
+        self._portable_crack_running = False
         self._cancel_next_actions_until = datetime.min
         self._merchant_condition = threading.Condition()
         self._remote_running = False
@@ -179,6 +181,8 @@ class LifecycleMixin:
         self.fishing_mode_var           = ConfigVar(self.config, "fishing_mode", False)
         self.ping_minimum_var           = ConfigVar(self.config, "ping_minimum", "100000")
         self.aura_user_id_var           = ConfigVar(self.config, "aura_user_id", "")
+        self.force_ping_auras_var       = ConfigVar(self.config, "force_ping_auras", "")
+        self.force_record_auras_var     = ConfigVar(self.config, "force_record_auras", "")
         self.ping_mari_var              = ConfigVar(self.config, "ping_mari", False)
         self.mari_user_id_var           = ConfigVar(self.config, "mari_user_id", "")
         self.ping_jester_var            = ConfigVar(self.config, "ping_jester", False)
@@ -189,6 +193,14 @@ class LifecycleMixin:
         self.remote_access_var          = ConfigVar(self.config, "remote_access_enabled", False)
         self.remote_bot_token_var       = ConfigVar(self.config, "remote_bot_token", "")
         self.remote_allowed_user_id_var = ConfigVar(self.config, "remote_allowed_user_id", "")
+
+        # Eden detection:
+        self.eden_detection_var         = ConfigVar(self.config, "eden_detection", False)
+        self.eden_check_interval_var    = ConfigVar(self.config, "eden_check_interval", "5")
+        self.ping_eden_var              = ConfigVar(self.config, "ping_eden", False)
+        self.eden_user_id_var           = ConfigVar(self.config, "eden_user_id", "")
+        self._eden_checking_pending     = False
+        self._eden_checking             = False
         
         if not hasattr(self, "remote_command_queue"):
             self.remote_command_queue = queue.Queue()
@@ -214,6 +226,7 @@ class LifecycleMixin:
         self.auto_pop_cyberspace_var    = ConfigVar(self.config, "auto_pop_cyberspace", False)
         self.auto_pop_dreamspace_var    = ConfigVar(self.config, "auto_pop_dreamspace", False)
         self.cyberspace_only_warp_var   = ConfigVar(self.config, "cyberspace_only_warp", False)
+        self.azerty_mode_var            = ConfigVar(self.config, "azerty_mode", False)
 
         # aura detection:
         self.last_aura_found = None

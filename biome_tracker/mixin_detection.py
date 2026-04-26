@@ -102,6 +102,10 @@ class DetectionMixin:
                             data[biome_name]["color"] = overrides["color"]
                         if "thumbnail_url" in overrides and overrides["thumbnail_url"]:
                             data[biome_name]["thumbnail_url"] = overrides["thumbnail_url"]
+                        if "start_description" in overrides and overrides["start_description"]:
+                            data[biome_name]["start_description"] = overrides["start_description"]
+                        if "end_description" in overrides and overrides["end_description"]:
+                            data[biome_name]["end_description"] = overrides["end_description"]
                 except Exception:
                     pass
 
@@ -386,129 +390,152 @@ class DetectionMixin:
         )
 
     def start_detection(self):
-        if not self.detection_running:
+        with getattr(self, "lock", threading.Lock()):
+            if self.detection_running: return
             now = datetime.now()
             self.detection_running = True
-            self._start_player_logger_thread()
-            self.start_time = now
-            self.current_session = 0
-            self.has_started_once = True
-            self._session_window_reset_performed = False
-            self.stop_sent = False
-            self.last_egg_collect_time = now
+            
+        self._start_player_logger_thread()
+        self.start_time = now
+        self.current_session = 0
+        self.has_started_once = True
+        self._session_window_reset_performed = False
+        self.stop_sent = False
+        self.last_egg_collect_time = datetime.min
 
-            # reset disconnect tracking so the macro doesnt log old disconnect 
-            self._disconnect_log_file = None
-            self._last_position_disconnect = 0
-            self._last_disconnect_time = 0
-            self._disconnect_handled = False
-            self.has_sent_disconnected_message = False
-            self._roblox_fullscreened = False
+        # reset disconnect tracking so the macro doesnt log old disconnect 
+        self._disconnect_log_file = None
+        self._last_position_disconnect = 0
+        self._last_disconnect_time = 0
+        self._disconnect_handled = False
+        self.has_sent_disconnected_message = False
+        self._roblox_fullscreened = False
 
-            if not self.session_window_start:
-                self.session_window_start = now
-                self.saved_session = 0
-            else:
-                try:
-                    if (now - self.session_window_start).total_seconds() >= 86400:
-                        self.session_window_start = now
-                        self.saved_session = 0
-                except Exception:
+        if not self.session_window_start:
+            self.session_window_start = now
+            self.saved_session = 0
+        else:
+            try:
+                if (now - self.session_window_start).total_seconds() >= 86400:
                     self.session_window_start = now
                     self.saved_session = 0
-
-            self.config["session_window_start"] = self.session_window_start.isoformat()
-            self.config["macro_last_start"] = now.isoformat()
-            self.save_config()
-            self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
-            self.send_webhook_status("Macro started!", color=0x64ff5e)
-
-            threads = [
-                (self.check_disconnect_loop, "Disconnect Check"),
-                (self.biome_loop_check, "Biome Check"),
-                (self.biome_itemchange_loop, "Item Change"),
-                (self.aura_loop_check, "Aura Check"),
-                (self.anti_afk_loop, "Anti-AFK"),
-                (self.quest_claim_loop, "Quest Claim"),
-                (self.obby_path_loop, "Obby Path"),
-                (self.egg_collect_loop, "Egg Collect"),
-                (self.egg_ocr_check_loop, "Egg OCR Check"),
-            ]
-
-            for thread_func, name in threads:
-                thread = threading.Thread(target=thread_func, name=name, daemon=True)
-                thread.start()
-
-            # Fire one anti-AFK cycle immediately in background so users
-            # do not need to wait the first 268s interval.
-            try:
-                threading.Thread(
-                    target=self.perform_anti_afk_action,
-                    name="Anti-AFK Initial",
-                    daemon=True,
-                ).start()
             except Exception:
-                pass
-            
-            try:
-                if getattr(self, "remote_access_var", None) and self.remote_access_var.get():
-                    token = self.remote_bot_token_var.get().strip() if hasattr(self, "remote_bot_token_var") else ""
-                    if token:
-                        self.start_remote_bot()
-            except Exception:
-                pass
-            print("Biome detection started.")
+                self.session_window_start = now
+                self.saved_session = 0
+
+        self.config["session_window_start"] = self.session_window_start.isoformat()
+        self.config["macro_last_start"] = now.isoformat()
+        self.save_config()
+        self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
+        self.send_webhook_status("Macro started!", color=0x64ff5e)
+
+        threads = [
+            (self.check_disconnect_loop, "Disconnect Check"),
+            (self.biome_loop_check, "Biome Check"),
+            (self.biome_itemchange_loop, "Item Change"),
+            (self.aura_loop_check, "Aura Check"),
+            (self.anti_afk_loop, "Anti-AFK"),
+            (self.quest_claim_loop, "Quest Claim"),
+            (self.obby_path_loop, "Obby Path"),
+            (self.egg_collect_loop, "Egg Collect"),
+            (self.egg_ocr_check_loop, "Egg OCR Check"),
+            (self.eden_ocr_check_loop, "Eden OCR Check"),
+            (self.merchant_ocr_check_loop, "Merchant OCR Check"),
+        ]
+
+        for thread_func, name in threads:
+            thread = threading.Thread(target=thread_func, name=name, daemon=True)
+            thread.start()
+
+        # Fire one anti-AFK cycle immediately in background so users
+        # do not need to wait the first 268s interval.
+        try:
+            threading.Thread(
+                target=self.perform_anti_afk_action,
+                name="Anti-AFK Initial",
+                daemon=True,
+            ).start()
+        except Exception:
+            pass
+        
+        try:
+            if getattr(self, "remote_access_var", None) and self.remote_access_var.get():
+                token = self.remote_bot_token_var.get().strip() if hasattr(self, "remote_bot_token_var") else ""
+                if token:
+                    self.start_remote_bot()
+        except Exception:
+            pass
+        print("Biome detection started.")
 
     def stop_detection(self):
-        if self.detection_running:
-            caller_stack = traceback.extract_stack()
-            if len(caller_stack) >= 2:
-                caller = caller_stack[-2]
-                stop_reason = f"[TRACEBACK] Macro stopped by {caller.filename}:{caller.lineno} in {caller.name}()"
-            else:
-                stop_reason = "[TRACEBACK] Macro stopped (unknown caller)"
-            try:
-                self.append_log(stop_reason)
-            except Exception: pass
-            print(stop_reason)
-
-            now = datetime.now()
+        with getattr(self, "lock", threading.Lock()):
+            if not getattr(self, "detection_running", False): return
             self.detection_running = False
-            self._stop_player_logger_thread()
-            if getattr(self, "timer_paused_by_disconnect", False):
-                elapsed_time = 0
-                self.timer_paused_by_disconnect = False
-            else:
-                if self.start_time:
-                    elapsed_time = int((now - self.start_time).total_seconds())
-                else:
-                    elapsed_time = 0
-
-            session_seconds = elapsed_time
-
-            if self.session_window_start and (now - self.session_window_start).total_seconds() >= 86400:
-                last24h_seconds = session_seconds
-            else:
-                last24h_seconds = self.saved_session + elapsed_time
-                if last24h_seconds > 86400:
-                    last24h_seconds = 86400
-
-            self.saved_session += elapsed_time
-            self.start_time = None
-            self.stop_sent = True
-            self.set_title_threadsafe(f"Coteab Macro {current_ver} (Stopped)")
+            
+        if hasattr(self, "on_status_change") and callable(self.on_status_change):
             try:
-                self.stop_remote_bot()
+                self.on_status_change("IDLE")
             except Exception:
                 pass
-            self.send_macro_summary(last24h_seconds)
-            print("closed", self.current_session)
-            self.save_config()
-            print("Biome detection stopped.")
+
+        caller_stack = traceback.extract_stack()
+        if len(caller_stack) >= 2:
+            caller = caller_stack[-2]
+            stop_reason = f"[TRACEBACK] Macro stopped by {caller.filename}:{caller.lineno} in {caller.name}()"
+        else:
+            stop_reason = "[TRACEBACK] Macro stopped (unknown caller)"
+        try:
+            self.append_log(stop_reason)
+        except Exception: pass
+        print(stop_reason)
+
+        now = datetime.now()
+        self._stop_player_logger_thread()
+        if getattr(self, "timer_paused_by_disconnect", False):
+            elapsed_time = 0
+            self.timer_paused_by_disconnect = False
+        else:
+            if self.start_time:
+                elapsed_time = int((now - self.start_time).total_seconds())
+            else:
+                elapsed_time = 0
+
+        session_seconds = elapsed_time
+
+        if self.session_window_start and (now - self.session_window_start).total_seconds() >= 86400:
+            last24h_seconds = session_seconds
+        else:
+            last24h_seconds = self.saved_session + elapsed_time
+            if last24h_seconds > 86400:
+                last24h_seconds = 86400
+
+        self.saved_session += elapsed_time
+        self.start_time = None
+        self.stop_sent = True
+        self.set_title_threadsafe(f"Coteab Macro {current_ver} (Stopped)")
+        try:
+            self.stop_remote_bot()
+        except Exception:
+            pass
+        self.send_macro_summary(last24h_seconds)
+        print("closed", self.current_session)
+        self.save_config()
+        print("Biome detection stopped.")
 
     def get_latest_log_file(self):
         files = [os.path.join(self.logs_dir, f) for f in os.listdir(self.logs_dir) if f.endswith('.log')]
-        latest_file = max(files, key=os.path.getmtime)
+        latest_file = None
+        latest_mtime = -1
+        for f in files:
+            try:
+                mt = os.path.getmtime(f)
+                if mt > latest_mtime:
+                    latest_mtime = mt
+                    latest_file = f
+            except (FileNotFoundError, OSError):
+                continue
+        if latest_file is None:
+            raise FileNotFoundError("No valid Roblox log files found")
         return latest_file
 
     def _get_target_roblox_username(self):
@@ -707,10 +734,18 @@ class DetectionMixin:
                         aura = match.group(1)
                         if not hasattr(self, "_auras_data_lower_map"):
                             self._auras_data_lower_map = {k.lower(): k for k in self.auras_data.keys()}
+                            self._auras_data_norm_map = {k.lower().replace("_", "").replace(" ", ""): k for k in self.auras_data.keys()}
 
                         aura_lower = aura.lower()
+                        aura_norm = aura_lower.replace("_", "").replace(" ", "")
                         if aura_lower in self._auras_data_lower_map:
                             real_aura_key = self._auras_data_lower_map[aura_lower]
+                        elif aura_norm in self._auras_data_norm_map:
+                            real_aura_key = self._auras_data_norm_map[aura_norm]
+                        else:
+                            real_aura_key = None
+
+                        if real_aura_key:
                             aura_info = self.auras_data[real_aura_key]
                             parsed_aura_name = real_aura_key
                             
@@ -738,10 +773,11 @@ class DetectionMixin:
                             if parsed_aura_name != self.last_aura_found:
                                 screenshot_path = None
                                 try:
-                                    if getattr(self, "aura_screenshot_var", None) and self.aura_screenshot_var.get() and not self.is_fishing_mode_enabled():
-                                        for _ in range(2):
-                                            self.activate_roblox_window()
-                                            time.sleep(0.75)
+                                    if getattr(self, "aura_screenshot_var", None) and self.aura_screenshot_var.get():
+                                        if not self.is_fishing_mode_enabled():
+                                            for _ in range(2):
+                                                self.activate_roblox_window()
+                                                time.sleep(0.75)
 
                                         screenshot_dir = os.path.join(os.getcwd(), "images")
                                         os.makedirs(screenshot_dir, exist_ok=True)
@@ -759,17 +795,23 @@ class DetectionMixin:
                                 self.send_aura_webhook(parsed_aura_name, formatted_rarity, biome_message, screenshot_path=screenshot_path)
                                 self.last_aura_found = parsed_aura_name
 
-                                if self.enable_aura_record_var.get() and rarity >= int(self.aura_record_minimum_var.get()):
-                                    self.trigger_aura_record()
+                                force_record_auras = str(self.config.get("force_record_auras", "") or "").lower()
+                                force_record_list = [x.strip() for x in force_record_auras.split(",") if x.strip()]
+                                is_force_record = bool(force_record_list) and any(aura_norm.startswith(x.replace("_", "").replace(" ", "")) or x.replace("_", "").replace(" ", "") in aura_norm for x in force_record_list)
+
+                                if self.enable_aura_record_var.get():
+                                    if rarity >= int(self.aura_record_minimum_var.get()) or is_force_record:
+                                        self.trigger_aura_record()
                         else:
                             # Aura not found in auras_data (biomes_data.json)
                             if aura != self.last_aura_found:
                                 screenshot_path = None
                                 try:
-                                    if getattr(self, "aura_screenshot_var", None) and self.aura_screenshot_var.get() and not self.is_fishing_mode_enabled():
-                                        for _ in range(5):
-                                            self.activate_roblox_window()
-                                            time.sleep(0.75)
+                                    if getattr(self, "aura_screenshot_var", None) and self.aura_screenshot_var.get():
+                                        if not self.is_fishing_mode_enabled():
+                                            for _ in range(5):
+                                                self.activate_roblox_window()
+                                                time.sleep(0.75)
 
                                         screenshot_dir = os.path.join(os.getcwd(), "images")
                                         os.makedirs(screenshot_dir, exist_ok=True)
@@ -784,8 +826,16 @@ class DetectionMixin:
                                 except Exception as e:
                                     self.error_logging(e, "Error taking aura screenshot")
 
-                                self.send_aura_webhook(aura, None, "", screenshot_path=screenshot_path)
+                                biome_message = f"[From {self.current_biome}!]" if getattr(self, "current_biome", None) and getattr(self, "current_biome") != "NORMAL" else ""
+                                self.send_aura_webhook(aura, None, biome_message, screenshot_path=screenshot_path)
                                 self.last_aura_found = aura
+
+                                force_record_auras = str(self.config.get("force_record_auras", "") or "").lower()
+                                force_record_list = [x.strip() for x in force_record_auras.split(",") if x.strip()]
+                                is_force_record = bool(force_record_list) and any(aura_norm.startswith(x.replace("_", "").replace(" ", "")) or x.replace("_", "").replace(" ", "") in aura_norm for x in force_record_list)
+
+                                if self.enable_aura_record_var.get() and is_force_record:
+                                    self.trigger_aura_record()
                         return
 
                 except Exception as e:
@@ -899,30 +949,24 @@ class DetectionMixin:
                     if isinstance(deadline, (int, float)):
                         popup_window_active = time.monotonic() <= deadline
                     else:
-                        # Backward-safe fallback for states created before this field exists.
                         popup_window_active = True
                     if not popup_window_active:
                         self.just_reconnected = False
                         self.reconnect_confirm_deadline = None
 
-                if biome in rare_biomes and popup_window_active:
+                if biome in rare_biomes:
                     try:
                         confirmed = self.confirm_biome_popup(biome)
                     except Exception:
                         confirmed = None
-                    self.just_reconnected = False
-                    self.reconnect_confirm_deadline = None
+                    if popup_window_active:
+                        self.just_reconnected = False
+                        self.reconnect_confirm_deadline = None
                     if confirmed is False:
+                        self.append_log(f"[BiomeConfirm] User chose to stop macro for {biome}.")
                         self.stop_detection()
                         return
-                    if confirmed is None:
-                        try:
-                            self.send_webhook_status(
-                                f"No response to rare-biome popup within 10 seconds ({biome}). Continuing macro.",
-                                color=0xffcc00
-                            )
-                        except Exception:
-                            pass
+
                 # rare biome sshot       
                 screenshot_path = None
                 if biome in rare_biomes and self.config.get("rare_biome_screenshot", False):
@@ -960,7 +1004,7 @@ class DetectionMixin:
                     if not self.config.get("enable_idle_mode", False):
                         self.auto_pop_buffs_for_current_biome()
 
-            if biome == "GLITCHED":
+            if biome == "GLITCHED" or biome == "DREAMSPACE":
                 with self.lock:
                     if self.config.get("enable_buff_glitched", False) and not self.is_fishing_mode_enabled():
                         threading.Thread(target=self.perform_glitched_enable_buff, daemon=True).start()
@@ -992,7 +1036,6 @@ class DetectionMixin:
             try:
                 current_log_file = self.get_latest_log_file()
                 if current_log_file != last_log_file:
-                    self.last_position = 0
                     last_log_file = current_log_file
 
                 if self.enable_aura_detection_var.get(): self.check_aura_in_logs(current_log_file)
@@ -1258,9 +1301,18 @@ class DetectionMixin:
         except Exception:
             pass
 
+        try:
+            crack_cooldown = timedelta(minutes=int(self.config.get("portable_crack_interval", "30")))
+        except (ValueError, TypeError):
+            crack_cooldown = timedelta(minutes=30)
+
+        if self.config.get("teleport_portable_crack") and datetime.now() - getattr(self, 'last_crack_time', datetime.min) >= crack_cooldown and not getattr(self, '_br_sc_running', False) and not getattr(self, '_portable_crack_running', False) and not getattr(self, '_mt_running', False) and not getattr(self, '_remote_running', False) and not getattr(self, '_egg_collecting', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until', datetime.min) and not (self.config.get("enable_idle_mode", False)):
+            self.use_portable_crack()
+            self.last_crack_time = datetime.now()
+
         if self.mt_var.get() and datetime.now() - self.last_mt_time >= mt_cooldown and not getattr(self,
                                                                                                     '_br_sc_running',
-                                                                                                    False) and not getattr(
+                                                                                                    False) and not getattr(self, '_portable_crack_running', False) and not getattr(
                         self, '_mt_running', False) and not getattr(self, '_remote_running', False) and not getattr(
                         self, '_egg_collecting', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
                                                                                 datetime.min) and not (self.config.get("enable_idle_mode", False)):
@@ -1274,7 +1326,7 @@ class DetectionMixin:
 
         if self.sc_var.get() and datetime.now() - self.last_sc_time >= sc_cooldown and not getattr(self,
                                                                                                     '_br_sc_running',
-                                                                                                    False) and not getattr(
+                                                                                                    False) and not getattr(self, '_portable_crack_running', False) and not getattr(
                         self, '_mt_running', False) and not getattr(self, '_remote_running', False) and not getattr(
                         self, '_egg_collecting', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
                                                                                 datetime.min) and not (self.config.get("enable_idle_mode", False)):
@@ -1288,7 +1340,7 @@ class DetectionMixin:
 
         if self.br_var.get() and datetime.now() - self.last_br_time >= br_cooldown and not getattr(self,
                                                                                                     '_br_sc_running',
-                                                                                                    False) and not getattr(
+                                                                                                    False) and not getattr(self, '_portable_crack_running', False) and not getattr(
                         self, '_mt_running', False) and not getattr(self, '_remote_running', False) and not getattr(
                         self, '_egg_collecting', False) and datetime.now() >= getattr(self, '_cancel_next_actions_until',
                                                                                 datetime.min) and not (self.config.get("enable_idle_mode", False)):

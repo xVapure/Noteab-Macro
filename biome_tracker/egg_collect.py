@@ -15,6 +15,7 @@ from .fishing import (
     _autoit_key_tap,
     _autoit_key_down,
     _autoit_key_up,
+    _safe_type_text,
     NON_VIP_WALK_SPEED_MULTIPLIER,
     _MOVEMENT_KEYS,
     _coerce_point,
@@ -193,7 +194,7 @@ def _run_equip_aura_before_egg_collect(
         return False
 
     try:
-        autoit.send(aura_name)
+        _safe_type_text(aura_name, cfg)
     except Exception:
         pass
     if not sleep_interruptible(step_delay, 0.02):

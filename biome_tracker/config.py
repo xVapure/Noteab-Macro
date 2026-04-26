@@ -1,4 +1,4 @@
-﻿
+
 from __future__ import annotations
 
 import copy
@@ -6,6 +6,11 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
+import os as _os
+import tempfile as _tempfile
+import threading as _threading
+
+_config_lock = _threading.Lock()
 
 def get_base_path() -> Path:
     if getattr(sys, 'frozen', False):
@@ -205,29 +210,52 @@ def sync_config() -> None:
 
 def load_config() -> dict[str, Any]:
     ensure_workspace_files()
-    try:
-        config_file = get_config_file()
-        data = json.loads(config_file.read_text(encoding="utf-8"))
-        if isinstance(data, dict):
-            data["auto_pop_biomes"] = normalize_auto_pop_biomes(data)
-            return data
-        return {}
-    except Exception:
-        return {}
-        
+    with _config_lock:
+        try:
+            config_file = get_config_file()
+            raw = config_file.read_text(encoding="utf-8").strip()
+            if not raw:
+                return {}
+            data = json.loads(raw)
+            if isinstance(data, dict):
+                data["auto_pop_biomes"] = normalize_auto_pop_biomes(data)
+                return data
+            return {}
+        except Exception:
+            return {}
+
 def save_config(config_data: dict[str, Any]) -> None:
-    ensure_workspace_files()
-    try:
-        config_file = get_config_file()
-        current_config = {}
-        if config_file.exists():
-             try:
-                 current_config = json.loads(config_file.read_text(encoding="utf-8"))
-             except Exception:
-                 pass
-         
-        current_config.update(config_data)
-        current_config["auto_pop_biomes"] = normalize_auto_pop_biomes(current_config)
-        config_file.write_text(json.dumps(current_config, indent=4) + "\n", encoding="utf-8")
-    except Exception as e:
-        print(f"Failed to save config: {e}")
+    with _config_lock:
+        try:
+            config_file = get_config_file()
+            current_config = {}
+            if config_file.exists():
+                try:
+                    raw = config_file.read_text(encoding="utf-8").strip()
+                    if raw:
+                        parsed = json.loads(raw)
+                        if isinstance(parsed, dict):
+                            current_config = parsed
+                except Exception:
+                    pass
+
+            current_config.update(config_data)
+            current_config["auto_pop_biomes"] = normalize_auto_pop_biomes(current_config)
+            tmp_fd, tmp_path = _tempfile.mkstemp(
+                dir=str(config_file.parent), suffix=".tmp", prefix="config_"
+            )
+            try:
+                with _os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                    json.dump(current_config, f, indent=4)
+                    f.write("\n")
+                    f.flush()
+                    _os.fsync(f.fileno())
+                _os.replace(tmp_path, str(config_file))
+            except Exception:
+                try:
+                    _os.unlink(tmp_path)
+                except Exception:
+                    pass
+                raise
+        except Exception as e:
+            print(f"Failed to save config: {e}")

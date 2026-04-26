@@ -1,15 +1,19 @@
-"""Auto-extracted mixin methods from legacy tracker."""
+"""Config load/save/import logic. Handles merging defaults, legacy compat, etc."""
 
 from .base_support import *
 from .config import load_config as core_load_config, save_config as core_save_config
 
 class ConfigMixin:
-    """Methods grouped under: config."""
     def save_config(self):
         try:
             config = core_load_config()
         except Exception:
             config = {}
+
+        if not config or len(config) < 5:
+            print("[ConfigSave] WARNING: Loaded config is empty or corrupt. Skipping save to protect user data.")
+            return
+        
         auto_buff_glitched = config.get("auto_buff_glitched", self.config.get("auto_buff_glitched", {}))
         session_time = self.get_total_session_time()
         if hasattr(self, "webhook_urls") and self.webhook_urls:
@@ -42,7 +46,10 @@ class ConfigMixin:
             "auto_roblox_fullscreen": self.auto_roblox_fullscreen_var.get() if hasattr(self, "auto_roblox_fullscreen_var") else self.config.get("auto_roblox_fullscreen", False),
             "enable_glitch_effect": self.enable_glitch_effect_var.get() if hasattr(self, "enable_glitch_effect_var") else self.config.get("enable_glitch_effect", False),
             "auto_chat_close": self.config.get("auto_chat_close", False),
+            "azerty_mode": self.azerty_mode_var.get() if hasattr(self, "azerty_mode_var") else self.config.get("azerty_mode", False),
             "fishing_mode": self.config.get("fishing_mode", False),
+            "fishing_use_merchant_ocr_every_x_fish": self.config.get("fishing_use_merchant_ocr_every_x_fish", False),
+            "fishing_merchant_ocr_every_x_fish_amt": self.config.get("fishing_merchant_ocr_every_x_fish_amt", "30"),
 
             # ── Item Use (BR / SC / MT) ──
             "biome_randomizer": self.br_var.get(),
@@ -51,6 +58,8 @@ class ConfigMixin:
             "sc_duration": self.sc_duration_var.get(),
             "merchant_teleporter": self.mt_var.get(),
             "mt_duration": self.mt_duration_var.get(),
+            "merchant_ocr": self.config.get("merchant_ocr", False),
+            "merchant_ocr_interval": self.config.get("merchant_ocr_interval", "60"),
             "auto_merchant_in_limbo": self.auto_merchant_in_limbo_var.get(),
             "merchant_extra_slot": self.merchant_extra_slot_var.get(),
 
@@ -94,6 +103,8 @@ class ConfigMixin:
             "enable_aura_detection": self.enable_aura_detection_var.get(),
             "ping_minimum": self.ping_minimum_var.get(),
             "aura_user_id": self.aura_user_id_var.get(),
+            "force_ping_auras": self.force_ping_auras_var.get() if hasattr(self, 'force_ping_auras_var') else self.config.get("force_ping_auras", ""),
+            "force_record_auras": self.force_record_auras_var.get() if hasattr(self, 'force_record_auras_var') else self.config.get("force_record_auras", ""),
             "enable_aura_record": self.enable_aura_record_var.get(),
             "aura_record_keybind": self.aura_record_keybind_var.get(),
             "aura_record_minimum": self.aura_record_minimum_var.get(),
@@ -260,6 +271,8 @@ class ConfigMixin:
                 "aura_record_keybind": "F8",
                 "aura_record_minimum": "200000",
                 "aura_user_id": "",
+                "force_ping_auras": "",
+                "force_record_auras": "",
                 "auto_buff_glitched": {
                     "Fortune Potion I": [ False, 1 ],
                     "Fortune Potion II": [ False, 1 ],
@@ -443,9 +456,11 @@ class ConfigMixin:
                 "egg_playback_multiplier": 1.0,
                 "egg_ocr_detect_special": False,
                 "merchant_close_button": [ 1086, 342 ],
-                "player_logger": True,
+                "player_logger": True,  
                 "webhook_url": [],
                 "non_vip_movement_path": False,
+                "azerty_mode": False,
+                "eden_detection": False
             }
 
             # Override coordinate defaults with the current calibrated values from config.json.
@@ -619,6 +634,8 @@ class ConfigMixin:
             self.enable_aura_detection_var.set(config.get("enable_aura_detection", False))
             self.aura_user_id_var.set(config.get("aura_user_id", ""))
             self.ping_minimum_var.set(config.get("ping_minimum", "100000"))
+            if hasattr(self, "force_ping_auras_var"): self.force_ping_auras_var.set(config.get("force_ping_auras", ""))
+            if hasattr(self, "force_record_auras_var"): self.force_record_auras_var.set(config.get("force_record_auras", ""))
             self.enable_aura_record_var.set(config.get("enable_aura_record", False))
             self.aura_record_keybind_var.set(config.get("aura_record_keybind", "shift + F8"))
             if hasattr(self, "aura_record_minimum_var"): self.aura_record_minimum_var.set(config.get("aura_record_minimum", "500000"))

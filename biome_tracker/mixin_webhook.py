@@ -239,12 +239,18 @@ class WebhookMixin:
 
     def send_webhook(self, biome, message_type, event_type, screenshot_path=None):
         urls = self.get_webhook_list()
+
+        private_server_link = self.config.get("private_server_link", "")
+        if isinstance(private_server_link, str):
+            private_server_link = private_server_link.replace("\n", "")
+
         if not urls:
             self.append_log("Webhook URL is missing/not included in the config.json")
             return
         if message_type == "None": return
         biome_info = self.biome_data[biome]
-        biome_color = int(biome_info["color"], 16)
+        color_str = biome_info.get("color", "0xffffff").replace("#", "")
+        biome_color = int(color_str, 16)
         current_utc_time = datetime.now(timezone.utc)
         current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
         current_utc_time = str(current_utc_time)
@@ -254,7 +260,7 @@ class WebhookMixin:
         content = ""
         if event_type == "start" and biome in rare_biomes:
             content = "@everyone"
-        private_server_link = self.config.get("private_server_link").replace("\n", "")
+        
         if private_server_link == "":
             description = f"> ## Biome Started - {biome} \nNo link provided (ManasAarohi ate the link blame him)" if event_type == "start" else f"> ## Biome Ended - {biome}"
         else:
@@ -300,7 +306,6 @@ class WebhookMixin:
         }
         
         # merchant_counts is incremented in Merchant_Handler (mixin_actions.py)
-        # so we only trigger the UI refresh here if needed
         if hasattr(self, "on_stats_update") and callable(self.on_stats_update):
             try:
                 self.on_stats_update()
@@ -379,6 +384,12 @@ class WebhookMixin:
             return
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
         ping_minimum = int(self.config.get("ping_minimum", "100000"))
+        
+        force_ping_auras = str(self.config.get("force_ping_auras", "") or "").lower()
+        force_ping_list = [x.strip() for x in force_ping_auras.split(",") if x.strip()]
+        aura_name_norm = aura_name.lower().replace("_", "").replace(" ", "")
+        is_force_ping = bool(force_ping_list) and any(aura_name_norm.startswith(x.replace("_", "").replace(" ", "")) or x.replace("_", "").replace(" ", "") in aura_name_norm for x in force_ping_list)
+        
         color = 0xffffff
         if rarity is not None:
             rarity_value = int(rarity.replace(',', ''))
@@ -394,7 +405,12 @@ class WebhookMixin:
                 color = 0xff9447
             description = f"> ## Aura equipped: {aura_name} | 1 in {rarity} {biome_message}"
         else:
-            description = f"> ## Aura equipped: {aura_name}"
+            if is_force_ping:
+                color = 0xed2f59
+            if biome_message:
+                description = f"> ## Aura equipped: {aura_name} {biome_message}"
+            else:
+                description = f"> ## Aura equipped: {aura_name}"
         current_utc_time = datetime.now(timezone.utc)
         current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
         current_utc_time = str(current_utc_time)
@@ -409,7 +425,13 @@ class WebhookMixin:
             "timestamp": current_utc_time
         }
         content = ""
+        should_ping = False
         if rarity is not None and 'rarity_value' in locals() and rarity_value >= ping_minimum:
+            should_ping = True
+        if is_force_ping:
+            should_ping = True
+            
+        if should_ping:
             aura_user_id = self.config.get("aura_user_id", "")
             if aura_user_id:
                 content = f"<@{aura_user_id}>"
@@ -571,3 +593,47 @@ class WebhookMixin:
                     self.append_log(f"Failed to send egg OCR webhook: {e}")
         except Exception as e:
             self.error_logging(e, "Error in send_egg_ocr_webhook")
+
+    def send_eden_ocr_webhook(self, discord_user_id="", screenshot_path=None):
+        try:
+            urls = self.get_webhook_list()
+            if not urls: return
+            icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
+            eden_thumbnail = "https://i.postimg.cc/q7jFZVMp/eden.png"
+            current_utc_time = datetime.now(timezone.utc)
+            current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
+            current_utc_time = str(current_utc_time)
+
+            content = f"<@{discord_user_id}>" if discord_user_id else ""
+
+            embed = {
+                "description": f"> ## The Devourer of the Void is here...",
+                "color": 0x2f3136,
+                "timestamp": current_utc_time,
+                "thumbnail": {"url": eden_thumbnail},
+                "footer": {
+                    "text": f"Coteab Macro {current_ver}",
+                    "icon_url": icon_url
+                }
+            }
+
+            if screenshot_path and os.path.isfile(screenshot_path):
+                embed["image"] = {"url": f"attachment://{os.path.basename(screenshot_path)}"}
+
+            for webhook_url in urls:
+                try:
+                    embed_copy = dict(embed)
+                    if screenshot_path and os.path.isfile(screenshot_path):
+                        with open(screenshot_path, "rb") as img_file:
+                            files = {"file": (os.path.basename(screenshot_path), img_file, "image/png")}
+                            data = {"payload_json": json.dumps({"content": content, "embeds": [embed_copy]})}
+                            response = requests.post(webhook_url, data=data, files=files, timeout=15)
+                    else:
+                        payload = {"content": content, "embeds": [embed_copy]}
+                        response = requests.post(webhook_url, json=payload, timeout=10)
+                    response.raise_for_status()
+                    self.append_log(f"Eden OCR webhook sent")
+                except requests.exceptions.RequestException as e:
+                    self.append_log(f"Failed to send Eden OCR webhook: {e}")
+        except Exception as e:
+            self.error_logging(e, "Error in send_eden_ocr_webhook")
