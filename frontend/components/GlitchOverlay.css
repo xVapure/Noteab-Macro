@@ -1,0 +1,378 @@
+.glitch-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+    /* Create an overall CRT scanline effect base */
+    background: repeating-linear-gradient(0deg,
+            rgba(0, 0, 0, 0.15),
+            rgba(0, 0, 0, 0.15) 1px,
+            transparent 1px,
+            transparent 2px);
+    animation: master-shake 0.15s infinite;
+}
+
+/* Base static noise overlay */
+.glitch-noise {
+    position: absolute;
+    inset: -200%;
+    background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+    opacity: 0.15;
+    animation: tv-static 0.15s steps(10) infinite;
+    mix-blend-mode: overlay;
+}
+
+/* Sharp color splits imitating RGB separation */
+.glitch-rgb-split {
+    position: absolute;
+    inset: 0;
+    animation: color-split 0.1s infinite;
+    mix-blend-mode: color-dodge;
+}
+
+/* The actual chaotic tearing bars from TSX */
+.glitch-bar {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.4);
+    animation: glitch-tear 0.1s infinite linear;
+}
+
+/* Randomize bar colors and mix modes for intense artifacts */
+.glitch-bar:nth-child(odd) {
+    background: rgba(255, 0, 0, 0.2);
+    mix-blend-mode: difference;
+    animation-duration: 0.08s;
+}
+
+.glitch-bar:nth-child(even) {
+    background: rgba(0, 255, 255, 0.2);
+    mix-blend-mode: exclusion;
+    animation-duration: 0.05s;
+}
+
+@keyframes tv-static {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    10% {
+        transform: translate(-5%, -5%);
+    }
+
+    20% {
+        transform: translate(-10%, 5%);
+    }
+
+    30% {
+        transform: translate(5%, -10%);
+    }
+
+    40% {
+        transform: translate(-5%, 15%);
+    }
+
+    50% {
+        transform: translate(-10%, 5%);
+    }
+
+    60% {
+        transform: translate(15%, 0);
+    }
+
+    70% {
+        transform: translate(0, 10%);
+    }
+
+    80% {
+        transform: translate(-15%, 0);
+    }
+
+    90% {
+        transform: translate(10%, 5%);
+    }
+
+    100% {
+        transform: translate(5%, 0);
+    }
+}
+
+@keyframes color-split {
+    0% {
+        box-shadow: inset 10px 0 0 rgba(255, 0, 0, 0.5), inset -10px 0 0 rgba(0, 255, 255, 0.5);
+    }
+
+    25% {
+        box-shadow: inset -15px 0 0 rgba(255, 0, 255, 0.5), inset 15px 0 0 rgba(0, 255, 0, 0.5);
+    }
+
+    50% {
+        box-shadow: inset 12px 0 0 rgba(0, 0, 255, 0.5), inset -12px 0 0 rgba(255, 255, 0, 0.5);
+    }
+
+    75% {
+        box-shadow: inset -8px 0 0 rgba(255, 0, 0, 0.5), inset 8px 0 0 rgba(0, 255, 255, 0.5);
+    }
+
+    100% {
+        box-shadow: inset 10px 0 0 rgba(255, 0, 0, 0.5), inset -10px 0 0 rgba(0, 255, 255, 0.5);
+    }
+}
+
+@keyframes glitch-tear {
+    0% {
+        transform: translateX(0);
+        opacity: 0;
+    }
+
+    10% {
+        transform: translateX(-40px);
+        opacity: 1;
+    }
+
+    20% {
+        transform: translateX(40px);
+        opacity: 0.8;
+    }
+
+    30% {
+        transform: translateX(-15px);
+        opacity: 0;
+    }
+
+    40% {
+        transform: translateX(25px);
+        opacity: 1;
+    }
+
+    50% {
+        transform: translateX(-50px);
+        opacity: 0.5;
+    }
+
+    60% {
+        transform: translateX(50px);
+        opacity: 0;
+    }
+
+    70% {
+        transform: translateX(-20px);
+        opacity: 1;
+    }
+
+    80% {
+        transform: translateX(35px);
+        opacity: 0.8;
+    }
+
+    90% {
+        transform: translateX(-10px);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateX(10px);
+        opacity: 1;
+    }
+}
+
+/* Gibberish Text Container */
+.glitch-gibberish {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10000;
+}
+
+/* Individual Gibberish Text Elements */
+.glitch-text-element {
+    position: absolute;
+    color: #ff003c;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    text-shadow: 2px 0 0 #00ffff, -2px 0 0 #ff00ff;
+    opacity: 0;
+    animation: text-spawn 0.8s infinite;
+    mix-blend-mode: color-dodge;
+    white-space: nowrap;
+}
+
+@keyframes text-spawn {
+    0% {
+        opacity: 0;
+        transform: scale(0.9) translateX(20px);
+    }
+
+    10% {
+        opacity: 1;
+        transform: scale(1.1) translateX(-5px);
+    }
+
+    20% {
+        opacity: 0;
+        transform: scale(0.8) translateX(10px);
+    }
+
+    30% {
+        opacity: 0.8;
+        transform: scale(1) translateX(0);
+        filter: hue-rotate(90deg);
+    }
+
+    40% {
+        opacity: 0;
+        transform: scale(1.2) translateX(-15px);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(0.9) translateX(5px);
+        filter: saturate(3);
+    }
+
+    60% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Extra Detail: Moving CRT Scanlines */
+.glitch-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    background: linear-gradient(to bottom,
+            rgba(255, 255, 255, 0),
+            rgba(255, 255, 255, 0) 50%,
+            rgba(0, 0, 0, 0.2) 50%,
+            rgba(0, 0, 0, 0.2));
+    background-size: 100% 4px;
+    animation: scanline-scroll 10s linear infinite;
+    opacity: 0.6;
+}
+
+@keyframes scanline-scroll {
+    0% {
+        background-position: 0 0;
+    }
+
+    100% {
+        background-position: 0 100vh;
+    }
+}
+
+/* Extra Detail: Dark Vignette for old TV look */
+.glitch-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9997;
+    background: radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.8) 100%);
+    mix-blend-mode: multiply;
+}
+
+/* Extra Detail: Corrupted Color Blocks */
+.glitch-block {
+    position: absolute;
+    z-index: 9996;
+    animation: block-flash 0.2s infinite;
+    mix-blend-mode: overlay;
+}
+
+.glitch-block.red {
+    background: rgba(255, 0, 0, 0.4);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+.glitch-block.blue {
+    background: rgba(0, 255, 255, 0.4);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.glitch-block.green {
+    background: rgba(0, 255, 0, 0.4);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+@keyframes block-flash {
+
+    0%,
+    100% {
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    30% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    70% {
+        opacity: 0;
+    }
+}
+
+@keyframes master-shake {
+
+    0%,
+    100% {
+        transform: translate(0, 0) skew(0deg);
+    }
+
+    10% {
+        transform: translate(-3px, 2px) skew(1deg);
+        filter: hue-rotate(90deg) contrast(1.5);
+    }
+
+    20% {
+        transform: translate(3px, -2px) skew(-2deg);
+        filter: invert(0.2) saturate(2);
+    }
+
+    30% {
+        transform: translate(-2px, 3px) skew(0deg);
+    }
+
+    40% {
+        transform: translate(2px, -3px) skew(3deg);
+        filter: hue-rotate(-90deg) brightness(1.2);
+    }
+
+    50% {
+        transform: translate(-3px, -2px) skew(-3deg);
+    }
+
+    60% {
+        transform: translate(3px, 2px) skew(0deg);
+        filter: invert(0.1);
+    }
+
+    70% {
+        transform: translate(-2px, -3px) skew(2deg);
+    }
+
+    80% {
+        transform: translate(2px, 3px) skew(-2deg);
+        filter: hue-rotate(45deg);
+    }
+
+    90% {
+        transform: translate(-3px, -3px) skew(0deg);
+    }
+}

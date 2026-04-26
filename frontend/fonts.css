@@ -1,0 +1,55 @@
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/inter-var.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Sarpanch';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/sarpanch-400.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Sarpanch';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/sarpanch-500.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Sarpanch';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/sarpanch-600.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Sarpanch';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/sarpanch-700.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Sarpanch';
+    font-style: normal;
+    font-weight: 800;
+    font-display: swap;
+    src: url('/fonts/sarpanch-800.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Sarpanch';
+    font-style: normal;
+    font-weight: 900;
+    font-display: swap;
+    src: url('/fonts/sarpanch-900.ttf') format('truetype');
+}
