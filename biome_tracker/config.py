@@ -22,6 +22,9 @@ EXE_CONFIG = BASE_PATH / "config.json"
 DEV_CONFIG_DIR = BASE_PATH / "config_folder"
 DEV_CONFIG = DEV_CONFIG_DIR / "config.json"
 
+APPDATA_BASE = Path(_os.environ.get("LOCALAPPDATA", _os.path.expanduser("~"))) / "CoteabMacro"
+APPDATA_CONFIG = APPDATA_BASE / "config.json"
+
 DEFAULT_AUTO_POP_BUFFS = [
     "Fortune Potion I",
     "Fortune Potion II",
@@ -34,6 +37,7 @@ DEFAULT_AUTO_POP_BUFFS = [
     "Lucky Potion",
     "Oblivion Potion",
     "Potion of bound",
+    "Rune of Everything",
     "Speed Potion",
     "Stella's Candle",
     "Strange Potion I",
@@ -57,6 +61,8 @@ DEFAULT_AUTO_POP_BIOMES = [
     "CYBERSPACE",
     "AURORA",
     "HEAVEN",
+    "EGGLAND",
+    "SINGULARITY",
 ]
 
 RARE_BIOMES = {"GLITCHED", "DREAMSPACE", "CYBERSPACE"}
@@ -184,20 +190,30 @@ def normalize_auto_pop_biomes(
     return normalized
 
 def get_config_file() -> Path:
-    return EXE_CONFIG
+    return APPDATA_CONFIG
 
 
 def ensure_workspace_files() -> None:
-    (BASE_PATH / "resources").mkdir(exist_ok=True)
-    (BASE_PATH / "resources" / "paths").mkdir(parents=True, exist_ok=True)
-    (BASE_PATH / "paths").mkdir(exist_ok=True)
-    (BASE_PATH / "logs").mkdir(exist_ok=True)
-    (BASE_PATH / "images").mkdir(exist_ok=True)
+    (APPDATA_BASE / "resources").mkdir(exist_ok=True)
+    (APPDATA_BASE / "resources" / "paths").mkdir(parents=True, exist_ok=True)
+    (APPDATA_BASE / "paths").mkdir(exist_ok=True)
+    (APPDATA_BASE / "logs").mkdir(exist_ok=True)
+    (APPDATA_BASE / "images").mkdir(exist_ok=True)
     
     if not getattr(sys, 'frozen', False):
         DEV_CONFIG_DIR.mkdir(exist_ok=True)
 
+    APPDATA_BASE.mkdir(parents=True, exist_ok=True)
     config_file = get_config_file()
+    
+    # Migrate local config to AppData
+    if EXE_CONFIG.exists() and not config_file.exists():
+        try:
+            import shutil
+            shutil.copy2(EXE_CONFIG, config_file)
+        except Exception as e:
+            print(f"Failed to migrate config.json to AppData: {e}")
+
     if not config_file.exists():
         default = {}
         config_file.parent.mkdir(parents=True, exist_ok=True)

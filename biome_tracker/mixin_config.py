@@ -32,6 +32,7 @@ class ConfigMixin:
             "roblox_username": self.config.get("roblox_username", ""),
             "auto_reconnect": self.auto_reconnect_var.get(),
             "biome_notifier": {biome: self.variables[biome].get() for biome in self.biome_data} if self.variables else self.config.get("biome_notifier", {}),
+            "biome_pings": self.config.get("biome_pings", {}),
             "biome_counts": self.biome_counts,
             "merchant_counts": getattr(self, "merchant_counts", self.config.get("merchant_counts", {"Jester": 0, "Mari": 0, "Rin": 0})),
             "custom_biome_overrides": self.config.get("custom_biome_overrides", {}),
@@ -210,6 +211,17 @@ class ConfigMixin:
             "remote_access_enabled": self.remote_access_var.get() if hasattr(self, "remote_access_var") else self.config.get("remote_access_enabled", False),
             "remote_bot_token": self.remote_bot_token_var.get() if hasattr(self, "remote_bot_token_var") else self.config.get("remote_bot_token", ""),
             "remote_allowed_user_id": self.remote_allowed_user_id_var.get() if hasattr(self, "remote_allowed_user_id_var") else self.config.get("remote_allowed_user_id", ""),
+            
+            # ── Eden ──
+            "eden_detection": self.config.get("eden_detection", False),
+            "ping_eden": self.config.get("ping_eden", False),
+            "eden_user_id": self.config.get("eden_user_id", ""),
+            "eden_check_interval": self.config.get("eden_check_interval", "2"),
+            "eden_path_interval": self.config.get("eden_path_interval", "35"),
+            "go_to_eden_spawn": self.config.get("go_to_eden_spawn", False),
+            "auto_eden_contract": self.config.get("auto_eden_contract", False),
+            "eden_contract_button": self.config.get("eden_contract_button", [708, 895]),
+            "eden_contract_interval": self.config.get("eden_contract_interval", "2"),
         })
 
         if not config["auto_buff_glitched"]: config["auto_buff_glitched"] = auto_buff_glitched
@@ -301,6 +313,7 @@ class ConfigMixin:
                 "auto_pop_dreamspace": False,
                 "auto_pop_glitched": False,
                 "auto_pop_biomes": {},
+                "biome_pings": {},
                 "auto_reconnect": False,
                 "biome_counts": {
                     "AURORA": 0, "CORRUPTION": 0, "CYBERSPACE": 0, "DREAMSPACE": 0,
@@ -322,6 +335,7 @@ class ConfigMixin:
                     "CORRUPTION": { "color": "0x6d32a8", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/CORRUPTION.png" },
                     "CYBERSPACE": { "color": "0x0A1A3D", "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/CYBERSPACE.png" },
                     "DREAMSPACE": { "color": "0xea9dda", "thumbnail_url": "http://github.com/xVapure/Noteab-Macro/blob/main/images/Screenshot_2026-01-03_021107.png?raw=true" },
+                    "EGGLAND": { "color": "0xd4fc8d", "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/EGGLAND.png" },
                     "GLITCHED": { "color": "0xbfff00", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/GLITCHED.png" },
                     "HEAVEN": { "color": "0xFFE8A0", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/HEAVEN.png" },
                     "HELL": { "color": "0xff4719", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/HELL.png" },
@@ -329,6 +343,7 @@ class ConfigMixin:
                     "NULL": { "color": "0x838383", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/NULL.png" },
                     "RAINY": { "color": "0x027cbd", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/RAINY.png" },
                     "SAND STORM": { "color": "0x8F7057", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SAND%20STORM.png" },
+                    "SINGULARITY": { "color": "0xcf4023", "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/SINGULARITY.png" },
                     "SNOWY": { "color": "0xDceff9", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SNOWY.png" },
                     "STARFALL": { "color": "0x011ab7", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/STARFALL.png" },
                     "WINDY": { "color": "0xF2F6FF", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/WINDY.png" }
@@ -460,8 +475,19 @@ class ConfigMixin:
                 "webhook_url": [],
                 "non_vip_movement_path": False,
                 "azerty_mode": False,
-                "eden_detection": False
+                "eden_detection": False,
+                "ping_eden": False,
+                "eden_user_id": "",
+                "eden_check_interval": "2",
+                "eden_path_interval": "35",
+                "go_to_eden_spawn": False,
+                "auto_eden_contract": False,
+                "eden_contract_button": [708, 895],
+                "eden_contract_interval": "3"
             }
+
+            if getattr(self, "biome_data", None):
+                default_config["biome_pings"] = {biome: {"id": "", "type": "userid"} for biome in self.biome_data if biome != "NORMAL"}
 
             # Override coordinate defaults with the current calibrated values from config.json.
             # This makes fresh/missing configs inherit your latest calibration baseline.

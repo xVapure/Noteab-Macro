@@ -102,6 +102,128 @@ class RemoteMixin:
                     except Exception:
                         pass
 
+            @bot.slash_command(name="start", description="Start the macro (biome detection)")
+            async def start_macro(ctx: discord.ApplicationContext):
+                try:
+                    if not _check_auth(ctx):
+                        await _safe_respond(ctx, "Unauthorized", ephemeral=True)
+                        return
+                    if getattr(self, "on_remote_start", None):
+                        self.on_remote_start()
+                        embed = discord.Embed(title="Macro Started", description="Biome detection has been started.", color=0x00FF00)
+                        await ctx.respond(embed=embed)
+                    else:
+                        await _safe_respond(ctx, "Start callback not configured.", ephemeral=True)
+                except Exception:
+                    pass
+
+            @bot.slash_command(name="stop", description="Stop the macro")
+            async def stop_macro(ctx: discord.ApplicationContext):
+                try:
+                    if not _check_auth(ctx):
+                        await _safe_respond(ctx, "Unauthorized", ephemeral=True)
+                        return
+                    if getattr(self, "on_remote_stop", None):
+                        self.on_remote_stop()
+                        embed = discord.Embed(title="Macro Stopped", description="Biome detection has been stopped.", color=0xFF0000)
+                        await ctx.respond(embed=embed)
+                    else:
+                        await _safe_respond(ctx, "Stop callback not configured.", ephemeral=True)
+                except Exception:
+                    pass
+
+            @bot.slash_command(name="status", description="Show current macro status")
+            async def status_macro(ctx: discord.ApplicationContext):
+                try:
+                    if not _check_auth(ctx):
+                        await _safe_respond(ctx, "Unauthorized", ephemeral=True)
+                        return
+                    
+                    is_running = getattr(self, "detection_running", False)
+                    status_text = "🟢 Running" if is_running else "🔴 Stopped"
+                    current_biome = getattr(self, "current_biome", "Unknown") or "None"
+                    
+                    session_time = "0:00:00"
+                    if is_running and getattr(self, "start_time", None):
+                        import datetime as dt
+                        now = dt.datetime.now()
+                        elapsed = int((now - self.start_time).total_seconds()) + getattr(self, "saved_session", 0)
+                        session_time = str(dt.timedelta(seconds=elapsed))
+                    else:
+                        import datetime as dt
+                        session_time = str(dt.timedelta(seconds=getattr(self, "saved_session", 0))) if hasattr(self, "saved_session") else "0:00:00"
+
+                    fishing_mode = "✅ On" if self.config.get("fishing_mode", False) else "❌ Off"
+                    
+                    embed = discord.Embed(title="== Macro Status ==", color=0x00AAFF)
+                    embed.add_field(name="Status", value=status_text, inline=True)
+                    embed.add_field(name="Current Biome", value=current_biome, inline=True)
+                    embed.add_field(name="Session Time", value=session_time, inline=True)
+                    embed.add_field(name="Fishing Mode", value=fishing_mode, inline=True)
+
+                    biome_counts = getattr(self, "biome_counts", {})
+                    valid_counts = {k: v for k, v in biome_counts.items() if v > 0}
+                    if valid_counts:
+                        items = sorted(valid_counts.items(), key=lambda x: x[1], reverse=True)
+                        lines = []
+                        for i in range(0, len(items), 2):
+                            left_k, left_v = items[i]
+                            left_str = f"{left_k.title():<11}: {left_v:<5}"
+                            if i + 1 < len(items):
+                                right_k, right_v = items[i+1]
+                                right_str = f" |  {right_k.title():<11}: {right_v}"
+                            else:
+                                right_str = ""
+                            lines.append(f"{left_str}{right_str}")
+                        counts_str = "```yaml\n" + "\n".join(lines) + "\n```"
+                        embed.add_field(name="Biome Counts", value=counts_str, inline=False)
+                    else:
+                        embed.add_field(name="Biome Counts", value="```\nNone yet.\n```", inline=False)
+                    
+                    try:
+                        from biome_tracker.base_support import current_version
+                        embed.set_footer(text=f"Coteab Macro {current_version}")
+                    except Exception:
+                        pass
+                        
+                    await ctx.respond(embed=embed)
+                except Exception:
+                    pass
+
+            @bot.slash_command(name="close_roblox_and_stop_macro", description="Kill Roblox process AND stop the macro")
+            async def close_roblox_and_stop_macro(ctx: discord.ApplicationContext):
+                try:
+                    if not _check_auth(ctx):
+                        await _safe_respond(ctx, "Unauthorized", ephemeral=True)
+                        return
+                    embed = discord.Embed(title="🛑 Terminating Roblox", description="Stopping the macro and forcefully killing Roblox processes...", color=0xFF0000)
+                    await ctx.respond(embed=embed)
+                    
+                    self.remote_command_queue.put(("__close_roblox__", ""))
+                    if getattr(self, "on_remote_stop", None):
+                        self.on_remote_stop()
+                except Exception:
+                    pass
+
+            @bot.slash_command(name="equip_aura", description="Search for and equip an aura by name")
+            async def equip_aura(ctx: discord.ApplicationContext, name: str):
+                try:
+                    if not _check_auth(ctx):
+                        await _safe_respond(ctx, "Unauthorized", ephemeral=True)
+                        return
+                        
+                    is_blocked = getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked())
+                    if is_blocked:
+                        embed = discord.Embed(title="Action Blocked", description=f"Cannot equip **{name}** while the macro is actively running an un-interruptible mode (e.g., Fishing Mode). Please wait for the macro to finish those action.", color=0xFF0000)
+                        await ctx.respond(embed=embed, ephemeral=True)
+                        return
+                        
+                    self.remote_command_queue.put(("__equip_aura__", str(name)))
+                    embed = discord.Embed(title="Equipping Aura", description=f"Attempting to search and equip **{name}**...", color=0xFFD700)
+                    await ctx.respond(embed=embed)
+                except Exception:
+                    pass
+
             @bot.slash_command(name="rejoin", description="Close Roblox to force rejoin (requires Auto Reconnect enabled)")
             async def rejoin(ctx: discord.ApplicationContext):
                 try:
@@ -109,34 +231,34 @@ class RemoteMixin:
                         await _safe_respond(ctx, "Unauthorized", ephemeral=True)
                         return
                     if not self.config.get("auto_reconnect"):
-                        await _safe_respond(ctx, "\u274c Auto Reconnect is disabled. Enable it in settings to use /rejoin.", ephemeral=True)
+                        await _safe_respond(ctx, "Auto Reconnect is disabled. Enable it in settings to use /rejoin.", ephemeral=True)
                         return
                     self.remote_command_queue.put(("__rejoin__", ""))
-                    await _safe_respond(ctx, "\U0001f504 Closing Roblox and rejoining the server...", ephemeral=False)
+                    embed = discord.Embed(title="Rejoining", description="Closing Roblox and forcing a server rejoin...", color=0x00FF00)
+                    await ctx.respond(embed=embed)
                 except Exception:
-                    try:
-                        await _safe_respond(ctx, "\u274c Something went wrong.", ephemeral=True)
-                    except Exception:
-                        pass
+                    pass
 
             @bot.slash_command(name="help", description="Helping u out with remote access features")
             async def help_cmd(ctx: discord.ApplicationContext, page: int = 1):
                 try:
                     cmds = getattr(self, "_help_command_list", [])
-                    per = 5
+                    per = 6
                     total = (len(cmds) + per - 1) // per if cmds else 1
                     p = max(1, min(page, total))
                     start = (p - 1) * per
                     end = start + per
                     page_items = cmds[start:end]
-                    lines = []
-                    for idx, cmd in enumerate(page_items, start=1):
+                    
+                    embed = discord.Embed(title="Remote Access Commands", color=0x5865F2)
+                    for cmd in page_items:
                         name = cmd[0] if len(cmd) > 0 else ""
                         usage = cmd[1] if len(cmd) > 1 else ""
                         desc = cmd[2] if len(cmd) > 2 else ""
-                        lines.append(f"`/{name} {usage}` - {desc}")
-                    content = f"Help page {p}/{total}\n" + ("\n".join(lines) if lines else "No commands on this page")
-                    await _safe_respond(ctx, content, ephemeral=False)
+                        embed.add_field(name=f"/{name} {usage}", value=desc, inline=False)
+                        
+                    embed.set_footer(text=f"Page {p}/{total}")
+                    await ctx.respond(embed=embed)
                 except Exception:
                     pass
 
@@ -146,8 +268,16 @@ class RemoteMixin:
                     if not _check_auth(ctx):
                         await _safe_respond(ctx, "Unauthorized", ephemeral=True)
                         return
+                        
+                    is_blocked = getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked())
+                    if is_blocked:
+                        embed = discord.Embed(title="Action Blocked", description=f"Cannot use items while the macro is actively running an un-interruptible mode (e.g., Fishing Mode). Please wait for the macro to finish those action.", color=0xFF0000)
+                        await ctx.respond(embed=embed, ephemeral=True)
+                        return
+                        
                     self.remote_command_queue.put((str(item), int(amount)))
-                    await _safe_respond(ctx, f"\U0001f4e6 Using **{item}** x{amount}...", ephemeral=False)
+                    embed = discord.Embed(title="Using Item", description=f"Using **{item}** x{amount}...", color=0x00FF00)
+                    await ctx.respond(embed=embed)
                 except Exception:
                     try:
                         await _safe_respond(ctx, "\u274c Something went wrong.", ephemeral=True)
@@ -171,6 +301,17 @@ class RemoteMixin:
                         pass
 
             @bot.slash_command(name="screenshot", description="Take current ingame screenshot and send to webhooks")
+            @discord.option(
+                name="target",
+                type=str,
+                description="Type of screenshot to take",
+                choices=[
+                    discord.OptionChoice(name="Fullscreen", value="full"),
+                    discord.OptionChoice(name="Inventory", value="inventory"),
+                    discord.OptionChoice(name="Aura Storage", value="aura"),
+                ],
+                required=False
+            )
             async def screenshot(ctx: discord.ApplicationContext, target: str = None):
                 try:
                     if not _check_auth(ctx):
@@ -179,12 +320,21 @@ class RemoteMixin:
                     t = (target or "").strip().lower()
                     if not t or t not in ("full", "inventory", "aura"):
                         t = "full"
+                        
+                    if t != "full":
+                        is_blocked = getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked())
+                        if is_blocked:
+                            embed = discord.Embed(title="Action Blocked", description=f"Cannot take an **{t}** screenshot while the macro is actively running an un-interruptible mode (e.g., Fishing Mode). Please wait for the macro to finish those action, or request a **Fullscreen** screenshot instead.", color=0xFF0000)
+                            await ctx.respond(embed=embed, ephemeral=True)
+                            return
+                            
                     self.remote_command_queue.put(("__screenshot__", t))
                     labels = {"full": "full screen", "inventory": "inventory", "aura": "aura"}
-                    await _safe_respond(ctx, f"\U0001f4f8 Taking a {labels.get(t, t)} screenshot and sending to webhooks...", ephemeral=False)
+                    embed = discord.Embed(title="Screenshot Requested", description=f"Taking a **{labels.get(t, t)}** screenshot and sending it to your webhooks...", color=0x00AAFF)
+                    await ctx.respond(embed=embed)
                 except Exception:
                     try:
-                        await _safe_respond(ctx, "\u274c Something went wrong.", ephemeral=True)
+                        await _safe_respond(ctx, "Something went wrong.", ephemeral=True)
                     except Exception:
                         pass
 
@@ -388,6 +538,14 @@ class RemoteMixin:
                             pass
                     continue
 
+                if item_name == "__close_roblox__":
+                    try:
+                        if self.check_roblox_procs():
+                            self.terminate_roblox_processes()
+                    except Exception:
+                        pass
+                    continue
+
                 if item_name == "__rejoin__":
                     if not self.detection_running or self.reconnecting_state:
                         try:
@@ -544,6 +702,52 @@ class RemoteMixin:
                             except Exception:
                                 pass
                         continue
+                if item_name == "__equip_aura__":
+                    aura_name = str(amount)
+                    if not self.detection_running or self.reconnecting_state:
+                        try:
+                            time.sleep(0.35)
+                            self.remote_command_queue.put((item_name, amount))
+                        except Exception:
+                            pass
+                        continue
+
+                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
+                        try:
+                            time.sleep(0.35)
+                            self.remote_command_queue.put((item_name, amount))
+                        except Exception:
+                            pass
+                        continue
+
+                    def _equip_aura_action():
+                        try:
+                            self._remote_running = True
+                            try:
+                                self.remote_status_label.config(text=f"Bot: equipping {aura_name}")
+                            except Exception:
+                                pass
+                            try:
+                                self.remote_equip_aura(aura_name)
+                            except Exception:
+                                pass
+                        finally:
+                            self._remote_running = False
+                            try:
+                                self.remote_status_label.config(text="Bot: running")
+                            except Exception:
+                                pass
+
+                    try:
+                        self._action_scheduler.enqueue_action(_equip_aura_action, name=f"remote:equip_aura:{aura_name}", priority=2)
+                    except Exception:
+                        try:
+                            time.sleep(0.35)
+                            self.remote_command_queue.put((item_name, amount))
+                        except Exception:
+                            pass
+                    continue
+
                 if not self.detection_running or self.reconnecting_state:
                     try:
                         time.sleep(0.35)
@@ -603,8 +807,15 @@ class RemoteMixin:
         time.sleep(0.57)
         inventory_menu = self.config.get("inventory_menu", [36, 535])
         inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
+        items_tab = self.config.get("items_tab", [1272, 329])
+        
         self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
         time.sleep(0.22 + inventory_click_delay)
+        
+        self.Global_MouseClick(items_tab[0], items_tab[1])
+        time.sleep(0.23)
+        self.Global_MouseClick(items_tab[0], items_tab[1])
+        time.sleep(0.23)
         search_bar = self.config.get("search_bar", [855, 358])
         self.Global_MouseClick(search_bar[0], search_bar[1], click=2)
         time.sleep(0.23 + inventory_click_delay)
@@ -645,6 +856,60 @@ class RemoteMixin:
         self.Global_MouseClick(use_button[0], use_button[1])
         time.sleep(0.25)
         self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
+        time.sleep(0.12)
+
+    def remote_equip_aura(self, aura_name):
+        if not self.detection_running or self.reconnecting_state:return
+        inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
+        step_delay = 0.67 + inventory_click_delay
+        for _ in range(4):
+            if not self.detection_running or self.reconnecting_state:return
+            self.activate_roblox_window()
+            time.sleep(0.35)
+        time.sleep(0.57)
+        aura_menu = self.config.get("aura_menu", [37, 387])
+        if aura_menu and aura_menu[0] > 0: self.Global_MouseClick(aura_menu[0], aura_menu[1])
+        time.sleep(step_delay)
+        aura_search_bar = self.config.get("aura_search_bar", [834, 364])
+        if aura_search_bar and aura_search_bar[0] > 0: self.Global_MouseClick(aura_search_bar[0], aura_search_bar[1])
+        time.sleep(step_delay)
+        try:
+            autoit.send(str(aura_name))
+        except Exception:
+            try:
+                keyboard.write(str(aura_name).lower())
+            except Exception:
+                pass
+        time.sleep(step_delay)
+        try:
+            keyboard.send("enter")
+        except Exception:
+            pass
+        time.sleep(step_delay)
+
+        first_aura_slot = self.config.get("first_aura_slot_pos", [819, 420])
+        if first_aura_slot and first_aura_slot[0] > 0:
+            try:
+                import pyautogui
+                pyautogui.moveTo(first_aura_slot[0], first_aura_slot[1])
+                time.sleep(step_delay)
+                # Scroll up to ensure we see the first result
+                try:
+                    autoit.mouse_wheel("up", max(1, int(round(5000 / 120.0))))
+                except Exception:
+                    pass
+                time.sleep(step_delay)
+            except Exception:
+                pass
+            self.Global_MouseClick(first_aura_slot[0], first_aura_slot[1])
+        time.sleep(step_delay)
+        equip_btn = self.config.get("equip_aura_button", [0, 0])
+        if equip_btn and equip_btn[0] > 0:
+            self.Global_MouseClick(equip_btn[0], equip_btn[1])
+        time.sleep(step_delay)
+        inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
+        if inventory_close_button and inventory_close_button[0] > 0:
+            self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
         time.sleep(0.12)
 
     def remote_take_and_send_screenshot(self):

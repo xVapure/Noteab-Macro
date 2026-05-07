@@ -33,15 +33,27 @@ class LifecycleMixin:
         self._active_webhook_channel_mentions = []
         try:
             if hasattr(self, "refresh_active_webhook_channels"):
-                self.refresh_active_webhook_channels(force=True)
+                threading.Thread(
+                    target=self.refresh_active_webhook_channels,
+                    args=(True,),
+                    daemon=True,
+                    name="InitWebhookChannels"
+                ).start()
         except Exception as e:
             try:
                 print(f"Failed to resolve active webhook channels on startup: {e}")
             except Exception:
                 pass
-            
         self.auras_data = self.load_auras_json()
         self.biome_data = self.load_biome_data()
+
+        # Sync biome_notifier with biome_data from GitHub so new biomes appear in frontend
+        if "biome_notifier" not in self.config:
+            self.config["biome_notifier"] = {}
+        for biome_name in self.biome_data.keys():
+            if biome_name != "NORMAL" and biome_name not in self.config["biome_notifier"]:
+                self.config["biome_notifier"][biome_name] = "Message"
+
         self.config["auto_pop_biomes"] = normalize_auto_pop_biomes(self.config, list(self.biome_data.keys()))
 
         self.current_biome = None
@@ -117,6 +129,9 @@ class LifecycleMixin:
         self._obby_running = False
         self.last_obby_claim = datetime.min
         self._egg_collecting = False
+        self._eden_running = False
+        self._eden_path_pending = False
+        self._potion_thread_active = False
         self._fishing_busy = False
         self.last_egg_collect_time = datetime.min
         screenshot_dir = os.path.join(os.getcwd(), "images")
@@ -148,6 +163,7 @@ class LifecycleMixin:
         self.sc_var               = ConfigVar(self.config, "strange_controller", False)
         self.sc_duration_var      = ConfigVar(self.config, "sc_duration", "15")
         self.anti_afk_var         = ConfigVar(self.config, "anti_afk", True)
+        self.anti_afk_interval_var = ConfigVar(self.config, "anti_afk_interval", "5")
         self.auto_reconnect_var   = ConfigVar(self.config, "auto_reconnect", False)
         self.macro_idle_mode_var  = ConfigVar(self.config, "enable_idle_mode", False)
         self.auto_roblox_fullscreen_var = ConfigVar(self.config, "auto_roblox_fullscreen", False)
@@ -208,10 +224,15 @@ class LifecycleMixin:
             self._remote_check_merchant_results = {}
         if not hasattr(self, "_help_command_list"):
             self._help_command_list = [
-                ("screenshot", "", "Take current ingame screenshot and send to webhooks."),
+                ("start", "", "Start the macro (biome detection)."),
+                ("stop", "", "Stop the macro."),
+                ("status", "", "Show current macro status."),
+                ("close_roblox_and_stop_macro", "", "Kill Roblox process AND stop the macro."),
+                ("screenshot", "[target]", "Take an in-game screenshot and send it to you."),
+                ("equip_aura", "{name}", "Search for and equip an aura by name."),
                 ("reroll_quest", "{quest name}", "Reroll a daily quest."),
                 ("check_merchant", "", "Use merchant teleporter and check for merchant."),
-                ("use", "{item_name} {amount}", "Use item remotely."),
+                ("use", "{item_name} {amount}", "Use an item remotely."),
                 ("rejoin", "", "Close Roblox to force rejoin (requires Auto Reconnect enabled)."),
             ]
         if not hasattr(self, "remote_worker_running"):
@@ -232,6 +253,13 @@ class LifecycleMixin:
         self.last_aura_found = None
         self.last_aura_screenshot_time = datetime.min
         self.last_inventory_screenshot_time = datetime.min
+        
+        # Start remote bot if enabled on startup
+        try:
+            if hasattr(self, "_remote_access_toggle"):
+                self._remote_access_toggle()
+        except Exception:
+            pass
 
     def is_fishing_mode_enabled(self):
         try:

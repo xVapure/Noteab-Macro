@@ -7,6 +7,7 @@ from typing import Any, Callable
 import os
 import sys
 import collections.abc
+from .config import APPDATA_BASE, BASE_PATH
 
 _autoit_lock = threading.Lock()
 
@@ -470,15 +471,25 @@ def run_egg_collect_once(
 ) -> bool:
     if not should_continue() or not can_run():
         return False
-
-
-    base_dir = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(os.getcwd())
-    paths_folder = base_dir / "paths"
-    route_files: list[Path] = sorted(paths_folder.glob("egg_route*.json"))
-
-    if not route_files:
-        print(f"{log_prefix} No egg route files found in {paths_folder}. Skipping.")
+    
+    search_dirs = [
+        APPDATA_BASE / "paths",
+        BASE_PATH / "paths",
+        Path(os.getcwd()) / "paths"
+    ]
+    
+    paths_folder = None
+    for sd in search_dirs:
+        if sd.exists() and any(sd.iterdir()):
+            paths_folder = sd
+            break
+            
+    if not paths_folder:
+        paths_folder = search_dirs[0]
+        print(f"{log_prefix} No egg route files found in macro paths. Last checked: {paths_folder}")
         return True
+
+    route_files: list[Path] = sorted(paths_folder.glob("egg_route*.json"))
 
     routes: list[tuple[str, list[dict[str, Any]]]] = []
     for rf in route_files:

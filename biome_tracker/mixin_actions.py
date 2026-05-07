@@ -8,12 +8,26 @@ class ActionsMixin:
             paths_folder = os.path.join(os.getcwd(), "paths")
             os.makedirs(paths_folder, exist_ok=True)
 
+            try:
+                from biome_tracker.config import get_base_path
+                import shutil
+                source_paths = os.path.join(str(get_base_path()), "paths")
+            except Exception:
+                source_paths = None
+
             base_url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/paths/"
-            for filename in ["obby.json", "egg_route1.json", "egg_route2.json", "egg_route3.json"]:
+            for filename in ["obby.json", "eden.json", "egg_route1.json", "egg_route2.json", "egg_route3.json"]:
                 file_path = os.path.join(paths_folder, filename)
                 if not os.path.exists(file_path):
+                    if source_paths and os.path.exists(os.path.join(source_paths, filename)):
+                        try:
+                            shutil.copy2(os.path.join(source_paths, filename), file_path)
+                            self.append_log(f"Copied {filename} from local workspace")
+                            continue
+                        except Exception:
+                            pass
                     try:
-                        response = requests.get(base_url + filename, timeout=15)
+                        response = requests.get(base_url + filename, timeout=5)
                         response.raise_for_status()
                         open(file_path, "w", encoding="utf-8").write(response.text)
                         self.append_log(f"Downloaded {filename}")
@@ -137,7 +151,7 @@ class ActionsMixin:
                 and not bool(getattr(self, "_remote_running", False))
                 and not bool(getattr(self, "_fishing_br_sc_override", False))
                 and not bool(self.config.get("enable_idle_mode", False))
-            ) or bool(getattr(self, "_egg_collecting", False))
+            ) or bool((getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)))
         except Exception:
             return False
 
@@ -453,7 +467,7 @@ class ActionsMixin:
                 return
             if not self.check_roblox_procs():
                 return
-            if getattr(self, "_egg_collecting", False):
+            if (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)):
                 return
             
             for _ in range(4):
@@ -527,7 +541,7 @@ class ActionsMixin:
             while True:
                 if not self.detection_running or self.reconnecting_state:
                     return
-                if not getattr(self, "_br_sc_running", False) and not getattr(self, "_mt_running", False) and not getattr(self, "auto_pop_state", False) and not getattr(self, "on_auto_merchant_state", False) and not getattr(self, "_egg_collecting", False) and not self.config.get("enable_potion_crafting", False):
+                if not getattr(self, "_br_sc_running", False) and not getattr(self, "_mt_running", False) and not getattr(self, "auto_pop_state", False) and not getattr(self, "on_auto_merchant_state", False) and not (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)) and not self.config.get("enable_potion_crafting", False):
                     break
                 time.sleep(0.67)
             if menu and menu[0]:
@@ -614,7 +628,7 @@ class ActionsMixin:
                 return
             if not getattr(self, "auto_claim_quests_var", None) or not self.auto_claim_quests_var.get():
                 return
-            if getattr(self, "_egg_collecting", False):
+            if (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)):
                 return
             if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
             if not self.check_roblox_procs():
@@ -762,7 +776,7 @@ class ActionsMixin:
                     time.sleep(2)
                     continue
 
-                if (getattr(self, "_egg_collecting", False) or
+                if ((getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)) or
                     getattr(self, "_br_sc_running", False) or
                     getattr(self, "_mt_running", False) or
                     getattr(self, "auto_pop_state", False) or
@@ -1079,6 +1093,84 @@ class ActionsMixin:
                     pass
                 time.sleep(0.02)
 
+    def _run_eden_macro(self, json_file_path):
+        try:
+            with open(json_file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            self.error_logging(e, f"Failed to load eden macro from {json_file_path}")
+            return
+
+        if isinstance(data, dict) and "events" in data:
+            all_events = data["events"]
+        elif isinstance(data, list):
+            all_events = data
+        else:
+            print("[Eden] eden.json has unexpected format. Skipping.")
+            return
+
+        _ALLOWED_KEYS = {"w", "a", "s", "d", "space"}
+        events = [
+            e for e in all_events
+            if e.get("type") in ("key_down", "key_up") and str(e.get("key", "")).lower() in _ALLOWED_KEYS
+        ]
+        if not events:
+            print("[Eden] No movement events found in eden.json.")
+            return
+
+        events.sort(key=lambda ev: float(ev.get("t", 0.0)))
+        base_t = float(events[0].get("t", 0.0))
+
+        def _cancelled():
+            return not self.detection_running
+
+        pressed_keys = set()
+        start_wall = time.time()
+
+        print(f"[Eden] Playback ({len(events)} events)...")
+
+        try:
+            for ev in events:
+                if _cancelled():
+                    print("[Eden] Cancelled during playback.")
+                    return
+
+                ev_t = float(ev.get("t", base_t)) - base_t
+                target_wall = start_wall + ev_t
+
+                now = time.time()
+                if target_wall > now:
+                    if target_wall - now > 0.02:
+                        time.sleep((target_wall - now) - 0.015)
+                    while time.time() < target_wall:
+                        if _cancelled():
+                            print("[Eden] Cancelled during wait.")
+                            return
+
+                typ = str(ev.get("type", ""))
+                k = str(ev.get("key", "")).lower().strip()
+                
+                if k:
+                    try:
+                        if typ == "key_down":
+                            keyboard.press(k)
+                            pressed_keys.add(k)
+                        elif typ == "key_up":
+                            keyboard.release(k)
+                            pressed_keys.discard(k)
+                    except Exception:
+                        pass
+
+            print("[Eden] Macro finished successfully!")
+        finally:
+            if pressed_keys:
+                print(f"[Eden] Releasing {len(pressed_keys)} stuck keys...")
+                for k in list(pressed_keys):
+                    try:
+                        keyboard.release(k)
+                    except Exception:
+                        pass
+
     # ── Easter Egg Collection ─────────────────────────────────────────
     def egg_collect_loop(self):
         while self.detection_running:
@@ -1268,7 +1360,7 @@ class ActionsMixin:
 
                 if (self.reconnecting_state or
                     self.auto_pop_state or
-                    getattr(self, "_egg_collecting", False) or
+                    (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)) or
                     getattr(self, "_obby_running", False) or
                     getattr(self, "_br_sc_running", False) or
                     getattr(self, "_mt_running", False) or
@@ -1336,7 +1428,7 @@ class ActionsMixin:
             chat_is_open = False
             for attempt in range(1, 3):
                 tab_text = self.extract_text_with_easyocr(tuple(chat_ocr_region)).lower()
-                if fuzzy_match_any(tab_text, ["general", "server message"], threshold=0.8):
+                if fuzzy_match_any(tab_text, ["here", "general", "server message"], threshold=0.8):
                     chat_is_open = True
                     break
                 if attempt < 2:
@@ -1486,7 +1578,7 @@ class ActionsMixin:
 
                 if (self.reconnecting_state or
                     self.auto_pop_state or
-                    getattr(self, "_egg_collecting", False) or
+                    (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)) or
                     getattr(self, "_obby_running", False) or
                     getattr(self, "_br_sc_running", False) or
                     getattr(self, "_mt_running", False) or
@@ -1697,7 +1789,7 @@ class ActionsMixin:
 
                 if (self.reconnecting_state or
                     self.auto_pop_state or
-                    getattr(self, "_egg_collecting", False) or
+                    (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)) or
                     getattr(self, "_obby_running", False) or
                     getattr(self, "_br_sc_running", False) or
                     getattr(self, "_mt_running", False) or
@@ -1992,8 +2084,246 @@ class ActionsMixin:
                 self.error_logging(e, "Error in quest_claim_loop")
             time.sleep(1)
 
+    def perform_eden_path_sync(self):
+        if not self.detection_running:
+            print("[Eden Pathing] Aborted: detection not running")
+            return
+        self._eden_running = True
 
-    def _potion_thread_launcher(self, file_name, potions_directory="crafting_files_do_not_open", stop_after=None, cancel_if=None):
+        def _eden_sleep(seconds):
+            end = time.monotonic() + max(0.0, float(seconds))
+            while time.monotonic() < end:
+                if not self.detection_running: return False
+                remaining = end - time.monotonic()
+                if remaining <= 0:
+                    break
+                time.sleep(min(0.05, remaining))
+            return self.detection_running
+
+        try:
+            # 1. Activate Roblox
+            print("[Eden Pathing] Activating Roblox...")
+            if not self.check_roblox_procs():
+                print("[Eden Pathing] No Roblox process found, aborting")
+                return
+            for _ in range(4):
+                if not self.detection_running:
+                    print("[Eden Pathing] Aborted during activation: detection stopped")
+                    return
+                self.activate_roblox_window()
+                time.sleep(0.15)
+
+            # 2. Reset Character
+            print("[Eden Pathing] Resetting Character...")
+            keyboard.press_and_release('esc')
+            if not _eden_sleep(1.25): return
+            keyboard.press_and_release('r')
+            if not _eden_sleep(1.25): return
+            keyboard.press_and_release('enter')
+            if not _eden_sleep(5): return
+
+            if not self.detection_running:
+                return
+
+            # 3. Close chat and then click Collection Buttons
+            self.close_chat_if_open()
+
+            if not _eden_sleep(0.2): return
+            collections_button = self.config.get("collections_button", [0, 0])
+            if collections_button and collections_button[0]:
+                try:
+                    autoit.mouse_click("left", collections_button[0], collections_button[1], 1, speed=3)
+                except Exception:
+                    try:
+                        self.Global_MouseClick(collections_button[0], collections_button[1])
+                    except Exception:
+                        pass
+                if not _eden_sleep(0.65): return
+
+            exit_collections_button = self.config.get("exit_collections_button", [0, 0])
+            if exit_collections_button and exit_collections_button[0]:
+                try:
+                    autoit.mouse_click("left", exit_collections_button[0], exit_collections_button[1], 1, speed=3)
+                except Exception:
+                    try:
+                        self.Global_MouseClick(exit_collections_button[0], exit_collections_button[1])
+                    except Exception:
+                        pass
+                if not _eden_sleep(0.65): return
+
+            if not self.detection_running:
+                return
+
+            # 4. Camera Adjustment
+            start_x = exit_collections_button[0] if exit_collections_button and exit_collections_button[0] else 500
+            start_y = exit_collections_button[1] if exit_collections_button and exit_collections_button[1] else 500
+
+            autoit.mouse_move(start_x, start_y, 0)
+            autoit.mouse_down("right")
+            if not _eden_sleep(0.45): return
+            autoit.mouse_move(start_x, start_y + 75, 0)
+            if not _eden_sleep(0.45): return
+            autoit.mouse_up("right")
+            try:
+                autoit.send("{I down}")
+            except Exception:
+                pass
+            if not _eden_sleep(4.0):
+                try: autoit.send("{I up}")
+                except: pass
+                return
+            try:
+                autoit.send("{I up}")
+            except Exception:
+                pass
+            if not _eden_sleep(0.3): return
+
+            try:
+                autoit.send("{O down}")
+            except Exception:
+                pass
+            if not _eden_sleep(1.05):
+                try: autoit.send("{O up}")
+                except: pass
+                return
+            try:
+                autoit.send("{O up}")
+            except Exception:
+                pass
+            if not _eden_sleep(0.3): return
+
+            if not self.detection_running:
+                return
+
+            # teleport using crack
+            print("[Eden Pathing] Using portable crack...")
+            self._teleport_crack_impl(ignore_eden=True)
+            self.last_crack_time = datetime.now()
+            if not _eden_sleep(10): return
+            if not self.detection_running:
+                return
+
+            # 6. Eden path playback
+            eden_file = os.path.join(os.getcwd(), "paths", "eden.json")
+            if os.path.exists(eden_file):
+                print("[Eden Pathing] Starting eden path playback...")
+                self._run_eden_macro(eden_file)
+            else:
+                print("[Eden Pathing] Macro file not found: " + eden_file)
+        except Exception as e:
+            print(f"[Eden Pathing] ERROR: {e}")
+            self.error_logging(e, "Error in perform_eden_path_sync")
+        finally:
+            print("[Eden Pathing] Path sequence finished.")
+            self._eden_running = False
+            self._eden_path_pending = False
+
+    def perform_eden_contract_sync(self):
+        if not self.detection_running or self.is_fishing_mode_enabled() or self.auto_pop_state: return
+        self._eden_running = True
+        try:
+            print("[Eden] Performing contract...")
+            contract_btn = self.config.get("eden_contract_button", [0, 0])
+
+            for _ in range(4):
+                if not self.detection_running: return
+                pyautogui.press('e')
+                time.sleep(0.3)
+            
+            for _ in range(7):
+                if not self.detection_running: return
+                if contract_btn and contract_btn[0] > 0 and contract_btn[1] > 0:
+                    self.Global_MouseClick(contract_btn[0], contract_btn[1])
+                    print("[Eden] Clicked Eden contract button.")
+                time.sleep(0.5)
+            
+            time.sleep(0.5)
+        except Exception as e:
+            self.error_logging(e, "Error in perform_eden_contract_sync")
+        finally:
+            self._eden_running = False
+
+    def eden_contract_loop(self):
+        last_contract_time = datetime.min
+        last_path_time = datetime.min
+
+        while self.detection_running:
+            try:
+                if self.config.get("enable_idle_mode", False):
+                    time.sleep(2)
+                    continue
+
+                # If eden is currently running (path or contract in progress), just wait
+                if getattr(self, "_eden_running", False):
+                    time.sleep(2)
+                    continue
+
+                if self.is_fishing_mode_enabled() or getattr(self, "_egg_collecting", False) or getattr(self, "_potion_thread_active", False) or getattr(self, "_obby_running", False):
+                    time.sleep(2)
+                    continue
+
+                go_to_eden = self.config.get("go_to_eden_spawn", False)
+                auto_contract = self.config.get("auto_eden_contract", False)
+                
+                if not go_to_eden and not auto_contract:
+                    time.sleep(2)
+                    continue
+
+                if (getattr(self, "_br_sc_running", False) or
+                    getattr(self, "_mt_running", False) or
+                    getattr(self, "auto_pop_state", False) or
+                    getattr(self, "on_auto_merchant_state", False) or
+                    getattr(self, "_auto_merchant_running", False) or
+                    getattr(self, "_fishing_busy", False) or
+                    self.reconnecting_state):
+                    time.sleep(2)
+                    continue
+
+                current_biome = str(getattr(self, "current_biome", "") or "").upper().strip()
+                if current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE"):
+                    time.sleep(2)
+                    continue
+
+                if (getattr(self, "enable_potion_crafting_var", None)
+                    and self.enable_potion_crafting_var.get()):
+                    time.sleep(2)
+                    continue
+
+                if go_to_eden:
+                    try:
+                        path_interval = float(self.config.get("eden_path_interval", "35"))
+                    except Exception:
+                        path_interval = 35.0
+                        
+                    if (datetime.now() - last_path_time) >= timedelta(minutes=path_interval):
+                        print("[Eden] Starting periodic eden path sequence...")
+                        self.perform_eden_path_sync()
+                        last_path_time = datetime.now()
+                        continue
+
+                if auto_contract:
+                    try:
+                        interval_min = float(self.config.get("eden_contract_interval", "10"))
+                    except Exception:
+                        interval_min = 10.0
+                        
+                    if (datetime.now() - last_contract_time) >= timedelta(minutes=interval_min):
+                        self._action_scheduler.enqueue_action(self.perform_eden_contract_sync, name="eden_contract", priority=3)
+                        last_contract_time = datetime.now()
+
+                time.sleep(1)
+            except Exception as e:
+                self.error_logging(e, "Error in eden_contract_loop")
+                time.sleep(1)
+
+    def _potion_thread_launcher(self, *args, **kwargs):
+        self._potion_thread_active = True
+        try:
+            self._potion_thread_launcher_impl(*args, **kwargs)
+        finally:
+            self._potion_thread_active = False
+
+    def _potion_thread_launcher_impl(self, file_name, potions_directory="crafting_files_do_not_open", stop_after=None, cancel_if=None):
         try:
             final_name = file_name if file_name.endswith(".json") else f"{file_name}.json"
             path = os.path.join(os.getcwd(), potions_directory, final_name)
@@ -2187,7 +2517,7 @@ class ActionsMixin:
                             self.on_auto_merchant_state or
                             self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE") or
                             getattr(self, '_mt_running', False) or
-                            getattr(self, '_egg_collecting', False)):
+                            (getattr(self, '_egg_collecting', False) or getattr(self, '_eden_running', False) or getattr(self, '_potion_thread_active', False))):
                             time.sleep(2)
                             continue
 
@@ -2519,6 +2849,10 @@ class ActionsMixin:
                         private_server_link = self.config.get("private_server_link")
                         reconnect_deep_links = self._build_reconnect_deep_links(private_server_link)
                         if reconnect_deep_links:
+                            old_log_file = None
+                            try:
+                                old_log_file = self.get_latest_log_file()
+                            except Exception: pass
                             max_retries = 4
                             for attempt in range(current_attempt, max_retries + 1):
                                 if not self.detection_running: break
@@ -2554,7 +2888,7 @@ class ActionsMixin:
                                 if roblox_opened:
                                     self.send_webhook_status("Roblox opened. Loading into the games...", color=0x4aff65)
                                     self.has_sent_disconnected_message = False
-                                    if not self.reconnect_check_start_button():
+                                    if not self.reconnect_check_start_button(old_log_file=old_log_file):
                                         self.send_webhook_status(
                                             "Stuck in 'In Main Menu' for too long. I might reconnect bro back to server again",
                                             color=0xff0000)
@@ -2583,7 +2917,7 @@ class ActionsMixin:
                 self.error_logging(e, "Error in check_disconnect_loop function.")
                 time.sleep(1)
 
-    def reconnect_check_start_button(self):
+    def reconnect_check_start_button(self, old_log_file=None):
         try:
             self.set_title_threadsafe(
                 f"""Coteab Macro {current_ver} (Reconnecting - In Main Menu)""")
@@ -2603,7 +2937,7 @@ class ActionsMixin:
                 self.Global_MouseClick(reconnect_start_button[0], reconnect_start_button[1])
 
                 # Check if we're now in-game
-                if self.reconnect_logs_state():
+                if self.reconnect_logs_state(old_log_file=old_log_file):
                     self.send_webhook_status("Clicked 'Start' button and you are in the game now!!", color=0x4aff65)
                     print("Game has started, exiting click loop.")
                     self.detection_running = True
@@ -2620,9 +2954,12 @@ class ActionsMixin:
 
         return False
 
-    def reconnect_logs_state(self):
+    def reconnect_logs_state(self, old_log_file=None):
         try:
             log_file_path = self.get_latest_log_file()
+            if old_log_file and log_file_path == old_log_file:
+                return False
+
             log_lines = self.read_full_log_file(log_file_path)
 
             for line in reversed(log_lines):
@@ -2764,7 +3101,7 @@ class ActionsMixin:
                 return
             if not self.check_roblox_procs(): return
             for _ in range(4):
-                if not self.detection_running or self._is_fishing_blocked() or self.auto_pop_state or getattr(self, "_egg_collecting", False):
+                if not self.detection_running or self._is_fishing_blocked() or self.auto_pop_state or (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)):
                     return
                 self.activate_roblox_window()
                 if not self._sleep_with_cancel(0.8):
@@ -2834,7 +3171,7 @@ class ActionsMixin:
             except Exception:
                 pass
 
-    def _teleport_crack_impl(self):
+    def _teleport_crack_impl(self, ignore_eden=False):
         self._portable_crack_running = True
         fishing_override = bool(getattr(self, "_fishing_br_sc_override", False))
         try:
@@ -2849,14 +3186,14 @@ class ActionsMixin:
                     or self.reconnecting_state
                     or self.auto_pop_state
                     or self.on_auto_merchant_state
-                    or self._is_fishing_blocked()
+                    or (self.is_fishing_mode_enabled() if ignore_eden else self._is_fishing_blocked())
                     or self.config.get("enable_potion_crafting")
-                    or getattr(self, "_egg_collecting", False)
+                    or (getattr(self, "_egg_collecting", False) or (not ignore_eden and getattr(self, "_eden_running", False)) or getattr(self, "_potion_thread_active", False))
                     or (getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get())
                 )
 
             def _do_sleep(seconds):
-                if fishing_override:
+                if fishing_override or ignore_eden:
                     time.sleep(max(0.0, seconds))
                     return not _cancelled()
                 return self._sleep_with_cancel(seconds)
@@ -2948,6 +3285,7 @@ class ActionsMixin:
     def _use_br_sc_impl(self, item_name):
         self._br_sc_running = True
         fishing_override = bool(getattr(self, "_fishing_br_sc_override", False))
+        _inventory_opened = False
         try:
             def _cancelled():
                 if fishing_override:
@@ -2964,7 +3302,7 @@ class ActionsMixin:
                     or self.config.get("enable_potion_crafting")
                     or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE")
                     or getattr(self, "_mt_running", False)
-                    or getattr(self, "_egg_collecting", False)
+                    or (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False))
                     or (getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get())
                 )
 
@@ -2999,6 +3337,7 @@ class ActionsMixin:
             print(f"Using {item_name.capitalize()}")
 
             self.Global_MouseClick(inventory_menu[0], inventory_menu[1])
+            _inventory_opened = True
             if not _do_sleep(0.2 + inventory_click_delay):
                 return
             self.Global_MouseClick(items_tab[0], items_tab[1])
@@ -3069,10 +3408,18 @@ class ActionsMixin:
                 return
             self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
             _do_sleep(0.22 + inventory_click_delay)
+            _inventory_opened = False
 
         except Exception as e:
             self.error_logging(e, "Error in use_br_sc function.")
         finally:
+            if _inventory_opened:
+                try:
+                    _inv_close = self.config.get("inventory_close_button", [1418, 298])
+                    self.Global_MouseClick(_inv_close[0], _inv_close[1])
+                    time.sleep(0.35)
+                except Exception:
+                    pass
             self._br_sc_running = False
 
     def Merchant_Handler(self):
@@ -3090,7 +3437,7 @@ class ActionsMixin:
                     or self.auto_pop_state
                     or self._is_fishing_blocked()
                     or self.config.get("enable_potion_crafting")
-                    or getattr(self, "_egg_collecting", False)
+                    or (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False))
                     or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE")
                 )
 
@@ -3633,7 +3980,7 @@ class ActionsMixin:
                     continue
 
                 jumps_done = 0
-                while self.detection_running and jumps_done < 3:
+                while self.detection_running and jumps_done < 1:
                     if win32gui.GetForegroundWindow() != target:
                         focused = False
                         while self.detection_running and not focused:
@@ -3668,56 +4015,26 @@ class ActionsMixin:
                     if jump_success:
                         jumps_done += 1
                         try:
-                            self.append_log(f"[Anti-AFK] Jump {jumps_done}/3")
+                            self.append_log(f"[Anti-AFK] Jump {jumps_done}/1")
                         except Exception:
                             pass
                         time.sleep(0.28)
                     else:
                         time.sleep(0.2)
 
-                if jumps_done == 3:
+                if jumps_done == 1:
                     if was_roblox_focused:
                         return
 
                     if not hwnd_before:
                         return
 
-                    attempts = 0
-                    while self.detection_running and attempts < 30:
-                        attempts += 1
-                        try:
-                            if win32gui.GetForegroundWindow() == hwnd_before:
-                                break
-                        except Exception:
-                            pass
-                        try:
+                    # Return focus to previous window, but less aggressively
+                    try:
+                        if win32gui.IsWindow(hwnd_before):
                             win32gui.SetForegroundWindow(hwnd_before)
-                        except Exception:
-                            pass
-                        time.sleep(0.12)
-                        try:
-                            if win32gui.GetForegroundWindow() == hwnd_before:
-                                break
-                        except Exception:
-                            pass
-                        try:
-                            if title_before:
-                                autoit.win_activate(title_before)
-                        except Exception:
-                            pass
-                        time.sleep(0.12)
-                        try:
-                            if win32gui.GetForegroundWindow() == hwnd_before:
-                                break
-                        except Exception:
-                            pass
-                        try:
-                            pyautogui.keyDown('alt')
-                            pyautogui.press('tab')
-                            pyautogui.keyUp('alt')
-                        except Exception:
-                            pass
-                        time.sleep(0.12)
+                    except Exception:
+                        pass
                     return
         except Exception as e:
             try:
@@ -3726,15 +4043,23 @@ class ActionsMixin:
                 pass
 
     def anti_afk_loop(self):
-        interval = 6.7 * 40
         while self.detection_running:
-            time.sleep(interval)
+            try:
+                interval_min = float(self.anti_afk_interval_var.get())
+            except Exception:
+                interval_min = 5.0
+            
+            interval_min = max(1.0, min(20.0, interval_min))
+            interval_sec = interval_min * 60.0
+            
+            time.sleep(interval_sec)
+            
             if not self.detection_running:
                 break
             try:
                 if self.is_fishing_mode_enabled():
                     continue
-                if getattr(self, "_egg_collecting", False):
+                if (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)):
                     continue
                 self.perform_anti_afk_action()
             except Exception as e:
@@ -3781,6 +4106,7 @@ class ActionsMixin:
             "Xyz Potion",
             "Transcendent Potion",
             "Warp Potion",
+            "Rune of Everything",
             "Heavenly Potion",
             "Godlike Potion",
             "Potion of bound",
@@ -3812,22 +4138,26 @@ class ActionsMixin:
 
         return buffs_to_use
 
-    def auto_pop_buffs_for_current_biome(self):
+    def auto_pop_buffs_for_current_biome(self, target_biome=None):
+        if target_biome is None:
+            target_biome = self.current_biome
+        self.auto_pop_state = True
         try:
             self._action_scheduler.enqueue_action(
-                self._auto_pop_buffs_for_current_biome_impl,
+                lambda: self._auto_pop_buffs_for_current_biome_impl(target_biome=target_biome),
                 name="auto_pop_current_biome",
                 priority=0,
             )
         except Exception:
             try:
-                self._auto_pop_buffs_for_current_biome_impl()
+                self._auto_pop_buffs_for_current_biome_impl(target_biome=target_biome)
             except Exception:
                 pass
 
-    def _auto_pop_buffs_for_current_biome_impl(self):
+    def _auto_pop_buffs_for_current_biome_impl(self, target_biome=None):
         self.auto_pop_state = True
-        target_biome = self.current_biome
+        if target_biome is None:
+            target_biome = self.current_biome
         try:
             if not target_biome or target_biome == "NORMAL": return
             if self.config.get("enable_idle_mode", False): return
@@ -3847,7 +4177,7 @@ class ActionsMixin:
                 or bool(getattr(self, "on_auto_merchant_state", False))
                 or bool(getattr(self, "_mt_running", False))
                 or bool(getattr(self, "_br_sc_running", False))
-                or bool(getattr(self, "_egg_collecting", False))
+                or bool((getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)))
             ):
                 self.append_log(f"[Auto Pop] Waiting for other actions to finish before popping buffs")
                 wait_deadline = time.monotonic() + 50
@@ -3859,7 +4189,7 @@ class ActionsMixin:
                         or bool(getattr(self, "on_auto_merchant_state", False))
                         or bool(getattr(self, "_mt_running", False))
                         or bool(getattr(self, "_br_sc_running", False))
-                        or bool(getattr(self, "_egg_collecting", False))
+                        or bool((getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False)))
                     )
                     if not still_busy: break
                     time.sleep(0.55)
