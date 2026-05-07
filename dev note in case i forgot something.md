@@ -11,7 +11,7 @@ cmd.exe /c "npx create-tauri-app@latest . --manager npm --template react-ts -y -
 
 No need to create if `frontend` folder already exists.
 
-## 2. Create the Dist Build
+## 2. Create the Dist Build (Single File)
 
 Run inside the `frontend` folder:
 
@@ -21,17 +21,18 @@ npm install
 
 > This installs all the `node_modules` dependencies. You **must** run this at least once before building, or whenever you delete the `node_modules` folder / clone fresh.
 
-Then build:
+Then build (if you have made changes to the frontend .tsx files)
 
 ```bash
 npm run build
 ```
 
-This compiles the modern UI into `index.html` and requires `main.py` to find that `index.html` from the `dist` folder and use it.
+**What this does:**
+This compiles the modern UI into a **single standalone `index.html` file** (CSS and JS are now inlined). This is much more reliable for the macro.
 
-> Remember to move the whole `dist` folder inside `frontend` folder to `lib` folder.
+> **IMPORTANT:** After building, you MUST move the `index.html` from `frontend/dist` to the `lib/dist` folder. 
 
-> **ALWAYS COMPILE THE DIST BUILD FIRST WHENEVER YOU CHANGE SOMETHING TO THE FRONTEND/TSX FILE OTHERWISE THE PYTHON WILL ONLY LOOK FOR THE OLD DIST FILE**
+> **ALWAYS COMPILE THE DIST BUILD FIRST** whenever you change something in the frontend (.tsx files), otherwise the Python code will still be running the old version of the UI!
 
 ---
 
@@ -64,6 +65,12 @@ pip install -r requirements.txt
 
 ```bash
 pyinstaller --name="CoteabMacro" --noconsole --onefile --icon="lib/official_release.ico" --add-data "lib;lib" --add-data "C:\Users\Akitosama\AppData\Local\Programs\Python\Python312\Lib\site-packages\autoit\lib\AutoItX3_x64.dll;autoit\lib" --collect-all webview --collect-all discord --upx-dir "C:\Users\Akitosama\Documents\upx-5.1.0-win64" main.py
+```
+
+### No UPX flag:
+
+```bash
+pyinstaller --name="CoteabMacro" --noconsole --onefile --noupx --icon="lib/official_release.ico" --add-data "lib;lib" --add-data "C:\Users\Akitosama\AppData\Local\Programs\Python\Python312\Lib\site-packages\autoit\lib\AutoItX3_x64.dll;autoit\lib" --collect-all webview --collect-all discord main.py
 ```
 
 ### Option 1.2: PyInstaller in isolated enviroment (aka venv) (must use Python 3.8-3.14)
@@ -127,7 +134,7 @@ deactivate
 ### Option 2: Nuitka
 
 ```bash
-python -m nuitka main.py --onefile --windows-console-mode=disable --windows-icon-from-ico=lib/official_release.ico --include-data-dir=lib=lib --include-data-file=C:\Users\Akitosama\AppData\Local\Programs\Python\Python312\Lib\site-packages\autoit\lib\AutoItX3_x64.dll=autoit\lib\AutoItX3_x64.dll --static-libpython=no --output-filename=CoteabMacro.exe --remove-output --jobs=0 --python-flag=no_docstrings
+python -m nuitka --onefile --windows-console-mode=disable --windows-icon-from-ico=lib/official_release.ico --include-data-dir=lib=lib --follow-imports --enable-plugin=pylint-warnings --output-filename=CoteabMacro.exe --remove-output --jobs=0 --lto=yes --static-libpython=no main.py
 ```
 
 ---
