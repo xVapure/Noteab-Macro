@@ -16,6 +16,29 @@ from datetime import datetime
 import logging
 import shutil
 import urllib.request
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+import socket
+import random
+from pathlib import Path
+from biome_tracker.config import APPDATA_BASE
+import keyboard
+
+ORIGINAL_ABS_FILE = os.path.abspath(__file__)
+os.environ['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = '--disable-gpu'
+
+# paths crafting_files_do_not_open and macoroni logs go into appdata/local instead of next to the EXE (maybe)
+APPDATA_BASE.mkdir(parents=True, exist_ok=True)
+os.chdir(APPDATA_BASE)
+
+_mutex = ctypes.windll.kernel32.CreateMutexW(None, True, "CoteabMacroSingleInstance")
+if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+    ctypes.windll.user32.MessageBoxW(
+        0,
+        "Coteab Macro is already running!\n\nPlease close the existing instance before opening a new one.",
+        "Coteab Macro",
+        0x30
+    )
+    sys.exit(0)
 
 try:
     import numpy
@@ -41,7 +64,7 @@ except Exception as e:
 
 # i added this so we can easily change macro version upon releases without having to change multiple back-end & front-end behaviours
 # for future people that is reading the open source code, hello :p
-current_version = "v2.1.6-hotfix1"
+current_version = "v2.1.7"
 os.environ["COTEAB_MACRO_VERSION"] = current_version
 UPDATE_LATEST_RELEASE_API_URL = "https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest"
 os.environ["COTEAB_UPDATE_API_URL"] = UPDATE_LATEST_RELEASE_API_URL
@@ -74,51 +97,62 @@ from biome_tracker.config import (
     normalize_auto_pop_biomes,
 )
 
-def get_base_path(): return sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.dirname(os.path.abspath(__file__))
+def get_base_path(): return sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.dirname(ORIGINAL_ABS_FILE)
 
 def _get_frontend_dist_dirs() -> list[str]:
     base_path = get_base_path()
-    if getattr(sys, "frozen", False):
-        return [os.path.join(base_path, "lib", "dist")]
-
-    return [
-        os.path.join(base_path, "frontend", "dist"),
-        os.path.join(base_path, "lib", "dist"),
+    from biome_tracker.config import APPDATA_BASE
+    
+    dirs = [
+        os.path.join(str(APPDATA_BASE), "dist"),
+        os.path.join(str(APPDATA_BASE), "frontend", "dist"),
+        os.path.join(os.getcwd(), "frontend", "dist"),
+        os.path.join(os.getcwd(), "dist"),
     ]
+    
+    if getattr(sys, "frozen", False):
+        dirs.append(os.path.join(base_path, "lib", "dist"))
+        dirs.append(os.path.join(base_path, "dist"))
+    else:
+        dirs.append(os.path.join(base_path, "frontend", "dist"))
+        dirs.append(os.path.join(base_path, "lib", "dist"))
+        dirs.append(os.path.join(base_path, "dist"))
+
+    return [d for d in dirs if os.path.exists(d)]
 
 
-def get_frontend_entry_data():
-    # I have temporarily  this frontend url load for the source code (since it will overrides your current index.html if you try to customize frontend layout)
-    # frontend_url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/assets/index.html"
-    # try:
-    #     req = urllib.request.Request(frontend_url, headers={'User-Agent': 'Mozilla/5.0'})
-    #     with urllib.request.urlopen(req, timeout=4) as response:
-    #         html_content = response.read().decode('utf-8')
-    #         if html_content and len(html_content) > 1000:
-    #             print("Fetched frontend entry from GitHub")
-    #             return {"html": html_content}
-    # except Exception as e:
-    #     print(f"Failed to fetch frontend from GitHub: {e}, falling back to local files.")
-
+def get_frontend_entry():
     for dist_dir in _get_frontend_dist_dirs():
         index_file = os.path.join(dist_dir, "index.html")
         if os.path.exists(index_file):
             try:
+                abs_path = os.path.abspath(index_file).replace("\\", "/")
                 with open(index_file, "r", encoding="utf-8") as f:
-                    return {"html": f.read()}
-            except Exception:
-                pass
-            
-    return {"url": "http://localhost:5173"}
+                    html_content = f.read()
+                print(f"Loading frontend from local: {abs_path}")
+                return {"html": html_content, "url": f"file:///{abs_path}"}
+            except Exception as e:
+                print(f"Error reading local index.html: {e}")
 
- 
-def get_frontend_entry_url():
-    for dist_dir in _get_frontend_dist_dirs():
-        index_file = os.path.join(dist_dir, "index.html")
-        if os.path.exists(index_file):
-            abs_path = os.path.abspath(index_file).replace("\\", "/")
-            return f"file:///{abs_path}"
-    return "http://localhost:5173"
+    frontend_url = "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/assets/index.html"
+    try:
+        from biome_tracker.config import APPDATA_BASE
+        appdata_dist = os.path.join(str(APPDATA_BASE), "dist")
+        os.makedirs(appdata_dist, exist_ok=True)
+
+        req = urllib.request.Request(frontend_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=8) as response:
+            html_content = response.read().decode('utf-8')
+            if html_content and len(html_content) > 1000:
+                saved_path = os.path.join(appdata_dist, "index.html")
+                with open(saved_path, "w", encoding="utf-8") as f: f.write(html_content)
+                abs_path = os.path.abspath(saved_path).replace("\\", "/")
+                print(f"Fetched frontend from GitHub -> saved to: {abs_path}")
+                return {"html": html_content, "url": f"file:///{abs_path}"}
+    except Exception as e:
+        print(f"Failed to fetch frontend from GitHub: {e}")
+
+    return {"url": "http://localhost:5173"}
 
 
 def _read_cli_value(flag, default=""):
@@ -142,6 +176,39 @@ def _cfg_bool(cfg, key, default=False):
     except Exception:
         return bool(default)
 
+class LoggerWriter:
+    def __init__(self, filename="macro_logs.txt", original_stream=None):
+        self.terminal = original_stream
+        self.filename = filename
+
+    def write(self, message):
+        if self.terminal is not None:
+            try:
+                self.terminal.write(message)
+                self.terminal.flush()
+            except UnicodeEncodeError:
+                try:
+                    self.terminal.write(message.encode("ascii", "replace").decode("ascii"))
+                    self.terminal.flush()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        try:
+            with open(self.filename, "a", encoding="utf-8") as f:
+                f.write(message)
+        except Exception:
+            pass
+
+    def flush(self):
+        if self.terminal is not None:
+            try:
+                self.terminal.flush()
+            except Exception:
+                pass
+
+sys.stdout = LoggerWriter("macro_logs.txt", sys.stdout)
+sys.stderr = LoggerWriter("macro_logs.txt", sys.stderr)
 
 class Api:
     def __init__(self, tracker=None):
@@ -165,6 +232,7 @@ class Api:
         # rare biome pop up confirmation
         self._biome_confirm_evt = threading.Event()
         self._biome_confirm_result = None
+        self.emergency_port = None
 
     def set_window(self, window):
         self._window = window
@@ -183,6 +251,28 @@ class Api:
         if t and isinstance(getattr(t, 'config', None), dict) and t.config:
             return t.config
         return load_config()
+
+    def get_biome_data(self):
+        if self._tracker and isinstance(getattr(self._tracker, "biome_data", None), dict):
+            result = {}
+            for biome, data in self._tracker.biome_data.items():
+                color = data.get("color", "0xffffff")
+                if isinstance(color, str) and color.startswith("0x"): color = "#" + color[2:]
+                result[biome] = color
+            return result
+        return {}
+
+    def get_full_biome_data(self):
+        if self._tracker and isinstance(getattr(self._tracker, "biome_data", None), dict):
+            return self._tracker.biome_data
+        return {}
+
+    def open_appdata(self):
+        try:
+            os.startfile(str(APPDATA_BASE))
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def save_config(self, config_data):
         prev_anti_afk = False
@@ -269,7 +359,16 @@ class Api:
     def close_window(self):
         self._stop_fishing_worker()
         if self._window:
-            self._window.destroy()
+            try:
+                self._window.destroy()
+            except Exception:
+                pass
+        
+        def delayed_exit():
+            time.sleep(1.5)
+            os._exit(0)
+        threading.Thread(target=delayed_exit, daemon=True).start()
+        return {"success": True}
 
     def minimize_window(self):
         if self._window:
@@ -306,6 +405,140 @@ class Api:
 
     def get_macro_version(self):
         return current_version
+
+    def _setup_emergency_server(self):
+        class SafeModeHandler(BaseHTTPRequestHandler):
+            api = self
+
+            def do_GET(self):
+                if self.path == "/health":
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b"OK")
+                else:
+                    # Serve files from any valid dist directory
+                    file_path = self.path.split('?')[0].lstrip('/')
+                    if not file_path or file_path == 'index.html':
+                        file_path = 'index.html'
+                    
+                    found_full_path = None
+                    for dist_dir in _get_frontend_dist_dirs():
+                        full_path = os.path.join(dist_dir, file_path)
+                        if os.path.exists(full_path) and os.path.isfile(full_path):
+                            found_full_path = full_path
+                            break
+                    
+                    if found_full_path:
+                        self.send_response(200)
+                        if file_path.endswith('.js'): self.send_header('Content-type', 'application/javascript')
+                        elif file_path.endswith('.css'): self.send_header('Content-type', 'text/css')
+                        elif file_path.endswith('.html'): self.send_header('Content-type', 'text/html')
+                        self.end_headers()
+                        with open(found_full_path, 'rb') as f:
+                            self.wfile.write(f.read())
+                    else:
+                        self.send_response(404)
+                        self.end_headers()
+
+            def do_POST(self):
+                if self.path.startswith("/api/"):
+                    method_name = self.path.replace("/api/", "")
+                    content_length = int(self.headers['Content-Length'])
+                    post_data = self.rfile.read(content_length)
+                    try:
+                        args = json.loads(post_data) if post_data else []
+                    except:
+                        args = []
+                    
+                    method = getattr(self.api, method_name, None)
+                    if method and callable(method):
+                        try:
+                            if isinstance(args, list): result = method(*args)
+                            elif isinstance(args, dict): result = method(**args)
+                            else: result = method()
+                            
+                            self.send_response(200)
+                            self.send_header('Content-type', 'application/json')
+                            self.send_header('Access-Control-Allow-Origin', '*')
+                            self.end_headers()
+                            self.wfile.write(json.dumps(result).encode())
+                        except Exception as e:
+                            self.send_response(500)
+                            self.end_headers()
+                            self.wfile.write(str(e).encode())
+                
+            def do_OPTIONS(self):
+                self.send_response(200)
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+                self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+                self.end_headers()
+
+            def log_message(self, format, *args): pass
+
+        self.emergency_port = random.randint(18000, 19000)
+        def _run():
+            try:
+                server = ThreadingHTTPServer(('127.0.0.1', self.emergency_port), SafeModeHandler)
+                print(f"Emergency Server running on http://127.0.0.1:{self.emergency_port}")
+                server.serve_forever()
+            except Exception as e:
+                print(f"Server failed: {e}")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _setup_emergency_hotkey(self):
+        def trigger():
+            print("Emergency UI Triggered! Hiding main window...")
+            if hasattr(self, '_window') and self._window:
+                try:
+                    self._window.hide()
+                    print("Main window hidden.")
+                except Exception as e:
+                    print(f"Note: Could not hide window: {e}")
+
+            url = f"http://127.0.0.1:{self.emergency_port}/index.html?safe_mode=1"
+            webbrowser.open(url)
+            print(f"Emergency UI opened in browser: {url}")
+
+        keyboard.add_hotkey('ctrl+shift+f10', trigger)
+
+    def get_active_modules(self):
+        if not self._tracker: return {}
+        t = self._tracker
+        cfg = t.config
+        
+        modules = {
+            "Biome Detection": { "active": t.detection_running, "enabled": True },
+            "Aura Detection": { "active": t.detection_running and bool(cfg.get("enable_aura_detection", False)), "enabled": bool(cfg.get("enable_aura_detection", False)) },
+            "Fishing Mode": { "active": t.detection_running and self._is_fishing_mode_enabled(), "enabled": bool(cfg.get("fishing_mode", False)) },
+            "Auto Pop Buff": { "active": bool(getattr(t, "auto_pop_state", False)), "enabled": True },
+            "Anti-AFK": { "active": t.detection_running and bool(cfg.get("anti_afk", True)), "enabled": bool(cfg.get("anti_afk", True)) },
+            "Auto Merchant": { "active": bool(getattr(t, "on_auto_merchant_state", False)), "enabled": bool(cfg.get("merchant_teleporter", False)) },
+            "BR / SC Sequence": { "active": bool(getattr(t, "_br_sc_running", False)), "enabled": bool(cfg.get("biome_randomizer", False)) or bool(cfg.get("strange_controller", False)) },
+            "Eden Path": { "active": bool(getattr(t, "_eden_running", False)), "enabled": bool(cfg.get("go_to_eden_spawn", False)) },
+            "Auto Eden Contract": { "active": bool(getattr(t, "_eden_running", False)), "enabled": bool(cfg.get("auto_eden_contract", False)) },
+            "Egg Pathing": { "active": bool(getattr(t, "_egg_collecting", False)), "enabled": bool(cfg.get("collect_easter_egg", False)) },
+            "Basic Obby": { "active": bool(getattr(t, "_obby_running", False)), "enabled": bool(cfg.get("enable_auto_obby", False)) },
+            "Daily Quests": { "active": t.detection_running and bool(cfg.get("auto_claim_daily_quests", False)), "enabled": bool(cfg.get("auto_claim_daily_quests", False)) },
+            "Potion Crafting": { "active": bool(getattr(t, "_potion_thread_active", False)), "enabled": bool(cfg.get("enable_potion_crafting", False)) },
+            "Macro Idle Mode": { "active": bool(cfg.get("enable_idle_mode", False)), "enabled": bool(cfg.get("enable_idle_mode", False)) },
+        }
+        
+        incompatibilities = []
+        if cfg.get("enable_idle_mode", False):
+            incompatibilities.append("Idle Mode is ON: Most automated actions are paused infinitely.")
+        
+        if cfg.get("go_to_eden_spawn", False) and bool(cfg.get("fishing_mode", False)):
+            incompatibilities.append("Conflict: Both Eden Path and Fishing Mode are enabled. Fishing will take priority unless blocked.")
+
+        if bool(cfg.get("enable_potion_crafting", False)) and bool(cfg.get("fishing_mode", False)):
+            incompatibilities.append("Potion Crafting is enabled: It has the highest priority take over from Fishing Mode and cancels any automated actions.")
+
+        return {
+            "modules": modules,
+            "incompatibilities": incompatibilities
+        }
 
     def _is_fishing_mode_enabled(self):
         cfg = getattr(self._tracker, "config", None) if self._tracker else None
@@ -539,7 +772,7 @@ class Api:
         popup_window = None
         try:
             print(f"[BiomeConfirm] Spawning independent popup for biome: {biome}")
-            fe = get_frontend_entry_data()
+            fe = get_frontend_entry()
             popup_w, popup_h = 480, 400
             try:
                 screen_w = win32api.GetSystemMetrics(0)
@@ -559,7 +792,7 @@ class Api:
                 "resizable": False,
             }
 
-            if "html" in fe:
+            if fe and "html" in fe:
                 injected_script = f'''<script>
                 const _OrigSearchParams = window.URLSearchParams;
                 window.URLSearchParams = class extends _OrigSearchParams {{
@@ -574,7 +807,7 @@ class Api:
                 html = fe["html"].replace("<head>", f"<head>{injected_script}", 1)
                 win_kwargs["html"] = html
             else:
-                base = fe["url"]
+                base = fe["url"] if fe else "http://localhost:5173"
                 sep = "&" if "?" in base else "?"
                 win_kwargs["url"] = f"{base}{sep}window=biome_confirm&biome={biome}"
 
@@ -693,10 +926,11 @@ class Api:
          return "No tracker"
 
     def _get_frontend_url(self):
-         return get_frontend_entry_url()
+         res = get_frontend_entry()
+         return res["url"] if res else "http://localhost:5173"
 
     def _open_recorder(self, mode: str = "obby"):
-         fe = get_frontend_entry_data()
+         fe = get_frontend_entry()
          query = "window=recorder"
          if mode == "potion":
              query += "&mode=potion"
@@ -800,7 +1034,11 @@ class Api:
 
     def emit_calibration_result(self, data):
          if self._window:
-             self._window.evaluate_js(f"if(window.onCalibrationResult) window.onCalibrationResult({json.dumps(data)}); else if (window.onCalibrationResultMisc) window.onCalibrationResultMisc({json.dumps(data)});")
+             js_data = json.dumps(data)
+             self._window.evaluate_js(
+                 f"if(window.onCalibrationResult) window.onCalibrationResult({js_data});"
+                 f"if(window.onCalibrationResultMisc) window.onCalibrationResultMisc({js_data});"
+             )
 
     def create_calibration_window(self, key="unknown", window_type="point"):
         self._calib_mgr.request_calibration(config_key=key, window_type=window_type)
@@ -852,7 +1090,7 @@ def launch_app(api_class, tracker=None):
     tracker.on_biome_confirm_request = api._request_biome_confirm
     tracker.on_status_change = lambda status: api._emit_macro_status()
 
-    fe = get_frontend_entry_data()
+    fe = get_frontend_entry()
     win_args = {
         "title": f"Coteab Macro {current_version}",
         "js_api": api,
@@ -860,8 +1098,8 @@ def launch_app(api_class, tracker=None):
         "min_size": (550, 500),
         "resizable": True, "frameless": False
     }
-    if "html" in fe: win_args["html"] = fe["html"]
-    else: win_args["url"] = fe["url"]
+    if fe and "html" in fe: win_args["html"] = fe["html"]
+    else: win_args["url"] = fe["url"] if fe else "http://localhost:5173"
 
     window = webview.create_window(**win_args)
     api.set_window(window)
@@ -929,43 +1167,6 @@ def launch_app(api_class, tracker=None):
 
     return tracker
 
-_LOADING_HTML = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #0f172a;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    display: flex; align-items: center; justify-content: center;
-    height: 100vh; overflow: hidden; color: #e2e8f0;
-  }
-  .wrap { text-align: center; }
-  .spinner {
-    width: 38px; height: 38px; margin: 0 auto 18px;
-    border: 3px solid rgba(255,255,255,0.08);
-    border-top-color: #f59e0b;
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  h1 { font-size: 17px; font-weight: 600; margin-bottom: 6px; color: #f1f5f9; }
-  p  { font-size: 12px; color: #64748b; }
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="spinner"></div>
-    <h1>Tysm for using Coteab Macro!!</h1>
-    <p>Loading macro dependencies plss wait :3 (it should be quick)\u2026</p>
-  </div>
-</body>
-</html>
-"""
-
 def stop_app(tracker):
     if tracker and getattr(tracker, "detection_running", False): tracker.stop_detection()
 
@@ -973,17 +1174,22 @@ def main():
     ensure_workspace_files()
     tracker = None
     api = Api(tracker=None)
+    api._setup_emergency_server()
+    api._setup_emergency_hotkey()
     try:
+        fe = get_frontend_entry()
         win_args = {
             "title": f"Coteab Macro {current_version}",
             "js_api": api,
-            "html": _LOADING_HTML,
             "width": 985, "height": 550,
             "min_size": (550, 500),
             "resizable": True, "frameless": False,
         }
-        loading_window = webview.create_window(**win_args)
-        api._window = loading_window
+        if "html" in fe: win_args["html"] = fe["html"]
+        else: win_args["url"] = fe["url"]
+
+        window = webview.create_window(**win_args)
+        api._window = window
 
         def _background_init():
             nonlocal tracker
@@ -996,12 +1202,12 @@ def main():
                 except Exception: old_pid = None
 
                 if tracker.maybe_self_rename_to_canonical_exe(canonical, old_pid=old_pid):
-                    loading_window.destroy()
+                    window.destroy()
                     return
 
                 if _cfg_bool(getattr(tracker, "config", {}), "auto_update_enabled", True):
                     if tracker.apply_startup_auto_update():
-                        loading_window.destroy()
+                        window.destroy()
                         return
 
 
@@ -1012,13 +1218,9 @@ def main():
                 tracker.on_update_status = api._emit_update_status
                 tracker.on_biome_confirm_request = api._request_biome_confirm
                 tracker.on_status_change = lambda status: api._emit_macro_status()
-                api.set_window(loading_window)
-
-                fe = get_frontend_entry_data()
-                if "html" in fe:
-                    loading_window.load_html(fe["html"])
-                else:
-                    loading_window.load_url(fe["url"])
+                tracker.on_remote_start = lambda: api.set_biome_detection(True)
+                tracker.on_remote_stop = lambda: api.set_biome_detection(False)
+                api.set_window(window)
 
             except Exception as exc:
                 print(f"Background init error: {exc}")
