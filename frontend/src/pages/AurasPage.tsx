@@ -36,6 +36,13 @@ export default function AurasPage() {
 
                 {config.enable_aura_detection && (
                     <>
+                        <ToggleSwitch
+                            label="Aura Detection Screenshot"
+                            description="Take a screenshot when you rolled a new aura (Only works if Roblox is focused/Fishing mode is OFF!)"
+                            checked={config.aura_detection_screenshot || false}
+                            onChange={(val) => updateConfig("aura_detection_screenshot", val)}
+                        />
+
                         <div className="form-row" style={{ marginTop: "10px" }}>
                             <div className="form-group">
                                 <label className="form-label">Ping Minimum Rarity</label>
@@ -58,12 +65,19 @@ export default function AurasPage() {
                             </div>
                         </div>
 
-                        <ToggleSwitch
-                            label="Aura Detection Screenshot"
-                            description="Take a screenshot when you rolled a new aura (Only works if Roblox is focused/Fishing mode is OFF!)"
-                            checked={config.aura_detection_screenshot || false}
-                            onChange={(val) => updateConfig("aura_detection_screenshot", val)}
-                        />
+                        <div className="form-group" style={{ marginTop: "10px" }}>
+                            <label className="form-label">Force Ping Auras</label>
+                            <input
+                                className="form-input"
+                                value={config.force_ping_auras || ""}
+                                onChange={(e) => updateConfig("force_ping_auras", e.target.value)}
+                                placeholder="e.g. Oblivion, Illusionary,... (comma-separated)"
+                                style={{ width: "100%" }}
+                            />
+                            <small style={{ color: "var(--text-muted)", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                                Pings Discord User ID even if rarity is not met. (otherwise don't put the auras in the box if you don't want the macro to force ping)
+                            </small>
+                        </div>
                     </>
                 )}
             </div>
@@ -85,26 +99,58 @@ export default function AurasPage() {
                 />
 
                 {config.enable_aura_record && (
-                    <div className="form-row" style={{ marginTop: "10px" }}>
-                        <div className="form-group">
-                            <label className="form-label">Record Keybind</label>
+                    <>
+                        <div className="form-row" style={{ marginTop: "10px" }}>
+                            <div className="form-group">
+                                <label className="form-label">Record Keybind</label>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                    <input
+                                        className="form-input"
+                                        value={config.aura_record_keybind || "F8"}
+                                        onChange={(e) => updateConfig("aura_record_keybind", e.target.value)}
+                                        style={{ width: "100px" }}
+                                    />
+                                    <button
+                                        className="btn btn-accent"
+                                        onClick={() => {
+                                            if ((window as any).pywebview) {
+                                                (window as any).pywebview.api.test_aura_keybind();
+                                            }
+                                        }}
+                                        style={{ padding: "8px 16px", whiteSpace: "nowrap" }}
+                                    >
+                                        Test Keybind
+                                    </button>
+                                    <small style={{ color: "var(--text-muted)", fontSize: "11px", whiteSpace: "nowrap" }}>
+                                        (Fires after 2s delay)
+                                    </small>
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Min Rarity to Record</label>
+                                <input
+                                    className="form-input"
+                                    value={config.aura_record_minimum || "100000"}
+                                    onChange={(e) => updateConfig("aura_record_minimum", e.target.value)}
+                                    style={{ width: "140px" }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-group" style={{ marginTop: "10px" }}>
+                            <label className="form-label">Force Record Auras</label>
                             <input
                                 className="form-input"
-                                value={config.aura_record_keybind || "F8"}
-                                onChange={(e) => updateConfig("aura_record_keybind", e.target.value)}
-                                style={{ width: "140px" }}
+                                value={config.force_record_auras || ""}
+                                onChange={(e) => updateConfig("force_record_auras", e.target.value)}
+                                placeholder="e.g. Oblivion, Illusionary,... (comma-separated)"
+                                style={{ width: "100%" }}
                             />
+                            <small style={{ color: "var(--text-muted)", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                                Force aura record even if rarity is not met (otherwise don't put the auras in the box if you don't want the macro to force record)
+                            </small>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Min Rarity to Record</label>
-                            <input
-                                className="form-input"
-                                value={config.aura_record_minimum || "100000"}
-                                onChange={(e) => updateConfig("aura_record_minimum", e.target.value)}
-                                style={{ width: "140px" }}
-                            />
-                        </div>
-                    </div>
+                    </>
                 )}
             </div>
         </>

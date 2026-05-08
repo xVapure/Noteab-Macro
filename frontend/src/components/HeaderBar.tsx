@@ -1,10 +1,12 @@
 import { useState, useCallback } from "react";
+
 interface HeaderBarProps {
     isRunning: boolean;
     onToggle: () => void;
     theme: string;
     onThemeChange: (theme: string) => void;
     isGlitching: boolean;
+    setActiveTab?: (tab: string) => void;
 }
 
 const themes = [
@@ -19,9 +21,27 @@ const themes = [
     { id: "lavender", label: "Lavender" },
 ];
 
-export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, isGlitching }: HeaderBarProps) {
+const SEARCH_INDEX = [
+    { title: "Webhooks", tab: "webhook", keywords: ["discord", "webhook", "ping", "notification", "role", "server", "glitched", "dreamspace", "cyberspace", "url", "test", "high accuracy", "logs", "username"] },
+    { title: "Macro Calibrations", tab: "calibrations", keywords: ["calibrate", "positions", "window", "screen", "resolution", "align", "coordinates"] },
+    { title: "Automated actions", tab: "misc", keywords: ["inventory", "delay", "screenshot", "quest", "biome record", "clip", "medal", "rare biome", "ocr failsafe", "biome randomizer", "br", "strange controller", "sc", "reconnect", "private server", "daily", "eden"] },
+    { title: "Fishing", tab: "fishing", keywords: ["fish", "rod", "merchant teleporter", "fish failsafe", "sell all", "flarg", "minigame", "idle"] },
+    { title: "Merchant", tab: "merchant", keywords: ["merchant", "shop", "potions", "items", "buy", "teleport"] },
+    { title: "Auto Pop & Buff", tab: "autopopbuff", keywords: ["auto pop", "buff", "potion", "fortune", "haste", "lucky", "speed", "universe", "heavenly", "oblivion"] },
+    { title: "Auras", tab: "auras", keywords: ["aura", "record", "ping", "min rarity", "force", "clip", "user id", "keybind", "test", "global"] },
+    { title: "Movements", tab: "movements", keywords: ["move", "walk", "jump", "obby", "macro", "path", "record", "replay", "jump"] },
+    { title: "Potion Crafting", tab: "potioncraft", keywords: ["craft", "potion", "cauldron", "stella", "brew", "ingredients"] },
+    { title: "Other Features", tab: "otherfeatures", keywords: ["anti", "afk", "idle", "reset character", "glitch effect"] },
+    { title: "Remote Access", tab: "remoteaccess", keywords: ["remote", "access", "control", "api", "discord bot"] },
+    { title: "Customization", tab: "customization", keywords: ["custom", "background", "image", "theme"] }
+];
+
+export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, isGlitching, setActiveTab }: HeaderBarProps) {
     const [alwaysOnTop, setAlwaysOnTop] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     const toggleAlwaysOnTop = async () => {
         const next = !alwaysOnTop;
@@ -51,6 +71,37 @@ export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, i
         }
     };
 
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const q = e.target.value;
+        setSearchQuery(q);
+        if (!q.trim()) {
+            setSearchResults([]);
+            return;
+        }
+
+        const lowerQ = q.toLowerCase();
+        const results = SEARCH_INDEX.map(item => {
+            const indexStr = (item.title + " " + item.tab + " " + item.keywords.join(" ")).toLowerCase();
+            return { item, match: indexStr.includes(lowerQ) };
+        }).filter(x => x.match).map(x => x.item);
+
+        setSearchResults(results);
+    };
+
+    const handleSearchSelect = (result: typeof SEARCH_INDEX[0]) => {
+        if (setActiveTab) {
+            setActiveTab(result.tab);
+            setTimeout(() => {
+                if ((window as any).find && searchQuery.trim().length >= 3) {
+                    (window as any).find(searchQuery, false, false, true, false, false, false);
+                }
+            }, 300);
+        }
+        setSearchQuery("");
+        setSearchResults([]);
+        setIsSearchFocused(false);
+    };
+
     const handleThemeWheel = useCallback((e: React.WheelEvent) => {
         e.preventDefault();
         const idx = themes.findIndex((t) => t.id === theme);
@@ -74,6 +125,12 @@ export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, i
                             e.stopPropagation();
                         }
                     }}
+                    style={{
+                        padding: "4px 12px",
+                        fontSize: "12px",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0
+                    }}
                 >
                     {isRunning ? "■ Stop (F2)" : "▶ Start (F1)"}
                 </button>
@@ -93,6 +150,91 @@ export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, i
             </div>
 
             <div className="header-right">
+                <div style={{ position: "relative", marginRight: "10px" }}>
+                    <div style={{ position: "absolute", left: "8px", top: "50%", transform: "translateY(-50%)", fontSize: "12px", color: "var(--text-muted)", pointerEvents: "none" }}>
+                        🔍
+                    </div>
+                    <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Filter index"
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                        style={{
+                            width: "110px",
+                            fontSize: "12px",
+                            padding: "4px 8px 4px 26px"
+                        }}
+                    />
+                    {isSearchFocused && searchResults.length > 0 && (
+                        <div style={{
+                            position: "absolute",
+                            top: "100%",
+                            right: 0,
+                            marginTop: "8px",
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border)",
+                            borderRadius: "var(--radius-md)",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                            zIndex: 1000,
+                            minWidth: "200px",
+                            maxHeight: "300px",
+                            overflowY: "auto"
+                        }}>
+                            {searchResults.map((res, i) => (
+                                <div
+                                    key={i}
+                                    onClick={() => handleSearchSelect(res)}
+                                    style={{
+                                        padding: "8px 12px",
+                                        cursor: "pointer",
+                                        borderBottom: i < searchResults.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
+                                        fontSize: "12px",
+                                        transition: "background 0.2s ease"
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                >
+                                    <div style={{ color: "var(--text-primary)", fontWeight: 500, marginBottom: "2px" }}>{res.title}</div>
+                                    <div style={{ color: "var(--text-muted)", fontSize: "11px" }}>Switch to {res.tab} tab ➜</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {(window as any).isSafeMode && (
+                    <button
+                        className="btn btn-stop"
+                        onClick={async () => {
+                            if (window.confirm("Are you sure you want to completely exit the macro?")) {
+                                try {
+                                    await window.pywebview?.api?.close_window();
+                                    window.close();
+                                    setTimeout(() => {
+                                        document.body.innerHTML = '<div style="background:#111;color:#fff;height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;"><h1>Macro Terminated. You can close this tab.</h1></div>';
+                                    }, 500);
+                                } catch (e) {
+                                    console.error("Exit failed", e);
+                                    window.close();
+                                }
+                            }
+                        }}
+                        style={{
+                            fontSize: "11px",
+                            padding: "4px 8px",
+                            marginRight: "10px",
+                            backgroundColor: "#e74c3c",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            color: "white"
+                        }}
+                    >
+                        Exit Macro
+                    </button>
+                )}
+
                 <button
                     className="btn btn-import"
                     onClick={handleImportConfig}
@@ -100,9 +242,11 @@ export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, i
                     title="Import a config.json file"
                     style={{
                         fontSize: "11px",
-                        padding: "4px 10px",
+                        padding: "4px 8px",
                         marginRight: "10px",
                         cursor: isImporting ? "wait" : "pointer",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0
                     }}
                 >
                     {isImporting ? "Importing..." : "Import Config"}

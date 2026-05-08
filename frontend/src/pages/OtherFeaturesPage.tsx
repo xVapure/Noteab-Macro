@@ -58,6 +58,20 @@ export default function OtherFeaturesPage() {
                     </div>
                 </div>
 
+                <div className="setting-row" style={{ padding: '15px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-bright)' }}>Open AppData Folder</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Opens the folder where logs, config, and macro data are stored</div>
+                    </div>
+                    <button 
+                        className="btn primary" 
+                        onClick={() => window.pywebview?.api?.open_appdata()}
+                        style={{ padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', backgroundColor: 'var(--primary)', color: 'white', border: 'none', fontWeight: 600 }}
+                    >
+                        Open Folder
+                    </button>
+                </div>
+
                 <ToggleSwitch
                     label="GLITCHED visual effect on macro UI when GLITCHED biome is found (to look cool ofc)"
                     description={<span style={{ color: "red", fontWeight: "bold" }}>ONLY USE THIS IF YOU ARE NON PHOTOSENSITIVE</span>}
@@ -71,6 +85,19 @@ export default function OtherFeaturesPage() {
                     checked={config.anti_afk || false}
                     onChange={(val) => updateConfig("anti_afk", val)}
                 />
+
+                <div className="setting-row" style={{ padding: '0 20px 20px 20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Usage Duration (minutes):</span>
+                    <input 
+                        type="number" 
+                        className="form-input" 
+                        style={{ width: '80px', textAlign: 'center' }}
+                        value={config.anti_afk_interval || "5"}
+                        min="1"
+                        max="20"
+                        onChange={(e) => updateConfig("anti_afk_interval", e.target.value)}
+                    />
+                </div>
 
                 <ToggleSwitch
                     label="Auto Update (startup)"
@@ -91,6 +118,13 @@ export default function OtherFeaturesPage() {
                     description="Automatically fullscreen Roblox window when macro starts"
                     checked={config.auto_roblox_fullscreen || false}
                     onChange={(val) => updateConfig("auto_roblox_fullscreen", val)}
+                />
+
+                <ToggleSwitch
+                    label="AZERTY Keyboard Mode (experimental)"
+                    description="Enable this if you currently using AZERTY keyboard layout :aga:"
+                    checked={config.azerty_mode || false}
+                    onChange={(val) => updateConfig("azerty_mode", val)}
                 />
             </div>
         </>

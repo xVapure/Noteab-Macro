@@ -1525,6 +1525,7 @@ body {
   padding: 13px 18px;
   border: none;
   border-radius: 10px;
+  font-family: inherit;
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;

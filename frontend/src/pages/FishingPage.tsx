@@ -62,6 +62,22 @@ export default function FishingPage() {
         updateConfig("fishing_failsafe_rejoin", true);
     };
 
+    const handleFishingMerchantMTPToggle = (enabled: boolean) => {
+        if (enabled && config.fishing_use_merchant_ocr_every_x_fish) {
+            alert("Please disable 'Check merchant on roblox chat (OCR) every x fishes' before enabling the Auto Merchant using Merchant Teleporter every x fishes.");
+            return;
+        }
+        updateConfig("fishing_use_merchant_every_x_fish", enabled);
+    };
+
+    const handleFishingMerchantOCRToggle = (enabled: boolean) => {
+        if (enabled && config.fishing_use_merchant_every_x_fish) {
+            alert("Please disable 'Use merchant teleporter every x fishes' before enabling merchant OCR detection.");
+            return;
+        }
+        updateConfig("fishing_use_merchant_ocr_every_x_fish", enabled);
+    };
+
     const fishingMode = config.fishing_mode || false;
     const fishingFailsafe = config.fishing_failsafe_rejoin || false;
     const fishSellingEnabled = config.fishing_enable_selling || false;
@@ -204,7 +220,7 @@ export default function FishingPage() {
                     label="Use merchant teleporter every x fishes"
                     description="Runs full auto-merchant flow directly from fishing mode."
                     checked={fishingMerchantEnabled}
-                    onChange={(val) => updateConfig("fishing_use_merchant_every_x_fish", val)}
+                    onChange={handleFishingMerchantMTPToggle}
                 />
                 {fishingMerchantEnabled && (
                     <div className="form-row" style={{ marginTop: "8px" }}>
@@ -214,6 +230,26 @@ export default function FishingPage() {
                                 className="form-input"
                                 value={config.fishing_merchant_every_x_fish ?? "30"}
                                 onChange={(e) => updateConfig("fishing_merchant_every_x_fish", e.target.value)}
+                                style={{ width: "90px" }}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                <ToggleSwitch
+                    label="Check merchant on roblox chat (OCR) every x fishes"
+                    description="Check chat for merchant spawns via OCR directly from fishing mode."
+                    checked={config.fishing_use_merchant_ocr_every_x_fish || false}
+                    onChange={handleFishingMerchantOCRToggle}
+                />
+                {config.fishing_use_merchant_ocr_every_x_fish && (
+                    <div className="form-row" style={{ marginTop: "8px" }}>
+                        <div className="form-group">
+                            <label className="form-label">Check OCR every x fish</label>
+                            <input
+                                className="form-input"
+                                value={config.fishing_merchant_ocr_every_x_fish_amt ?? "30"}
+                                onChange={(e) => updateConfig("fishing_merchant_ocr_every_x_fish_amt", e.target.value)}
                                 style={{ width: "90px" }}
                             />
                         </div>

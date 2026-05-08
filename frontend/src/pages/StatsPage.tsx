@@ -3,6 +3,31 @@ import { useConfig } from "../contexts/ConfigContext";
 
 const GLITCH_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()[]{}<>?/\\|~`";
 
+const FALLBACK_BIOME_COLORS: Record<string, string> = {
+    "WINDY": "#9ae5ff",
+    "RAINY": "#027cbd",
+    "SNOWY": "#Dceff9",
+    "SAND STORM": "#8F7057",
+    "HELL": "#ff4719",
+    "STARFALL": "#011ab7",
+    "CORRUPTION": "#6d32a8",
+    "NULL": "#838383",
+    "GLITCHED": "#bfff00",
+    "DREAMSPACE": "#ea9dda",
+    "CYBERSPACE": "#0A1A3D",
+    "AURORA": "#56d6a0",
+    "HEAVEN": "#dfaf63",
+    "EGGLAND": "#d4fc8d",
+    "SINGULARITY": "#cf4023",
+};
+
+const KNOWN_ORDER = [
+    "WINDY", "RAINY", "SNOWY", "SAND STORM",
+    "HELL", "STARFALL", "CORRUPTION", "NULL",
+    "GLITCHED", "DREAMSPACE", "CYBERSPACE",
+    "AURORA", "HEAVEN"
+];
+
 function GlitchText() {
     const [text, setText] = useState("GLITCHED");
     const frameRef = useRef(0);
@@ -39,7 +64,7 @@ function GlitchText() {
 }
 
 export default function StatsPage() {
-    const { config, error, sessionDuration, lastStartTime, isMacroRunning } = useConfig();
+    const { config, error, sessionDuration, lastStartTime, isMacroRunning, biomeColors } = useConfig();
     const [elapsedDisplay, setElapsedDisplay] = useState("00:00:00");
 
     useEffect(() => {
@@ -66,21 +91,9 @@ export default function StatsPage() {
         return () => clearInterval(interval);
     }, [sessionDuration, lastStartTime, isMacroRunning]);
 
-    const biomeColors: Record<string, string> = {
-        "WINDY": "#9ae5ff",
-        "RAINY": "#027cbd",
-        "SNOWY": "#Dceff9",
-        "SAND STORM": "#8F7057",
-        "HELL": "#ff4719",
-        "STARFALL": "#011ab7",
-        "CORRUPTION": "#6d32a8",
-        "NULL": "#838383",
-        "GLITCHED": "#bfff00",
-        "DREAMSPACE": "#ea9dda",
-        "CYBERSPACE": "#0A1A3D",
-        "AURORA": "#56d6a0",
-        "HEAVEN": "#dfaf63",
-    };
+    function getBiomeColor(biome: string): string {
+        return biomeColors[biome] || FALLBACK_BIOME_COLORS[biome] || "#9ca3af";
+    }
 
     if (error) return (
         <div style={{ padding: "20px", color: "#ef4444" }}>
@@ -99,12 +112,11 @@ export default function StatsPage() {
     const merchantCounts = config.merchant_counts || {};
     const totalMerchants = Object.values(merchantCounts).reduce((a, b) => a + Number(b), 0);
 
-    const displayOrder = [
-        "WINDY", "RAINY", "SNOWY", "SAND STORM",
-        "HELL", "STARFALL", "CORRUPTION", "NULL",
-        "GLITCHED", "DREAMSPACE", "CYBERSPACE",
-        "AURORA", "HEAVEN"
-    ];
+    // Build dynamic display order: known biomes first (in order), then any new biomes sorted alphabetically
+    const allBiomes = Object.keys(biomeCounts).filter(b => b !== "NORMAL");
+    const orderedKnown = KNOWN_ORDER.filter(b => allBiomes.includes(b));
+    const newBiomes = allBiomes.filter(b => !KNOWN_ORDER.includes(b)).sort();
+    const displayOrder = [...orderedKnown, ...newBiomes];
 
     return (
         <>
@@ -150,7 +162,7 @@ export default function StatsPage() {
                     {displayOrder.map((name) => (
                         <div key={name} className="stat-card">
                             <div className="stat-value">{biomeCounts[name] || 0}</div>
-                            <div className="stat-label" style={{ color: biomeColors[name] }}>
+                            <div className="stat-label" style={{ color: getBiomeColor(name) }}>
                                 {name === "GLITCHED" ? <GlitchText /> : name}
                             </div>
                         </div>

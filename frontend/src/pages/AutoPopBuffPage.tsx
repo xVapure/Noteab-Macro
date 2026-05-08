@@ -22,6 +22,7 @@ const DEFAULT_BUFFS = [
     "Lucky Potion",
     "Oblivion Potion",
     "Potion of bound",
+    "Rune of Everything",
     "Speed Potion",
     "Stella's Candle",
     "Strange Potion I",
@@ -44,6 +45,8 @@ const FALLBACK_BIOME_COLORS: Record<string, string> = {
     CYBERSPACE: "#0a1a3d",
     AURORA: "#56d6a0",
     HEAVEN: "#dfaf63",
+    EGGLAND: "#d4fc8d",
+    SINGULARITY: "#cf4023",
 };
 
 function normalizeColor(value: string | undefined): string {
@@ -137,7 +140,7 @@ function countEnabledBuffs(buffs: BuffConfig): number {
     return Object.values(buffs).filter(([enabled]) => enabled).length;
 }
 
-function getBiomeColor(config: Record<string, unknown>, biomeName: string): string {
+function getBiomeColor(config: Record<string, unknown>, biomeName: string, contextColors?: Record<string, string>): string {
     const overrides = config.custom_biome_overrides;
     if (overrides && typeof overrides === "object") {
         const biomeOverride = (overrides as Record<string, { color?: string }>)[biomeName];
@@ -146,11 +149,15 @@ function getBiomeColor(config: Record<string, unknown>, biomeName: string): stri
         }
     }
 
+    if (contextColors && contextColors[biomeName]) {
+        return contextColors[biomeName];
+    }
+
     return FALLBACK_BIOME_COLORS[biomeName] ?? "#9ca3af";
 }
 
 export default function AutoPopBuffPage() {
-    const { config, saveConfig, error } = useConfig();
+    const { config, saveConfig, error, biomeColors: contextColors } = useConfig();
     const [selectedBiome, setSelectedBiome] = useState<string | null>(null);
 
     if (error) {
@@ -229,7 +236,7 @@ export default function AutoPopBuffPage() {
                     {biomes.map((biomeName) => {
                         const biomeEntry = getBiomeEntry(autoPopBiomes, biomeName);
                         const enabledBuffs = countEnabledBuffs(biomeEntry.buffs);
-                        const biomeColor = getBiomeColor(typedConfig, biomeName);
+                        const biomeColor = getBiomeColor(typedConfig, biomeName, contextColors);
 
                         return (
                             <div
@@ -334,6 +341,7 @@ export default function AutoPopBuffPage() {
                                         </label>
                                         <input
                                             className="form-input buff-amount"
+                                            style={{ width: "65px", padding: "4px 8px" }}
                                             type="number"
                                             min="1"
                                             value={amount}

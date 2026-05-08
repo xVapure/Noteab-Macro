@@ -14,6 +14,8 @@ export interface AppConfig {
     [key: string]: any;
 }
 
+export type BiomeColorMap = Record<string, string>;
+
 interface ConfigContextType {
     config: AppConfig | null;
     setConfig: (config: AppConfig) => void;
@@ -25,6 +27,7 @@ interface ConfigContextType {
     setMacroRunning: (running: boolean) => void;
     sessionDuration: number; // Accumulated ms
     lastStartTime: number | null; // Start time of current run
+    biomeColors: BiomeColorMap;
 }
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -38,6 +41,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     const [isMacroRunning, setIsMacroRunningState] = useState(false);
     const [sessionDuration, setSessionDuration] = useState(0);
     const [lastStartTime, setLastStartTime] = useState<number | null>(null);
+    const [biomeColors, setBiomeColors] = useState<BiomeColorMap>({});
 
     const setMacroRunning = useCallback((running: boolean) => {
         setIsMacroRunningState(running);
@@ -102,6 +106,18 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
 
             setConfig(data);
             setIsLoading(false);
+
+            // Fetch biome colors from the tracker's GitHub-fetched biome_data
+            try {
+                if (window.pywebview?.api?.get_biome_data) {
+                    const colors = await window.pywebview.api.get_biome_data();
+                    if (colors && typeof colors === 'object') {
+                        setBiomeColors(colors);
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not fetch biome_data colors:", e);
+            }
         } catch (err) {
             console.error("Failed to load config:", err);
             setError(String(err));
@@ -125,7 +141,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     return (
         <ConfigContext.Provider value={{
             config, setConfig, saveConfig, isLoading, error,
-            isMacroRunning, setMacroRunning, sessionDuration, lastStartTime
+            isMacroRunning, setMacroRunning, sessionDuration, lastStartTime,
+            biomeColors
         }}>
             {children}
         </ConfigContext.Provider>

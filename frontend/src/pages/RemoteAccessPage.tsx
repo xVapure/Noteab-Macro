@@ -1,5 +1,6 @@
 import { useConfig } from "../contexts/ConfigContext";
 import ToggleSwitch from "../components/ToggleSwitch";
+import { looksLikeWebhookUrl, getWebhookWarning } from "../utils/webhookGuard";
 
 export default function RemoteAccessPage() {
     const { config, saveConfig, error } = useConfig();
@@ -9,6 +10,22 @@ export default function RemoteAccessPage() {
 
     const updateConfig = (key: string, value: any) => {
         saveConfig({ ...config, [key]: value });
+    };
+
+    const handleBotTokenChange = (val: string) => {
+        if (looksLikeWebhookUrl(val)) {
+            alert(getWebhookWarning(val, "Discord Bot Token"));
+            return;
+        }
+        updateConfig("remote_bot_token", val);
+    };
+
+    const handleUserIdChange = (val: string) => {
+        if (looksLikeWebhookUrl(val)) {
+            alert(getWebhookWarning(val, "Allowed User ID"));
+            return;
+        }
+        updateConfig("remote_allowed_user_id", val);
     };
 
     return (
@@ -41,7 +58,7 @@ export default function RemoteAccessPage() {
                                 className="form-input"
                                 type="password"
                                 value={config.remote_bot_token || ""}
-                                onChange={(e) => updateConfig("remote_bot_token", e.target.value)}
+                                onChange={(e) => handleBotTokenChange(e.target.value)}
                                 placeholder="Enter your Discord bot token"
                                 style={{ width: "100%", maxWidth: "440px" }}
                             />
@@ -52,7 +69,7 @@ export default function RemoteAccessPage() {
                             <input
                                 className="form-input"
                                 value={config.remote_allowed_user_id || ""}
-                                onChange={(e) => updateConfig("remote_allowed_user_id", e.target.value)}
+                                onChange={(e) => handleUserIdChange(e.target.value)}
                                 placeholder="123456789012345678"
                                 style={{ width: "220px" }}
                             />

@@ -4,7 +4,8 @@ import { useConfig } from "../contexts/ConfigContext";
 
 export default function MiscPage() {
     const { config, saveConfig, error } = useConfig();
-    const [calibrationTarget, setCalibrationTarget] = useState<"ocr" | "reconnect" | null>(null);
+    const [calibrationTarget, setCalibrationTarget] = useState<"ocr" | "reconnect" | "eden_contract" | null>(null);
+    const [ocrStatus, setOcrStatus] = useState<{ installed: boolean; version: string | null } | null>(null);
 
     useEffect(() => {
         (window as any).onCalibrationResultMisc = (data: any) => {
@@ -23,8 +24,9 @@ export default function MiscPage() {
                         nextValue = candidate;
                     }
                 }
-            } else if (calibrationTarget === "reconnect") {
-                if (Array.isArray(data?.value) && data?.key === "reconnect_start_button") {
+            } else if (calibrationTarget === "reconnect" || calibrationTarget === "eden_contract") {
+                const targetKey = calibrationTarget === "reconnect" ? "reconnect_start_button" : "eden_contract_button";
+                if (Array.isArray(data?.value) && data?.key === targetKey) {
                     const candidate = data.value.slice(0, 2).map((value: any) => Math.round(Number(value)));
                     if (candidate.length === 2 && candidate.every((value: number) => Number.isFinite(value))) {
                         nextValue = candidate;
@@ -41,8 +43,10 @@ export default function MiscPage() {
 
             if (calibrationTarget === "ocr") {
                 saveConfig({ ...config, first_item_slot_ocr_pos: nextValue });
-            } else {
+            } else if (calibrationTarget === "reconnect") {
                 saveConfig({ ...config, reconnect_start_button: nextValue });
+            } else if (calibrationTarget === "eden_contract") {
+                saveConfig({ ...config, eden_contract_button: nextValue });
             }
 
             setCalibrationTarget(null);
@@ -52,6 +56,20 @@ export default function MiscPage() {
             delete (window as any).onCalibrationResultMisc;
         };
     }, [calibrationTarget, config, saveConfig]);
+
+    useEffect(() => {
+        const checkOcr = async () => {
+            try {
+                if (window.pywebview?.api) {
+                    const result = await window.pywebview.api.check_winocr_status();
+                    setOcrStatus(result);
+                }
+            } catch {
+                setOcrStatus({ installed: false, version: null });
+            }
+        };
+        checkOcr();
+    }, []);
 
     if (error) {
         return (
@@ -96,6 +114,19 @@ export default function MiscPage() {
         }
     };
 
+    const startEdenContractCalibration = async () => {
+        setCalibrationTarget("eden_contract");
+        try {
+            if (window.pywebview?.api) {
+                await window.pywebview.api.create_calibration_window("eden_contract_button", "point");
+            }
+        } catch (errorValue) {
+            console.error("Failed to open calibration window", errorValue);
+            alert("Failed to open calibration tool: " + errorValue);
+            setCalibrationTarget(null);
+        }
+    };
+
     return (
         <>
             <div className="page-header">
@@ -103,42 +134,40 @@ export default function MiscPage() {
                 <p>General automation, recovery, screenshot, and quest settings</p>
             </div>
 
-            <div className="card">
-                <div className="card-header">
-                    <div className="card-icon">🎬</div>
-                    <div>
-                        <h3>Biome Recording</h3>
-                        <p>Auto clip and screenshot rare biome detections</p>
-                    </div>
-                </div>
-
-                <ToggleSwitch
-                    label="Glitched/Dreamspace Biome clip keybind"
-                    description="Require 1 of 2 recorders: Medal, Xbox Gaming Bar"
-                    checked={config.record_rare_biome || false}
-                    onChange={(value) => updateConfig("record_rare_biome", value)}
-                />
-
-                {config.record_rare_biome && (
-                    <div className="form-row" style={{ marginTop: "10px" }}>
-                        <div className="form-group">
-                            <label className="form-label">Record Keybind</label>
-                            <input
-                                className="form-input"
-                                value={config.rare_biome_record_keybind || "F8"}
-                                onChange={(event) => updateConfig("rare_biome_record_keybind", event.target.value)}
-                                style={{ width: "140px" }}
-                            />
-                        </div>
-                    </div>
+            <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 14px",
+                borderRadius: "var(--radius-md)",
+                background: ocrStatus?.installed ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                border: `1px solid ${ocrStatus?.installed ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                marginBottom: "16px",
+                fontSize: "12px"
+            }}>
+                <span style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: ocrStatus === null ? "var(--text-muted)" : ocrStatus.installed ? "#22c55e" : "#ef4444",
+                    flexShrink: 0
+                }} />
+                <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>
+                    WinOCR Status:
+                </span>
+                <span style={{ color: ocrStatus === null ? "var(--text-muted)" : ocrStatus.installed ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
+                    {ocrStatus === null ? "Checking..." : ocrStatus.installed ? "Installed" : "Not Installed"}
+                </span>
+                {ocrStatus?.installed && ocrStatus.version && ocrStatus.version !== "unknown" && (
+                    <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>
+                        (v{ocrStatus.version})
+                    </span>
                 )}
-
-                <ToggleSwitch
-                    label="Rare Biomes Screenshot"
-                    description="Automatically send a screenshot in your webhook when Glitched, Dreamspace, or Cyberspace is found"
-                    checked={config.rare_biome_screenshot !== false}
-                    onChange={(value) => updateConfig("rare_biome_screenshot", value)}
-                />
+                {ocrStatus && !ocrStatus.installed && (
+                    <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>
+                        — OCR failsafe will not work (if WinOCR haven't installed, ask macro helper to assist you about this!)
+                    </span>
+                )}
             </div>
 
             <div className="card">
@@ -149,6 +178,25 @@ export default function MiscPage() {
                         <p>Configure BR, SC, reconnect, and OCR safeguards</p>
                     </div>
                 </div>
+
+                <ToggleSwitch
+                    label="OCR failsafe"
+                    description="Prevent wrong item usage by validating the first inventory slot before clicking Use"
+                    checked={config.enable_ocr_failsafe || false}
+                    onChange={(value) => updateConfig("enable_ocr_failsafe", value)}
+                />
+                {config.enable_ocr_failsafe && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px", marginBottom: "14px" }}>
+                        <button
+                            className="btn btn-accent"
+                            style={{ fontSize: "11px", padding: "6px 12px" }}
+                            onClick={startOCRCalibration}
+                        >
+                            OCR Calibration
+                        </button>
+                        <span className="form-hint">{JSON.stringify(config.first_item_slot_ocr_pos || [797, 410, 98, 97])}</span>
+                    </div>
+                )}
 
                 <ToggleSwitch
                     label="Biome Randomizer (BR)"
@@ -219,25 +267,216 @@ export default function MiscPage() {
                         />
                     </div>
                 </div>
+            </div>
+
+            <div className="card">
+                <div className="card-header">
+                    <div className="card-icon">⚡</div>
+                    <div>
+                        <h3>Limbo Item Usage &amp; Eden Detection</h3>
+                        <p>Configure Eden detection and Limbo teleportation</p>
+                    </div>
+                </div>
 
                 <ToggleSwitch
-                    label="OCR failsafe"
-                    description="Prevent wrong item usage by validating the first inventory slot before clicking Use"
-                    checked={config.enable_ocr_failsafe || false}
-                    onChange={(value) => updateConfig("enable_ocr_failsafe", value)}
+                    label="Teleport to Limbo using Portable Crack"
+                    checked={config.teleport_portable_crack || false}
+                    onChange={(value) => updateConfig("teleport_portable_crack", value)}
                 />
-                {config.enable_ocr_failsafe && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
-                        <button
-                            className="btn btn-accent"
-                            style={{ fontSize: "11px", padding: "6px 12px" }}
-                            onClick={startOCRCalibration}
-                        >
-                            OCR Calibration
-                        </button>
-                        <span className="form-hint">{JSON.stringify(config.first_item_slot_ocr_pos || [797, 410, 98, 97])}</span>
+                
+                {config.teleport_portable_crack && (
+                    <div style={{ marginTop: "4px" }}>
+                        <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "inline-block" }}>
+                            Only works if fishing mode, potion crafting, auto obby, auto egg pathing is OFF!
+                        </span>
+                        <div className="duration-input" style={{ marginTop: "10px" }}>
+                            <label className="form-label">Usage Interval (minutes):</label>
+                            <input
+                                type="number"
+                                min="1"
+                                className="form-input"
+                                value={config.portable_crack_interval || "1"}
+                                onChange={(event) => updateConfig("portable_crack_interval", event.target.value)}
+                                onBlur={(event) => {
+                                    const val = parseInt(event.target.value);
+                                    if (isNaN(val) || val < 1) {
+                                        updateConfig("portable_crack_interval", "1");
+                                    }
+                                }}
+                                style={{ width: "70px" }}
+                            />
+                        </div>
                     </div>
                 )}
+
+                <div style={{ marginTop: "14px", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "14px" }}>
+                    <ToggleSwitch
+                        label="Go to Eden's spawn (experimental)"
+                        checked={config.go_to_eden_spawn || false}
+                        onChange={(value) => updateConfig("go_to_eden_spawn", value)}
+                    />
+
+                    {config.go_to_eden_spawn && (
+                        <div style={{ marginTop: "4px", marginBottom: "16px", marginLeft: "14px", paddingLeft: "14px" }}>
+                            <div className="duration-input" style={{ marginBottom: "12px" }}>
+                                <label className="form-label">Pathing Interval (minutes):</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    className="form-input"
+                                    value={config.eden_path_interval || "35"}
+                                    onChange={(event) => updateConfig("eden_path_interval", event.target.value)}
+                                    style={{ width: "70px" }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <ToggleSwitch
+                        label="Auto Eden's contract"
+                        checked={config.auto_eden_contract || false}
+                        onChange={(value) => updateConfig("auto_eden_contract", value)}
+                    />
+                    
+                    {config.auto_eden_contract && (
+                        <div style={{ marginTop: "4px", marginBottom: "16px", marginLeft: "14px", paddingLeft: "14px" }}>
+                            <div className="duration-input" style={{ marginBottom: "12px" }}>
+                                <label className="form-label">Contract Interval (minutes):</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    className="form-input"
+                                    value={config.eden_contract_interval || "10"}
+                                    onChange={(event) => updateConfig("eden_contract_interval", event.target.value)}
+                                    style={{ width: "70px" }}
+                                />
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <button
+                                    className="btn btn-accent"
+                                    style={{ fontSize: "11px", padding: "6px 12px" }}
+                                    onClick={startEdenContractCalibration}
+                                >
+                                    Eden Contract button (calibration)
+                                </button>
+                                <span className="form-hint">{JSON.stringify(config.eden_contract_button || [0, 0])}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ marginTop: "14px", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "14px" }}>
+                    <ToggleSwitch
+                        label="Eden detection using OCR (detect on roblox chat)"
+                        checked={config.eden_detection || false}
+                        onChange={(value) => updateConfig("eden_detection", value)}
+                    />
+                    
+                    {config.eden_detection && (
+                        <div style={{ marginTop: "8px" }}>
+                            <div className="info-banner" style={{ background: "rgba(124, 91, 245, 0.1)", border: "1px solid var(--accent)", marginBottom: "12px" }}>
+                                <strong>Reminder:</strong> This only detect eden and ping you if it found on roblox chat so u gotta get the eden aura by yourself
+                                <br />
+                                <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "inline-block", marginTop: "4px" }}>Only works if fishing, potion crafting, auto obby, auto egg pathing is OFF!</span>
+                                <br />
+                                <span style={{ color: "var(--text-muted)", fontSize: "11px", display: "inline-block", marginTop: "4px" }}>Make sure you do the chat, chat OCR tab, chat close, and chat OCR box region calibration in Movements Calibration tab!</span>
+                            </div>
+
+                            <div className="duration-input" style={{ marginBottom: "16px" }}>
+                                <label className="form-label">Checking Interval (minutes):</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    className="form-input"
+                                    value={config.eden_check_interval || "5"}
+                                    onChange={(event) => updateConfig("eden_check_interval", event.target.value)}
+                                    onBlur={(event) => {
+                                        const val = parseInt(event.target.value);
+                                        if (isNaN(val) || val < 1) {
+                                            updateConfig("eden_check_interval", "1");
+                                        }
+                                    }}
+                                    style={{ width: "70px" }}
+                                />
+                            </div>
+
+                            <div style={{ background: "rgba(0,0,0,0.2)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                <ToggleSwitch
+                                    label="Ping if Eden found?"
+                                    description="Custom Ping UserID/RoleID"
+                                    checked={config.ping_eden || false}
+                                    onChange={(val) => updateConfig("ping_eden", val)}
+                                />
+                                {config.ping_eden && (
+                                    <div className="form-group" style={{ marginTop: "12px" }}>
+                                        <label className="form-label">UserID / RoleID</label>
+                                        <input
+                                            className="form-input"
+                                            value={config.eden_user_id || ""}
+                                            onChange={(e) => updateConfig("eden_user_id", e.target.value)}
+                                            placeholder="123456789012345678"
+                                            style={{ width: "240px" }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="card">
+                <div className="card-header">
+                    <div className="card-icon">🎬</div>
+                    <div>
+                        <h3>Biome Recording</h3>
+                        <p>Auto clip and screenshot rare biome detections</p>
+                    </div>
+                </div>
+
+                <ToggleSwitch
+                    label="Glitched/Dreamspace/Cyberspace Biome clip keybind"
+                    description="Require 1 of 2 recorders: Medal, Xbox Gaming Bar"
+                    checked={config.record_rare_biome || false}
+                    onChange={(value) => updateConfig("record_rare_biome", value)}
+                />
+
+                {config.record_rare_biome && (
+                    <div className="form-row" style={{ marginTop: "10px" }}>
+                        <div className="form-group">
+                            <label className="form-label">Record Keybind</label>
+                            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                <input
+                                    className="form-input"
+                                    value={config.rare_biome_record_keybind || "F8"}
+                                    onChange={(event) => updateConfig("rare_biome_record_keybind", event.target.value)}
+                                    style={{ width: "100px" }}
+                                />
+                                <button
+                                    className="btn btn-accent"
+                                    onClick={() => {
+                                        if ((window as any).pywebview) {
+                                            (window as any).pywebview.api.test_biome_keybind();
+                                        }
+                                    }}
+                                    style={{ padding: "8px 16px", whiteSpace: "nowrap" }}
+                                >
+                                    Test Keybind
+                                </button>
+                                <small style={{ color: "var(--text-muted)", fontSize: "11px", whiteSpace: "nowrap" }}>
+                                    (Fires after 2s delay)
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <ToggleSwitch
+                    label="Rare Biomes Screenshot"
+                    description="Automatically send a screenshot in your webhook when Glitched, Dreamspace, or Cyberspace is found"
+                    checked={config.rare_biome_screenshot !== false}
+                    onChange={(value) => updateConfig("rare_biome_screenshot", value)}
+                />
             </div>
 
             <div className="card">

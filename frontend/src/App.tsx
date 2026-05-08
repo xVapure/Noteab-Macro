@@ -12,6 +12,7 @@ import MerchantPage from "./pages/MerchantPage";
 import AutoPopBuffPage from "./pages/AutoPopBuffPage";
 import AurasPage from "./pages/AurasPage";
 import PotionCraftPage from "./pages/PotionCraftPage";
+import StatusPage from "./pages/StatusPage";
 import StatsPage from "./pages/StatsPage";
 import OtherFeaturesPage from "./pages/OtherFeaturesPage";
 import CreditsPage from "./pages/CreditsPage";
@@ -24,6 +25,35 @@ import CustomizationPage from "./pages/CustomizationPage";
 import MovementsPage from "./pages/MovementsPage";
 import RecorderWindow from "./pages/RecorderWindow";
 import BiomeConfirmWindow from "./pages/BiomeConfirmWindow";
+
+// --- Safe Mode (Browser failsafe via HTTP) ---
+const isSafeMode = new URLSearchParams(window.location.search).get("safe_mode");
+if (isSafeMode && !(window as any).pywebview) {
+  console.log(`[SafeMode] Initializing HTTP bridge...`);
+  (window as any).isSafeMode = true;
+
+  (window as any).pywebview = {
+    api: new Proxy({}, {
+      get: (_target, method: string) => {
+        return async (...args: any[]) => {
+          try {
+            const response = await fetch(`/api/${method}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(args)
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            return data;
+          } catch (err) {
+            console.error(`[SafeMode] API Error (${method}):`, err);
+            throw err;
+          }
+        };
+      }
+    })
+  };
+}
 
 const pages: Record<string, React.FC> = {
   notice: NoticePage,
@@ -38,15 +68,18 @@ const pages: Record<string, React.FC> = {
   movements: MovementsPage,
   potioncraft: PotionCraftPage,
   stats: StatsPage,
+  status: StatusPage,
   otherfeatures: OtherFeaturesPage,
   customization: CustomizationPage,
   credits: CreditsPage,
   donations: DonationsPage,
+  // puzzle: PuzzlePage,
 };
 
 function App() {
   const [activeTab, setActiveTab] = useState("notice");
   const { config, saveConfig, isMacroRunning, setMacroRunning } = useConfig();
+  const [isApiReady, setIsApiReady] = useState(new URLSearchParams(window.location.search).get("safe_mode") !== null);
   const [theme, setTheme] = useState("midnight");
   const [isGlitching, setIsGlitching] = useState(false);
   const [macroVersion, setMacroVersion] = useState("v?.?.?");
@@ -253,10 +286,12 @@ function App() {
     };
 
     const onReady = () => {
+      setIsApiReady(true);
       void requestUpdateCheck();
     };
 
-    if (window.pywebview?.api) {
+    if (window.pywebview?.api || (window as any).isSafeMode) {
+      setIsApiReady(true);
       void requestUpdateCheck();
       return;
     }
@@ -285,37 +320,37 @@ function App() {
 
     const applyVersion = (value: unknown) => {
       const version = String(value ?? "").trim();
-      if (!version) return;
+      if (!version) return false;
       if (!cancelled) {
         setMacroVersion(version);
       }
       document.title = `Coteab Macro ${version}`;
+      return true;
     };
 
-    const loadMacroVersion = async () => {
+    const loadMacroVersion = async (): Promise<boolean> => {
       try {
         if (window.pywebview?.api && typeof window.pywebview.api.get_macro_version === "function") {
           const version = await window.pywebview.api.get_macro_version();
-          applyVersion(version);
+          return applyVersion(version);
         }
       } catch (err) {
         console.error("Failed to load macro version:", err);
       }
+      return false;
     };
 
-    const onPywebviewReady = () => {
-      void loadMacroVersion();
+    const tryLoad = async () => {
+      for (let i = 0; i < 10 && !cancelled; i++) {
+        if (await loadMacroVersion()) return;
+        await new Promise(r => setTimeout(r, 500));
+      }
     };
 
-    if (window.pywebview?.api) {
-      void loadMacroVersion();
-    } else {
-      window.addEventListener("pywebviewready", onPywebviewReady, { once: true });
-    }
+    void tryLoad();
 
     return () => {
       cancelled = true;
-      window.removeEventListener("pywebviewready", onPywebviewReady);
     };
   }, []);
 
@@ -356,8 +391,8 @@ function App() {
 
 
 
-  const activePageQuery = new URLSearchParams(window.location.search).get("overlay");
-  const windowType = new URLSearchParams(window.location.search).get("window");
+  const activePageQuery = (window as any).__INJECTED_OVERLAY__ || new URLSearchParams(window.location.search).get("overlay");
+  const windowType = (window as any).__INJECTED_WINDOW_TYPE__ || new URLSearchParams(window.location.search).get("window");
 
   if (windowType === "recorder") {
     return <RecorderWindow />;
@@ -386,7 +421,7 @@ function App() {
       <div className="corner-bracket tr" />
       <div className="corner-bracket bl" />
       <div className="corner-bracket br" />
-      <div className="app-layout">
+      <div className="app-layout" style={(!isApiReady && !(window as any).isSafeMode) ? { pointerEvents: 'none', opacity: 0.7 } : {}}>
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} isGlitching={isGlitching} macroVersion={macroVersion} />
         <div className="main-content" style={{ position: "relative" }}>
           <HeaderBar
@@ -395,6 +430,7 @@ function App() {
             theme={theme}
             onThemeChange={handleThemeChange}
             isGlitching={isGlitching}
+            setActiveTab={setActiveTab}
           />
           {updateInfo && (
             <UpdateBanner

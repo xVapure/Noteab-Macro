@@ -3,7 +3,7 @@ import "../App.css";
 
 export default function BiomeConfirmWindow() {
     const params = new URLSearchParams(window.location.search);
-    const biome = params.get("biome") || "UNKNOWN";
+    const biome = (window as any).__INJECTED_BIOME__ || params.get("biome") || "UNKNOWN";
 
     const [countdown, setCountdown] = useState(10);
     const [responded, setResponded] = useState(false);

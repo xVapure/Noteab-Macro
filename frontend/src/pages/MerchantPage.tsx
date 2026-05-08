@@ -16,7 +16,7 @@ const parseItems = (itemsObj: any): MerchantItem[] => {
         name,
         enabled: val[0],
         amount: val[1],
-        stopAfterBuy: val[2]
+        stopAfterBuy: false // forcefully ignoring backend's 3rd param
     }));
 };
 
@@ -24,7 +24,7 @@ const parseItems = (itemsObj: any): MerchantItem[] => {
 const serializeItems = (items: MerchantItem[]): any => {
     const obj: any = {};
     items.forEach(item => {
-        obj[item.name] = [item.enabled, item.amount, item.stopAfterBuy];
+        obj[item.name] = [item.enabled, item.amount, false];
     });
     return obj;
 };
@@ -51,7 +51,6 @@ function ItemTable({ items, onChange, accent }: {
             <div className="item-table-header">
                 <span className="item-col-name">Item Name</span>
                 <span className="item-col-amount">Amount</span>
-                <span className="item-col-rebuy">Rebuy</span>
             </div>
             {items.map((item, i) => (
                 <div key={item.name} className={`item-table-row ${item.enabled ? "item-row-active" : ""}`}>
@@ -72,15 +71,6 @@ function ItemTable({ items, onChange, accent }: {
                         min={1}
                         onChange={(e) => setAmount(i, e.target.value)}
                     />
-                    <label className="item-col-rebuy" title="Stop macro after buying?">
-                        <input
-                            type="checkbox"
-                            checked={item.stopAfterBuy}
-                            onChange={() => toggle(i, "stopAfterBuy")}
-                            className="item-checkbox"
-                            style={{ accentColor: accent }}
-                        />
-                    </label>
                 </div>
             ))}
         </div>
@@ -145,6 +135,22 @@ export default function MerchantPage() {
         updateConfig("Rin_Items", serializeItems(items));
     };
 
+    const handleMerchantTeleporterToggle = (enabled: boolean) => {
+        if (enabled && config.merchant_ocr) {
+            alert("Please disable 'Detect merchant on chat (using OCR)' before enabling the Auto Merchant using Merchant Teleporter.");
+            return;
+        }
+        updateConfig("merchant_teleporter", enabled);
+    };
+
+    const handleMerchantOcrToggle = (enabled: boolean) => {
+        if (enabled && config.merchant_teleporter) {
+            alert("Please disable 'Enable Auto Merchant (requires merchant teleporter)' before enabling merchant OCR detection.");
+            return;
+        }
+        updateConfig("merchant_ocr", enabled);
+    };
+
     return (
         <>
             <div className="page-header">
@@ -166,7 +172,7 @@ export default function MerchantPage() {
                     label="Enable Auto Merchant (requires merchant teleporter)"
                     description="Use merchant teleporter item periodically"
                     checked={config.merchant_teleporter || false}
-                    onChange={(val) => updateConfig("merchant_teleporter", val)}
+                    onChange={handleMerchantTeleporterToggle}
                 />
                 {config.merchant_teleporter && (
                     <div className="duration-input" style={{ marginTop: "6px", marginBottom: "10px" }}>
@@ -177,6 +183,31 @@ export default function MerchantPage() {
                             onChange={(e) => updateConfig("mt_duration", e.target.value)}
                         />
                         <span className="unit">min</span>
+                    </div>
+                )}
+
+                <ToggleSwitch
+                    label="Detect merchant on chat (using OCR)"
+                    description="Periodically check the Roblox chat for merchant spawn messages"
+                    checked={config.merchant_ocr || false}
+                    onChange={handleMerchantOcrToggle}
+                />
+                {config.merchant_ocr && (
+                    <div className="info-banner" style={{ marginTop: "10px", marginBottom: "10px" }}>
+                        <strong>Reminder:</strong> This only detects the merchant and pings you if found on Roblox chat, so you have to interact with the merchant yourself.
+                        <div className="form-row" style={{ marginTop: "10px" }}>
+                            <div className="form-group">
+                                <label className="form-label">Check interval (in secs)</label>
+                                <input
+                                    className="form-input"
+                                    type="number"
+                                    value={config.merchant_ocr_interval ?? "60"}
+                                    min="1"
+                                    onChange={(e) => updateConfig("merchant_ocr_interval", e.target.value)}
+                                    style={{ width: "90px" }}
+                                />
+                            </div>
+                        </div>
                     </div>
                 )}
 

@@ -139,21 +139,6 @@ export default function MovementsPage() {
                     </div>
                 </div>
 
-                <div style={{ marginBottom: "20px", padding: "10px", borderBottom: "1px solid var(--border-color)" }}>
-                    <h4 style={{ margin: "0 0 10px 0" }}>Recorder</h4>
-                    <button
-                        className="btn"
-                        onClick={() => { if (window.pywebview?.api) window.pywebview.api.open_recorder_window() }}
-                        style={{ position: "relative", padding: "10px 20px" }}
-                    >
-                        <div className="corner-bracket tl" style={{ top: 0, left: 0, width: "6px", height: "6px" }} />
-                        <div className="corner-bracket tr" style={{ top: 0, right: 0, width: "6px", height: "6px" }} />
-                        <div className="corner-bracket bl" style={{ bottom: 0, left: 0, width: "6px", height: "6px" }} />
-                        <div className="corner-bracket br" style={{ bottom: 0, right: 0, width: "6px", height: "6px" }} />
-                        🔴 Record Obby Path
-                    </button>
-                </div>
-
                 <div>
                     <ToggleSwitch
                         label="Auto complete Basic Obby"

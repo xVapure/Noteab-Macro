@@ -1,6 +1,5 @@
 import { useConfig } from "../contexts/ConfigContext";
 import { useState, useEffect } from "react";
-// Remove tauri imports
 
 type CalibrationField = {
     key: string;
@@ -340,9 +339,81 @@ export default function CalibrationPage() {
         setExpandedSection(expandedSection === section ? null : section);
     };
 
+    const [showRequirements, setShowRequirements] = useState(false);
+    const [presets, setPresets] = useState<any[]>([]);
+    const [selectedRes, setSelectedRes] = useState("");
+    const [selectedScale, setSelectedScale] = useState("");
+    const [selectedMode, setSelectedMode] = useState("");
+    const [showPresetModal, setShowPresetModal] = useState(false);
+    const [pendingPreset, setPendingPreset] = useState<any>(null);
+
+    useEffect(() => {
+        fetch("https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/assets/macro_calibs_preset.json")
+            .then(res => res.json())
+            .then(data => {
+                if (data && Array.isArray(data.presets)) {
+                    setPresets(data.presets);
+                }
+            })
+            .catch(err => console.warn("Failed to load calibration presets via Github fetching", err));
+    }, []);
+
+    const uniqueResolutions = Array.from(new Set(presets.map(p => p.resolution)));
+    const availableScales = Array.from(new Set(presets.filter(p => p.resolution === selectedRes).map(p => p.scale)));
+    const availableModes = Array.from(new Set(presets.filter(p => p.resolution === selectedRes && p.scale === selectedScale).map(p => p.mode)));
+
+    const handleApplyClick = () => {
+        const preset = presets.find(p => p.resolution === selectedRes && p.scale === selectedScale && p.mode === selectedMode);
+        if (!preset || !preset.calibrations) {
+            alert("Please select a valid preset (Resolution, Scale, and Mode)");
+            return;
+        }
+        setPendingPreset(preset);
+        setShowPresetModal(true);
+    };
+
+    const [presetStatus, setPresetStatus] = useState<string>("");
+
+    const confirmPresetApply = async () => {
+        if (pendingPreset && pendingPreset.calibrations) {
+            const newConfig = { ...config, ...pendingPreset.calibrations };
+            try {
+                await saveConfig(newConfig);
+                setPresetStatus(`Preset applied: ${pendingPreset.resolution} (${pendingPreset.scale} ${pendingPreset.mode})`);
+                setTimeout(() => setPresetStatus(""), 5000);
+            } catch (err) {
+                setPresetStatus("Failed to apply preset: " + String(err));
+                setTimeout(() => setPresetStatus(""), 5000);
+            }
+        }
+        setShowPresetModal(false);
+        setPendingPreset(null);
+    };
+
     return (
         <>
             <style>{styles}</style>
+
+            {/* Preset Confirm Modal */}
+            {showPresetModal && pendingPreset && (
+                <div className="biome-confirm-overlay" onClick={() => setShowPresetModal(false)}>
+                    <div className="biome-confirm-modal" onClick={e => e.stopPropagation()} style={{ textAlign: "left" }}>
+                        <h3 className="biome-confirm-title" style={{ textAlign: "center" }}>Overwrite Calibrations?</h3>
+                        <p style={{ color: "var(--text-secondary)", marginBottom: "20px", lineHeight: "1.6", textAlign: "center", fontSize: "14px" }}>
+                            This will overwrite your current calibrations with the
+                            <br />
+                            <strong style={{ color: "var(--text-primary)" }}>{pendingPreset.resolution} ({pendingPreset.scale} {pendingPreset.mode})</strong> preset.
+                            <br /><br />
+                            <span style={{ color: "var(--text-muted)", fontSize: "0.85em" }}>This action cannot be undone.</span>
+                        </p>
+                        <div className="biome-confirm-buttons">
+                            <button className="biome-confirm-btn confirm" onClick={confirmPresetApply}>Yes, Overwrite</button>
+                            <button className="biome-confirm-btn cancel" onClick={() => setShowPresetModal(false)}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="page-header">
                 <h2>Macro Calibrations</h2>
                 <p>View and manually edit calibration coordinates</p>
@@ -358,40 +429,149 @@ export default function CalibrationPage() {
                 </div>
             </div>
 
-            <div className="card" style={{ marginBottom: "16px" }}>
-                <div className="card-header">
+            {/* Mouse Action Requirements Section*/}
+            <div className="card" style={{ padding: "0", marginBottom: "16px" }}>
+                <div
+                    className="card-header"
+                    style={{
+                        padding: "16px",
+                        cursor: "pointer",
+                        borderBottom: showRequirements ? "1px solid var(--border-color)" : "none"
+                    }}
+                    onClick={() => setShowRequirements(!showRequirements)}
+                >
                     <div className="card-icon">🧭</div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                         <h3>Mouse Action Calibration Requirements</h3>
                         <p>Feature-to-calibration tracking for actions that use mouse inputs</p>
                     </div>
+                    <div>{showRequirements ? "▲" : "▼"}</div>
                 </div>
-                <div className="form-hint" style={{ marginBottom: "8px" }}>
-                    Note: Features using OCR failsafe also require calibrating First Item Slot OCR Region under Inventory Click Calibration.
+
+                {showRequirements && (
+                    <div style={{ padding: "16px" }}>
+                        <div className="form-hint" style={{ marginBottom: "8px" }}>
+                            Note: Features using OCR failsafe also require calibrating First Item Slot OCR Region under Inventory Click Calibration.
+                        </div>
+                        <div style={{ display: "grid", gap: "8px" }}>
+                            {MOUSE_ACTION_REQUIREMENTS.map((item) => (
+                                <div
+                                    key={item.feature}
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "120px 1fr 1fr",
+                                        gap: "10px",
+                                        alignItems: "center",
+                                        padding: "8px 10px",
+                                        border: "1px solid var(--border-color)",
+                                        borderRadius: "6px",
+                                        background: "rgba(255,255,255,0.02)"
+                                    }}
+                                >
+                                    <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{item.page}</div>
+                                    <div style={{ fontSize: "13px", color: "var(--text-primary)" }}>{item.feature}</div>
+                                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                                        {item.calibrations.join(" + ")}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Macro Calibrations Preset */}
+            <div className="card" style={{ marginBottom: "16px" }}>
+                <div className="card-header">
+                    <div className="card-icon">⚡</div>
+                    <div style={{ flex: 1 }}>
+                        <h3>Macro Calibrations Preset</h3>
+                        <p>Pre-made macro calibrations for common screen resolutions, display scales, and window modes (so u don't have to set it up manually :umamusume_mambo_dancing:)</p>
+                    </div>
                 </div>
-                <div style={{ display: "grid", gap: "8px" }}>
-                    {MOUSE_ACTION_REQUIREMENTS.map((item) => (
-                        <div
-                            key={item.feature}
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "120px 1fr 1fr",
-                                gap: "10px",
-                                alignItems: "center",
-                                padding: "8px 10px",
-                                border: "1px solid var(--border-color)",
-                                borderRadius: "6px",
-                                background: "rgba(255,255,255,0.02)"
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "10px", alignItems: "end", marginTop: "12px" }}>
+                    <div>
+                        <label style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px", letterSpacing: "0.5px" }}>RESOLUTION</label>
+                        <select
+                            className="form-input"
+                            style={{ width: "100%", cursor: "pointer" }}
+                            value={selectedRes}
+                            onChange={(e) => {
+                                setSelectedRes(e.target.value);
+                                setSelectedScale("");
+                                setSelectedMode("");
                             }}
                         >
-                            <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{item.page}</div>
-                            <div style={{ fontSize: "13px", color: "var(--text-primary)" }}>{item.feature}</div>
-                            <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                                {item.calibrations.join(" + ")}
-                            </div>
-                        </div>
-                    ))}
+                            <option value="">Select Resolution</option>
+                            {uniqueResolutions.map((res: any) => (
+                                <option key={res} value={res}>{res}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px", letterSpacing: "0.5px" }}>DISPLAY SCALE</label>
+                        <select
+                            className="form-input"
+                            style={{ width: "100%", cursor: selectedRes ? "pointer" : "not-allowed", opacity: selectedRes ? 1 : 0.5 }}
+                            value={selectedScale}
+                            onChange={(e) => {
+                                setSelectedScale(e.target.value);
+                                setSelectedMode("");
+                            }}
+                            disabled={!selectedRes}
+                        >
+                            <option value="">Select Scale</option>
+                            {availableScales.map((scale: any) => (
+                                <option key={scale} value={scale}>{scale}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px", letterSpacing: "0.5px" }}>WINDOW MODE</label>
+                        <select
+                            className="form-input"
+                            style={{ width: "100%", cursor: selectedScale ? "pointer" : "not-allowed", opacity: selectedScale ? 1 : 0.5 }}
+                            value={selectedMode}
+                            onChange={(e) => setSelectedMode(e.target.value)}
+                            disabled={!selectedScale}
+                        >
+                            <option value="">Select Mode</option>
+                            {availableModes.map((mode: any) => (
+                                <option key={mode} value={mode}>{mode}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <button
+                        className="btn btn-accent"
+                        onClick={handleApplyClick}
+                        disabled={!selectedRes || !selectedScale || !selectedMode}
+                        style={{ height: "36px", whiteSpace: "nowrap" }}
+                    >
+                        Apply Preset
+                    </button>
                 </div>
+                {presets.length === 0 && (
+                    <div style={{ color: "var(--text-muted)", fontSize: "12px", marginTop: "8px" }}>
+                        Presets not found on github or failed to fetch.
+                    </div>
+                )}
+                {presetStatus && (
+                    <div style={{
+                        marginTop: "10px",
+                        padding: "8px 14px",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        background: presetStatus.startsWith("✅") ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                        color: presetStatus.startsWith("✅") ? "#22c55e" : "#ef4444",
+                        border: `1px solid ${presetStatus.startsWith("✅") ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+                    }}>
+                        {presetStatus}
+                    </div>
+                )}
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

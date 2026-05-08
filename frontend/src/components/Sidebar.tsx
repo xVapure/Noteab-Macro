@@ -1,4 +1,3 @@
-
 interface SidebarProps {
     activeTab: string;
     onTabChange: (tab: string) => void;
@@ -8,15 +7,17 @@ interface SidebarProps {
 import GlitchOverlay from "./GlitchOverlay";
 import { useGlitchText } from "../hooks/useGlitchText";
 
-const SidebarItem = ({ item, isActive, onClick, isGlitching }: { item: any; isActive: boolean; onClick: () => void; isGlitching: boolean }) => {
+const SidebarItem = ({ item, isActive, onClick, isGlitching, locked }: { item: any; isActive: boolean; onClick: () => void; isGlitching: boolean; locked?: boolean }) => {
     const label = useGlitchText(item.label || "", isGlitching);
+    const isDisabled = item.disabled || locked;
     return (
         <div
             className={`sidebar-item ${isActive ? "active" : ""}`}
-            onClick={() => !item.disabled && onClick()}
-            style={item.disabled ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" } : {}}
+            onClick={() => !isDisabled && onClick()}
+            style={isDisabled ? { opacity: 0.3, cursor: "not-allowed", pointerEvents: "none" } : {}}
+            title={locked ? "🔒 Locked" : undefined}
         >
-            <span className="icon">{item.icon}</span>
+            <span className="icon">{locked ? "🔒" : item.icon}</span>
             {label}
             {item.disabled && <span style={{ fontSize: "10px", marginLeft: "auto", opacity: 0.7 }}>(WIP)</span>}
         </div>
@@ -28,6 +29,7 @@ const navItems = [
     { id: "notice", label: "Notice", icon: "📋" },
     { id: "webhook", label: "Webhook", icon: "🔗" },
     { id: "stats", label: "Stats", icon: "📊" },
+    { id: "status", label: "Status", icon: "⚙️" },
     { section: "Macro Settings" },
     { id: "misc", label: "Automated actions", icon: "🤖" },
     { id: "calibrations", label: "Macro Calibrations", icon: "🎯" },
@@ -49,6 +51,7 @@ const navItems = [
 export default function Sidebar({ activeTab, onTabChange, isGlitching, macroVersion }: SidebarProps) {
     const title = useGlitchText("Coteab Macro", isGlitching);
     const version = useGlitchText(macroVersion || "v?.?.?", isGlitching);
+
     return (
         <div className="sidebar" style={{ position: "relative" }}>
             {isGlitching && <GlitchOverlay />}
