@@ -44,6 +44,7 @@
     "Lost Soul": {"rarity": 9200, "exclusive_biome": ["None", 1]},
     "Atomic_Ribonucleic": {"rarity": 9876, "exclusive_biome": ["None", 1]},
     "\u2605\u2605\u2605": {"rarity": 10000, "exclusive_biome": ["DREAMSPACE", 1]},
+    "meta": {"rarity": 10000, "exclusive_biome": ["CYBERSPACE", 1]},
     "Undead": {"rarity": 12000, "exclusive_biome": ["HELL", 6]},
     "Corrosive": {"rarity": 12000, "exclusive_biome": ["CORRUPTION", 5]},
     "Kawaii": {"rarity": 12300, "exclusive_biome": ["None", 1]},
@@ -271,5 +272,11 @@
     "Projection": {"rarity": 197000000, "exclusive_biome": ["SINGULARITY", 1]},
     "Virtual_Memory": {"rarity": 232232232, "exclusive_biome": ["CYBERSPACE", 2]},
     "Gravitational_PointZero": {"rarity": 521121900, "exclusive_biome": ["SINGULARITY", 5]},
-    "ASTRAIOS": {"rarity": 1750000000, "exclusive_biome": ["SINGULARITY", 1]}
+    "ASTRAIOS": {"rarity": 1750000000, "exclusive_biome": ["SINGULARITY", 1]},
+    "Marsh": {"rarity": 25000, "exclusive_biome": ["None"]},
+    "Gilded_Crowned": {"rarity": 20000, "exclusive_biome": ["SAND STORM", 4]},
+    "dreamer": {"rarity": 315000000, "exclusive_biome": ["None", 1]},
+    "Vortex": {"rarity": 399999, "exclusive_biome": ["WINDY", 3]},
+    "TARGETED": {"rarity": 5000, "exclusive_biome": ["None", 1]},
+    "CYTOKINESIS": {"rarity": 330400472, "exclusive_biome": ["CYBERSPACE", 2]}
 }
