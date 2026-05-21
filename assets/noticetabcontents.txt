@@ -1,3 +1,17 @@
+# v2.1.8 (What's new?)
+
+## Features:
+BR/SC biome exclusion feature
+Jester auto exchange (Will do exchange every jester autobuy - if configured correctly)
+Added set max calibrations for merchant autobuy and jester exchange (jester has different set max button offset) -> This also mean autobuy with max amount and item exchange is possible now
+New fishing failsafe implemented (minigame popup can be closed by using UI Navigation and then macro will retry the reeling, then rejoins if it fails again)
+
+## Changes:
+Attempted fix for macro interface got bugged out when importing config from older version
+Active module page mini revamped (Filtered option allows you to see macro modules is active/idle/inactive)
+Macro session log (which extracted from macro_logs.txt) in "Status" section added
+New macro tutorial link annnd credit page :aga:
+
 # v2.1.7 (What's new?)
 
 ## Features:
