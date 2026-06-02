@@ -1,3 +1,9 @@
+# v2.1.8-hotfix1 (What's new?)
+
+* Egg features (egg collect pathing, checking egg on chat using ocr,...) removed
+* Fishing failsafe UI navigation keys changed to (\ + S + A + Enter) 
+* Attempt fix at auto update being broken due to "Coteab single instance" warning
+
 # v2.1.8 (What's new?)
 
 ## Features:
