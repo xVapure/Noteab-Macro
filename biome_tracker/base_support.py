@@ -16,7 +16,7 @@ import json, requests, time, os, threading, re, webbrowser, random, keyboard, py
     locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys, hashlib, winocr, asyncio, win32api, traceback
 
 
-current_ver = os.environ.get("COTEAB_MACRO_VERSION", "v2.1.7")
+current_ver = os.environ.get("COTEAB_MACRO_VERSION", "v2.1.8-hotfix1")
 rare_biomes = ["GLITCHED", "DREAMSPACE", "CYBERSPACE"]
 
 class ConfigVar:

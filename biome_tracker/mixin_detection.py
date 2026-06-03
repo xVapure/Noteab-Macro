@@ -439,8 +439,6 @@ class DetectionMixin:
             (self.anti_afk_loop, "Anti-AFK"),
             (self.quest_claim_loop, "Quest Claim"),
             (self.obby_path_loop, "Obby Path"),
-            (self.egg_collect_loop, "Egg Collect"),
-            (self.egg_ocr_check_loop, "Egg OCR Check"),
             (self.eden_ocr_check_loop, "Eden OCR Check"),
             (self.merchant_ocr_check_loop, "Merchant OCR Check"),
             (self.eden_contract_loop, "Eden Contract"),
@@ -1432,6 +1430,7 @@ class DetectionMixin:
                     return (
                         not self.detection_running
                         or self.reconnecting_state
+                        or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE")
                     )
                 return (
                     not self.detection_running

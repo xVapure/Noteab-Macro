@@ -1,6 +1,7 @@
 from .base_support import *
-import cv2
 import numpy as np
+from PIL import Image
+import io
 
 class ActionsMixin:
     def initialize_paths_and_files(self):
@@ -57,31 +58,25 @@ class ActionsMixin:
         try:
             x, y, width, height = region
             screenshot = pyautogui.screenshot(region=(x, y, width, height))
-            image_rgb = np.array(screenshot)
-            image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            pil_image = screenshot.convert("RGB")
 
             ocr_lock = getattr(self, "_easyocr_lock", None)
             if ocr_lock is None:
                 ocr_lock = threading.Lock()
                 self._easyocr_lock = ocr_lock
 
-            _, img_encoded = cv2.imencode(".png", image_bgr)
-            file_bytes = img_encoded.tobytes()
+            buf = io.BytesIO()
+            pil_image.save(buf, format="PNG")
+            file_bytes = buf.getvalue()
             img_hash = hashlib.sha256(file_bytes).hexdigest()
 
             with ocr_lock:
-                # ocr debug image
-                # try:
-                #     os.makedirs("images", exist_ok=True)
-                #     cv2.imwrite("images/ocr_debug.png", image_bgr)
-                # except Exception:
-                #     pass
-
                 try:
-                    image_ocr = cv2.resize(image_bgr, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+                    w, h = pil_image.size
+                    image_ocr = pil_image.resize((w * 3, h * 3), Image.BICUBIC)
                     loop = asyncio.new_event_loop()
                     try:
-                        result = loop.run_until_complete(winocr.recognize_cv2(image_ocr, "en"))
+                        result = loop.run_until_complete(winocr.recognize_pil(image_ocr, "en"))
                     finally:
                         loop.close()
 
@@ -98,6 +93,7 @@ class ActionsMixin:
                     self.append_log(f"[WinOCR] Failed: {winocr_err}")
 
                 return ""
+
 
         except Exception as e:
             try:
@@ -1742,7 +1738,7 @@ class ActionsMixin:
 
             try:
                 if hasattr(self, "send_merchant_webhook"):
-                    self.send_merchant_webhook(found_merchant.title(), screenshot_path=screenshot_path, source='ocr')
+                    threading.Thread(target=self.send_merchant_webhook, args=(found_merchant.title(),), kwargs={"screenshot_path": screenshot_path, "source": "ocr"}, daemon=True).start()
                     if hasattr(self, "last_merchant_sent"): self.last_merchant_sent[(found_merchant.title(), 'ocr')] = time.time()
 
             except Exception as e:
@@ -3292,6 +3288,8 @@ class ActionsMixin:
                     return (
                         not self.detection_running
                         or self.reconnecting_state
+                        or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE")
+                        or self.current_biome in self.config.get("disabled_biomes_br_sc", [])
                     )
                 return (
                     not self.detection_running
@@ -3301,6 +3299,7 @@ class ActionsMixin:
                     or self._is_fishing_blocked()
                     or self.config.get("enable_potion_crafting")
                     or self.current_biome in ("GLITCHED", "DREAMSPACE", "CYBERSPACE")
+                    or self.current_biome in self.config.get("disabled_biomes_br_sc", [])
                     or getattr(self, "_mt_running", False)
                     or (getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False))
                     or (getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get())
@@ -3564,13 +3563,24 @@ class ActionsMixin:
                     print(f"Merchant {merchant_name} already sent recently lol")
                     return False
 
+                is_jester_exchange = False
+                if merchant_name == "Jester":
+                    j_count = int(self.config.get("jester_exchange_count", 0)) + 1
+                    if self.config.get("enable_jester_exchange", False) and j_count >= int(self.config.get("jester_exchange_threshold", 3)):
+                        is_jester_exchange = True
+
                 print(f"Opening merchant interface for {merchant_name}")
 
-                x, y = merchant_open_button
-                autoit.mouse_click("left", x, y, 3)
+                if is_jester_exchange:
+                    print("[Jester Exchange] Threshold reached! Running exchange sequence yatta")
+                    btn_pos = self.config.get("jester_exchange_button", [851, 880])
+                else:
+                    btn_pos = merchant_open_button
+
+                autoit.mouse_click("left", btn_pos[0], btn_pos[1], 3)
                 inventory_click_delay = int(self.config.get("inventory_click_delay", "0")) / 1000.0
-                if not self._sleep_with_cancel(7 + inventory_click_delay):
-                    return
+                exchange_extra_wait = 4.0 if is_jester_exchange else 0.0
+                if not self._sleep_with_cancel(7 + exchange_extra_wait + inventory_click_delay): return
 
                 screenshot_dir = os.path.join(os.getcwd(), "images")
                 os.makedirs(screenshot_dir, exist_ok=True)
@@ -3580,7 +3590,7 @@ class ActionsMixin:
                                                f"merchant_{merchant_name.lower()}_{int(current_time)}.png")
                 item_screenshot.save(screenshot_path)
 
-                self.send_merchant_webhook(merchant_name, screenshot_path, source='ocr')
+                threading.Thread(target=self.send_merchant_webhook, args=(merchant_name, screenshot_path), kwargs={"source": "ocr"}, daemon=True).start()
                 self.last_merchant_sent[(merchant_name, 'ocr')] = current_time
 
                 if "merchant_counts" not in self.config:
@@ -3589,7 +3599,10 @@ class ActionsMixin:
                 self.save_config()
                 self.append_log(f"[Merchant Detection] {merchant_name} count: {self.config['merchant_counts'][merchant_name]}")
 
-                auto_buy_items = self.config.get(f"{merchant_name}_Items", {})
+                if is_jester_exchange:
+                    auto_buy_items = self.config.get("Jester_Exchange_Items", {})
+                else:
+                    auto_buy_items = self.config.get(f"{merchant_name}_Items", {})
                 if not isinstance(auto_buy_items, dict):
                     auto_buy_items = {}
                 purchased_items = {}
@@ -3612,12 +3625,18 @@ class ActionsMixin:
                     self.append_log(f"[Merchant Detection - {merchant_name}] Detected item text: {item_text}")
 
                     corrected_item_name = item_text.split('|')[0].strip()
-                    corrected_candidate = fuzzy_correct_item_name(corrected_item_name, ocrMisdetect_Key, threshold=0.6)
+
+                    combined_key = dict(ocrMisdetect_Key)
+                    if is_jester_exchange:
+                        for ex_name in auto_buy_items.keys():
+                            combined_key[ex_name.lower()] = ex_name.lower()
+
+                    corrected_candidate = fuzzy_correct_item_name(corrected_item_name, combined_key, threshold=0.7)
                     if isinstance(corrected_candidate, str) and corrected_candidate != corrected_item_name:
                         print(f"Corrected OCR misdetection: '{item_text}' -> '{corrected_candidate}'")
                         corrected_item_name = corrected_candidate
                     else:
-                        for misdetect, correct in ocrMisdetect_Key.items():
+                        for misdetect, correct in combined_key.items():
                             try:
                                 if misdetect in corrected_item_name.lower():
                                     corrected_item_name = correct
@@ -3628,24 +3647,46 @@ class ActionsMixin:
 
                     print(f"Detected item text: {item_text} | Corrected: {corrected_item_name}")
 
+                    if is_jester_exchange and ("void" in item_text or "vold" in item_text or "coin" in item_text):
+                        print(f"[Jester Exchange] Void Coin detected! Skipping slot {slot_index}...")
+                        continue
+
                     for item_name, item_vals in auto_buy_items.items():
                         enabled = item_vals[0] if len(item_vals) > 0 else False
                         quantity = int(item_vals[1]) if len(item_vals) > 1 else 1
+                        buy_all = bool(item_vals[3]) if len(item_vals) > 3 else False
                         
                         if enabled and corrected_item_name == item_name.lower():
                             purchased_count = purchased_items.get(item_name, 0)
 
                             if purchased_count == 0:
                                 self.append_log(
-                                    f"[Merchant Detection - {merchant_name}] - Item {item_name} found. Proceeding to buy {quantity}")
+                                    f"[Merchant Detection - {merchant_name}] - Item {item_name} found. Proceeding to buy {('MAX' if buy_all else quantity)}")
 
                                 purchase_amount_button = self.config["purchase_amount_button"]
                                 purchase_button = self.config["purchase_button"]
 
-                                autoit.mouse_click("left", *purchase_amount_button)
-                                self._safe_type_text(str(quantity))
-                                if not self._sleep_with_cancel(0.23):
-                                    return
+                                # "Set to Max"
+                                if buy_all:
+                                    if is_jester_exchange:
+                                        max_btn = self.config.get("jester_exchange_set_to_max_button", [0, 0])
+                                    else:
+                                        max_btn = self.config.get("autobuy_set_to_max_button", [0, 0])
+                                    if max_btn and max_btn[0] > 0 and max_btn[1] > 0:
+                                        autoit.mouse_click("left", *max_btn)
+                                        if not self._sleep_with_cancel(0.3):
+                                            return
+                                    else:
+                                        self.append_log(f"[Merchant] Set to Max button not calibrated! Falling back to typing {quantity}")
+                                        autoit.mouse_click("left", *purchase_amount_button)
+                                        self._safe_type_text(str(quantity))
+                                        if not self._sleep_with_cancel(0.23):
+                                            return
+                                else:
+                                    autoit.mouse_click("left", *purchase_amount_button)
+                                    self._safe_type_text(str(quantity))
+                                    if not self._sleep_with_cancel(0.23):
+                                        return
 
                                 autoit.mouse_click("left", *purchase_button, 3)
                                 if not self._sleep_with_cancel(3.67):
@@ -3657,6 +3698,14 @@ class ActionsMixin:
                 merchant_close_button = self.config.get("merchant_close_button", [1086, 342])
                 self.Global_MouseClick(merchant_close_button[0], merchant_close_button[1], click=3)
                 self.last_merchant_interaction = current_time
+
+                if merchant_name == "Jester":
+                    if is_jester_exchange:
+                        self.config["jester_exchange_count"] = 0
+                    else:
+                        self.config["jester_exchange_count"] = j_count
+                    self.save_config()
+
                 return True
             else:    
                 merchant_close_button = self.config.get("merchant_close_button", [1086, 342])
@@ -3729,7 +3778,7 @@ class ActionsMixin:
                 tab_text = self.extract_text_with_easyocr(tuple(chat_ocr_region)).lower()
                 self.append_log(f"[WinOcr] Close Chat OCR Check ({attempt}/3): '{tab_text}'")
 
-                if fuzzy_match_any(tab_text, ["general", "server message"], threshold=0.75):
+                if fuzzy_match_any(tab_text, ["general", "server message", "here"], threshold=0.75):
                     chat_detected = True
                     break
 

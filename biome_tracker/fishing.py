@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Callable
 import keyboard
 import autoit
-import cv2
+
 import numpy as np
 import pyautogui
 import win32clipboard
@@ -177,7 +177,7 @@ def load_fishing_config(raw_config: dict[str, Any] | None = None) -> dict[str, A
         "fishing_actions_delay_ms": _coerce_int(raw.get("fishing_actions_delay_ms"), 100, 0, 5000),
         "fishing_playback_multiplier": _coerce_float(raw.get("fishing_playback_multiplier"), 1.0, 1.0, 2.0),
         "non_vip_movement_path": bool(raw.get("non_vip_movement_path", False)),
-        "egg_ocr_detect_special": bool(raw.get("egg_ocr_detect_special", False)),
+
         # Performance tuning knobs (optional in config.json)
         "fishing_click_burst": _coerce_int(raw.get("fishing_click_burst"), 2, 1, 8),
         "fishing_reel_loop_sleep": _coerce_float(raw.get("fishing_reel_loop_sleep"), 0.004, 0.001, 0.03),
@@ -224,7 +224,7 @@ def _grab_region_bgr(region: tuple[int, int, int, int], sct: Any | None = None) 
 
     pil_img = pyautogui.screenshot(region=(int(x), int(y), int(w), int(h)))
     arr = np.array(pil_img)
-    return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+    return arr[:, :, ::-1]
 
 
 def detect_colour(
@@ -247,7 +247,7 @@ def detect_colour(
         min(255, bar_color[1] + tolerance),
         min(255, bar_color[0] + tolerance)
     ])
-    mask = cv2.inRange(bgr, lower_bound, upper_bound)
+    mask = np.all((bgr >= lower_bound) & (bgr <= upper_bound), axis=2)
     return bool(np.any(mask))
 
 
@@ -373,17 +373,9 @@ def _run_pre_fishing_sequence(
     can_run: Callable[[], bool],
     activate_roblox_cb: Callable[[], None] | None = None,
     close_chat_fn: Callable[[], None] | None = None,
-    egg_ocr_check_cb: Callable[[], None] | None = None,
 ) -> bool:
     if not should_continue() or not can_run():
         return False
-
-    if egg_ocr_check_cb is not None and bool(cfg.get("egg_ocr_detect_special", False)):
-        try:
-            egg_ocr_check_cb()
-            print("egg ocr check in fishing done")
-        except Exception as e:
-            print(f"[Fishing] egg_ocr_check_cb error: {e}")
 
     fishing_actions_delay = _get_fishing_actions_delay_seconds(cfg)
     if not _run_respawn_sequence(
@@ -572,7 +564,6 @@ def _run_sell_fish_sequence(
     activate_roblox_cb: Callable[[], None] | None = None,
     close_chat_fn: Callable[[], None] | None = None,
     set_busy_cb: Callable[[bool], None] | None = None,
-    egg_ocr_check_cb: Callable[[], None] | None = None,
 ) -> bool:
     if fish_sell_count <= 0:
         return True
@@ -581,12 +572,6 @@ def _run_sell_fish_sequence(
             set_busy_cb(True)
         except Exception:
             pass
-
-    if egg_ocr_check_cb is not None and bool(cfg.get("egg_ocr_detect_special", False)):
-        try:
-            egg_ocr_check_cb()
-        except Exception as e:
-            print(f"[Fishing] egg_ocr_check_cb error in sell sequence: {e}")
 
     fishing_actions_delay = _get_fishing_actions_delay_seconds(cfg)
     if not _run_respawn_sequence(
@@ -686,12 +671,6 @@ def _run_sell_fish_sequence(
     if not sleep_interruptible(0.85 + fishing_actions_delay):
         return False
 
-    if egg_ocr_check_cb is not None and bool(cfg.get("egg_ocr_detect_special", False)):
-        try:
-            egg_ocr_check_cb()
-        except Exception as e:
-            print(f"[Fishing] egg_ocr_check_cb error before final respawn: {e}")
-
     if not _run_respawn_sequence(
         sleep_interruptible=sleep_interruptible,
         should_continue=should_continue,
@@ -724,7 +703,6 @@ def run_fishing_loop(
     runtime_state: dict[str, Any] | None = None,
     set_fishing_busy_cb: Callable[[bool], None] | None = None,
     on_f2_pressed_cb: Callable[[], None] | None = None,
-    egg_ocr_check_cb: Callable[[], None] | None = None,
 ) -> None:
     stop_event = stop_event or threading.Event()
     config_provider = config_provider or _load_config_file
@@ -911,7 +889,6 @@ def run_fishing_loop(
                         activate_roblox_cb=activate_roblox_cb,
                         close_chat_fn=close_chat_fn,
                         set_busy_cb=_set_busy,
-                        egg_ocr_check_cb=egg_ocr_check_cb,
                     ):
                         continue
                     fish_caught_count = 0
@@ -936,7 +913,6 @@ def run_fishing_loop(
                         activate_roblox_cb=activate_roblox_cb,
                         close_chat_fn=close_chat_fn,
                         set_busy_cb=_set_busy,
-                        egg_ocr_check_cb=egg_ocr_check_cb,
                     ):
                         continue
                     fish_caught_count = 0
@@ -1048,7 +1024,6 @@ def run_fishing_loop(
                     can_run=_can_run,
                     activate_roblox_cb=activate_roblox_cb,
                     close_chat_fn=close_chat_fn,
-                    egg_ocr_check_cb=egg_ocr_check_cb,
                 ):
                     continue
                 if not _run_equip_aura_before_movement(
@@ -1089,11 +1064,42 @@ def run_fishing_loop(
                 and last_start_fishing_click_at is not None
                 and (time.monotonic() - float(last_start_fishing_click_at)) >= 60.0
             ):
-                print(f"{log_prefix} failsafe triggered: no minigame detected for >=60s. Closing Roblox.")
-                _notify_failsafe_timeout()
-                was_runnable = False
-                last_start_fishing_click_at = None
-                continue
+                # UI navigation failsafe
+                if not getattr(_notify_failsafe_timeout, '_ui_nav_attempted', False):
+                    print(f"{log_prefix} failsafe: 60s timeout! Attempting UI navigation to close minigame popup...")
+                    try:
+                        _autoit_key_tap("\\")
+                        if not _sleep_interruptible(1.5): continue
+                        _autoit_key_tap("s")
+                        if not _sleep_interruptible(1.5): continue
+                        _autoit_key_tap("a")
+                        if not _sleep_interruptible(1.5): continue
+                        _autoit_key_tap("enter")
+                        if not _sleep_interruptible(1.5): continue
+                        _autoit_key_tap("\\")
+                        if not _sleep_interruptible(1.0): continue
+                    except Exception as e:
+                        print(f"{log_prefix} UI nav failsafe error: {e}")
+
+                    try:
+                        click_x, click_y = cfg["fishing_click_position"]
+                        autoit.mouse_click("left", click_x, click_y, speed=3)
+                        if not _sleep_interruptible(0.3): continue
+                        print(f"{log_prefix} UI nav failsafe: clicked fish button")
+                    except Exception as e:
+                        print(f"{log_prefix} UI nav failsafe: failed to click fish button: {e}")
+
+                    last_start_fishing_click_at = time.monotonic()
+                    _notify_failsafe_timeout._ui_nav_attempted = True
+                    print(f"{log_prefix} UI nav failsafe done, retrying fishing...")
+                    continue
+                else:
+                    print(f"{log_prefix} failsafe triggered: no minigame detected for 60s after UI nav failsafe!")
+                    _notify_failsafe_timeout._ui_nav_attempted = False
+                    _notify_failsafe_timeout()
+                    was_runnable = False
+                    last_start_fishing_click_at = None
+                    continue
 
             detect_x, detect_y = cfg["fishing_detect_pixel"]
             pixel = _get_pixel_rgb(detect_x, detect_y, sct=sct)
@@ -1136,7 +1142,7 @@ def run_fishing_loop(
             if not _should_continue() or not _can_run():
                 continue
 
-            if not _sleep_interruptible(1.0):
+            if not _sleep_interruptible(0.55):
                 continue
 
             close_x, close_y = cfg["fishing_close_button_pos"]

@@ -36,22 +36,25 @@ class WebhookMixin:
 
     def get_webhook_list(self):
         try:
+            res = []
             if hasattr(self, "webhook_urls") and isinstance(self.webhook_urls, list):
-                return [u for u in self.webhook_urls if isinstance(u, str) and u.strip()]
-            raw = self.config.get("webhook_url", "")
-            if isinstance(raw, list):
-                return [u for u in raw if isinstance(u, str) and u.strip()]
-            if isinstance(raw, str):
-                s = raw.strip()
-                if not s:
-                    return []
-                try:
-                    parsed = json.loads(s)
-                    if isinstance(parsed, list):
-                        return [u for u in parsed if isinstance(u, str) and u.strip()]
-                except Exception:
-                    return [s]
-            return []
+                res = [u for u in self.webhook_urls if isinstance(u, str) and u.strip()]
+            else:
+                raw = self.config.get("webhook_url", "")
+                if isinstance(raw, list):
+                    res = [u for u in raw if isinstance(u, str) and u.strip()]
+                elif isinstance(raw, str):
+                    s = raw.strip()
+                    if s:
+                        try:
+                            parsed = json.loads(s)
+                            if isinstance(parsed, list):
+                                res = [u for u in parsed if isinstance(u, str) and u.strip()]
+                            else:
+                                res = [s]
+                        except Exception:
+                            res = [s]
+            return res
         except Exception:
             return []
 
@@ -290,7 +293,7 @@ class WebhookMixin:
         }
         if event_type == "start":
             embed["thumbnail"] = {"url": biome_info["thumbnail_url"]}
-            
+        
         for webhook_url in urls:
             try:
                 headers = {}

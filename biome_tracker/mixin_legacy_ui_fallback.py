@@ -458,7 +458,7 @@ class GuiMixin:
         bottom_frame = ttk.Frame(frame)
         bottom_frame.pack(side="bottom", fill="x", padx=5, pady=5)
 
-        discord_link = "https://discord.gg/fw6q274Nrt"
+        discord_link = "https://discord.gg/coteab"
         discord_label = ttk.Label(
             bottom_frame,
             text="JOIN OUR DEVELOPMENT SERVER TO KEEP IN TOUCH WITH THE LATEST 'C'OTEAB MACRO UPDATES, WE OFFER AN ACTIVE COMMUNITY AND MACRO SUPPORT! (CLICK HERE)",
@@ -1069,7 +1069,7 @@ class GuiMixin:
         discord_label = ttk.Label(noteab_frame, text="""Join the Coteab Discord server!!!""", foreground="royalblue", cursor="hand2")
         discord_label.configure(font=('Segoe UI', 9, 'underline'))
         discord_label.pack()
-        discord_label.bind("<Button-1>", lambda e: webbrowser.open_new("https://discord.gg/fw6q274Nrt"))
+        discord_label.bind("<Button-1>", lambda e: webbrowser.open_new("https://discord.gg/coteab"))
 
         github_label = ttk.Label(noteab_frame, text="""GitHub: Coteab Macro!""", foreground="#03cafc", cursor="hand2")
         github_label.pack()
