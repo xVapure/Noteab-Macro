@@ -10,11 +10,11 @@ export default function CreditsPage() {
             <div className="card">
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
                     <img
-                        src="https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/devteam3.png"
+                        src="https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/devteam.png"
                         alt="Dev Team"
                         style={{
-                            width: "120px",
-                            height: "120px",
+                            width: "300px",
+                            height: "auto",
                             borderRadius: "8px",
                             border: "1px solid var(--border)",
                             boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
@@ -29,15 +29,16 @@ export default function CreditsPage() {
                             <ul style={{ margin: 0, paddingLeft: "16px", listStyle: "disc" }}>
                                 <li><strong>Vapure/"@criticize."</strong> (Lead Developer, fullstack)</li>
                                 <li><strong>Akito</strong> (Lead Developer, fullstack)</li>
-                                <li><strong>Til/Comet</strong> (Developer, MacOS)</li>
-                                <li><strong>ManasAarohi</strong> (Developer, path maker)</li>
+                                <li><strong>ManasAarohi</strong> (Pathing Developer)</li>
+                                <li><strong>Matt</strong> (Developer)</li>
+                                <li><strong>spacedev0572</strong> (MacOS Developer)</li>
                             </ul>
                         </div>
                     </div>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", marginTop: "16px" }}>
-                    <a href="https://discord.gg/fw6q274Nrt" target="_blank" rel="noreferrer"
+                    <a href="https://discord.gg/coteab" target="_blank" rel="noreferrer"
                         style={{ color: "var(--accent)", textDecoration: "underline" }}>
                         Join the Coteab Discord server!!!
                     </a>
@@ -101,7 +102,7 @@ export default function CreditsPage() {
             </div>
 
             <div className="info-banner" style={{ marginTop: "16px" }}>
-                🌐 <a href="https://discord.gg/fw6q274Nrt" target="_blank" rel="noreferrer">JOIN OUR DEVELOPMENT SERVER</a> to keep in touch with the latest Coteab Macro updates!
+                🌐 <a href="https://discord.gg/coteab" target="_blank" rel="noreferrer">JOIN OUR DEVELOPMENT SERVER</a> to keep in touch with the latest Coteab Macro updates!
             </div>
         </>
     );

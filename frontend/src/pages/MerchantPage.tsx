@@ -7,6 +7,7 @@ interface MerchantItem {
     enabled: boolean;
     amount: number;
     stopAfterBuy: boolean; // mapped from 3rd boolean in array
+    buyAll: boolean;
 }
 
 // Helper to parse config object to array
@@ -16,7 +17,8 @@ const parseItems = (itemsObj: any): MerchantItem[] => {
         name,
         enabled: val[0],
         amount: val[1],
-        stopAfterBuy: false // forcefully ignoring backend's 3rd param
+        stopAfterBuy: false,
+        buyAll: val.length > 3 ? !!val[3] : false
     }));
 };
 
@@ -24,7 +26,7 @@ const parseItems = (itemsObj: any): MerchantItem[] => {
 const serializeItems = (items: MerchantItem[]): any => {
     const obj: any = {};
     items.forEach(item => {
-        obj[item.name] = [item.enabled, item.amount, false];
+        obj[item.name] = [item.enabled, item.amount, false, item.buyAll];
     });
     return obj;
 };
@@ -34,7 +36,7 @@ function ItemTable({ items, onChange, accent }: {
     onChange: (items: MerchantItem[]) => void;
     accent: string;
 }) {
-    const toggle = (i: number, key: "enabled" | "stopAfterBuy") => {
+    const toggle = (i: number, key: "enabled" | "stopAfterBuy" | "buyAll") => {
         const next = [...items];
         next[i] = { ...next[i], [key]: !next[i][key] };
         onChange(next);
@@ -51,6 +53,7 @@ function ItemTable({ items, onChange, accent }: {
             <div className="item-table-header">
                 <span className="item-col-name">Item Name</span>
                 <span className="item-col-amount">Amount</span>
+                <span style={{ width: "70px", textAlign: "center", fontSize: "12px" }}>Buy All</span>
             </div>
             {items.map((item, i) => (
                 <div key={item.name} className={`item-table-row ${item.enabled ? "item-row-active" : ""}`}>
@@ -69,8 +72,20 @@ function ItemTable({ items, onChange, accent }: {
                         className="item-amount-input"
                         value={item.amount}
                         min={1}
+                        disabled={item.buyAll}
                         onChange={(e) => setAmount(i, e.target.value)}
+                        style={{ opacity: item.buyAll ? 0.4 : 1 }}
                     />
+                    <div style={{ width: "70px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        <input
+                            type="checkbox"
+                            checked={item.buyAll}
+                            onChange={() => toggle(i, "buyAll")}
+                            className="item-checkbox"
+                            style={{ accentColor: accent }}
+                            title="Buy maximum amount (uses Set to Max button)"
+                        />
+                    </div>
                 </div>
             ))}
         </div>
@@ -83,17 +98,40 @@ export default function MerchantPage() {
     // Local state for items to avoid jitter, sync on change
     const [mariItems, setMariItems] = useState<MerchantItem[]>([]);
     const [jesterItems, setJesterItems] = useState<MerchantItem[]>([]);
+    const [jesterExchangeItems, setJesterExchangeItems] = useState<MerchantItem[]>([]);
     const [rinItems, setRinItems] = useState<MerchantItem[]>([]);
 
     // Collapsible states (default collapsed for faster scrolling)
     const [mariOpen, setMariOpen] = useState(false);
     const [jesterOpen, setJesterOpen] = useState(false);
+    const [jesterExchangeOpen, setJesterExchangeOpen] = useState(false);
     const [rinOpen, setRinOpen] = useState(false);
 
     useEffect(() => {
         if (config) {
             setMariItems(parseItems(config.Mari_Items));
             setJesterItems(parseItems(config.Jester_Items));
+
+            const jesterExchangeDefaults = [
+                "Icicle",
+                "Wind Essence",
+                "Rainy Bottle",
+                "Stella's Star",
+                "Hour Glass",
+                "Eternal Flame",
+                "Piece of Star",
+                "Feather Vial",
+                "Curruptaine",
+                "NULL"
+            ];
+            let loadedJesterExchange = parseItems(config.Jester_Exchange_Items);
+            jesterExchangeDefaults.forEach(name => {
+                if (!loadedJesterExchange.find(i => i.name === name)) {
+                    loadedJesterExchange.push({ name, enabled: false, amount: 1, stopAfterBuy: false, buyAll: false });
+                }
+            });
+            setJesterExchangeItems(loadedJesterExchange);
+
             const rinDefaults = [
                 "Sunstone Talisman",
                 "Moonstone Talisman",
@@ -106,7 +144,7 @@ export default function MerchantPage() {
             let loadedRin = parseItems(config.Rin_Items);
             rinDefaults.forEach(name => {
                 if (!loadedRin.find(i => i.name === name)) {
-                    loadedRin.push({ name, enabled: false, amount: 1, stopAfterBuy: false });
+                    loadedRin.push({ name, enabled: false, amount: 1, stopAfterBuy: false, buyAll: false });
                 }
             });
             setRinItems(loadedRin);
@@ -128,6 +166,11 @@ export default function MerchantPage() {
     const handleJesterChange = (items: MerchantItem[]) => {
         setJesterItems(items);
         updateConfig("Jester_Items", serializeItems(items));
+    };
+
+    const handleJesterExchangeChange = (items: MerchantItem[]) => {
+        setJesterExchangeItems(items);
+        updateConfig("Jester_Exchange_Items", serializeItems(items));
     };
 
     const handleRinChange = (items: MerchantItem[]) => {
@@ -230,6 +273,58 @@ export default function MerchantPage() {
                         />
                     </div>
                 </div>
+            </div>
+
+            {/* Jester Exchange Settings */}
+            <div className="card">
+                <div className="card-header">
+                    <div className="card-icon">💱</div>
+                    <div>
+                        <h3>Jester Exchange Settings</h3>
+                        <p>Configure auto-exchange logic after a certain amount of Jester autobuy</p>
+                    </div>
+                </div>
+
+                <ToggleSwitch
+                    label="Enable Jester Auto Exchange"
+                    checked={config.enable_jester_exchange || false}
+                    onChange={(val) => updateConfig("enable_jester_exchange", val)}
+                />
+                
+                {config.enable_jester_exchange && (
+                    <div className="form-row" style={{ marginTop: "10px", marginBottom: "10px" }}>
+                        <div className="form-group">
+                            <label className="form-label">Exchange every X jester spawns</label>
+                            <input
+                                className="form-input"
+                                type="number"
+                                value={config.jester_exchange_threshold ?? "3"}
+                                min="1"
+                                onChange={(e) => updateConfig("jester_exchange_threshold", e.target.value)}
+                                style={{ width: "90px" }}
+                            />
+                        </div>
+                    </div>
+                )}
+                
+                {config.enable_jester_exchange && (
+                    <div style={{ marginTop: "15px" }}>
+                        <div
+                            className="card-header"
+                            onClick={() => setJesterExchangeOpen(!jesterExchangeOpen)}
+                            style={{ cursor: "pointer", userSelect: "none", padding: "10px", background: "rgba(0,0,0,0.1)", borderRadius: "6px" }}
+                            title="Click to toggle"
+                        >
+                            <div style={{ flexGrow: 1 }}>
+                                <h4>Select Items to Exchange</h4>
+                            </div>
+                            <div style={{ fontSize: "1.2rem", color: "var(--text-secondary)", transform: jesterExchangeOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                                ▼
+                            </div>
+                        </div>
+                        {jesterExchangeOpen && <ItemTable items={jesterExchangeItems} onChange={handleJesterExchangeChange} accent="#10b981" />}
+                    </div>
+                )}
             </div>
 
             {/* Ping Settings */}

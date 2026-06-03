@@ -60,7 +60,10 @@ export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, i
             if (!window.pywebview || !window.pywebview.api) return;
             const result = await window.pywebview.api.import_config();
             if (result && result.success) {
-                window.location.reload();
+                // Trigger config re-load without page reload (reload kills inline html windows)
+                if (typeof (window as any).onConfigUpdated === "function") {
+                    (window as any).onConfigUpdated();
+                }
             } else if (result && result.error && result.error !== "No file selected") {
                 alert("Import failed: " + result.error);
             }

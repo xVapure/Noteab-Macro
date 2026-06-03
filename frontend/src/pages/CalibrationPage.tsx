@@ -54,9 +54,12 @@ const CALIBRATION_GROUPS: CalibrationGroup[] = [
         color: "#7c5bf5",
         fields: [
             { key: "merchant_open_button", label: "Open Button" },
+            { key: "jester_exchange_button", label: "Jester Exchange Button" },
             { key: "merchant_dialogue_box", label: "Dialogue Box" },
             { key: "purchase_amount_button", label: "Amount Input" },
             { key: "purchase_button", label: "Purchase Button" },
+            { key: "autobuy_set_to_max_button", label: "Autobuy - Set to Max" },
+            { key: "jester_exchange_set_to_max_button", label: "Jester Exchange - Set to Max" },
             { key: "first_item_merchant_slot_pos", label: "First Item Slot" },
             { key: "merchant_close_button", label: "Sell Menu Close Button" },
             { key: "merchant_name_ocr_pos", label: "Merchant Name OCR Region", isRegion: true },
@@ -423,8 +426,8 @@ export default function CalibrationPage() {
                 <div>ℹ️ Use "Select Pos" or "Select Region" to launch the calibration overlay :)</div>
                 <div style={{ marginTop: "6px" }}>
                     If you have troubles understanding refer to this tutorial:{" "}
-                    <a href="https://www.youtube.com/watch?v=s2S7Bncx9ns" target="_blank" rel="noreferrer">
-                        https://www.youtube.com/watch?v=s2S7Bncx9ns
+                    <a href="https://www.youtube.com/watch?v=dZzQytUMlCE" target="_blank" rel="noreferrer">
+                        https://www.youtube.com/watch?v=dZzQytUMlCE
                     </a>
                 </div>
             </div>

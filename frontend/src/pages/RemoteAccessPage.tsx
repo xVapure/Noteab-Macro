@@ -77,7 +77,7 @@ export default function RemoteAccessPage() {
 
                         <div>
                             <a
-                                href="https://www.youtube.com/watch?v=s2S7Bncx9ns"
+                                href="https://www.youtube.com/watch?v=dZzQytUMlCE"
                                 target="_blank"
                                 rel="noreferrer"
                                 style={{

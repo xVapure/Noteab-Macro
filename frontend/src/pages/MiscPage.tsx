@@ -232,6 +232,65 @@ export default function MiscPage() {
                     </div>
                 )}
 
+                {(config.biome_randomizer || config.strange_controller) && (
+                    <div style={{ marginTop: "12px", marginBottom: "16px", padding: "10px", background: "rgba(0,0,0,0.25)", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.03)" }}>
+                        <label style={{ marginBottom: "8px", display: "block", fontFamily: '"Sarpanch", sans-serif', textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em", color: "var(--text-secondary)" }}>
+                            Do NOT use BR/SC during these biomes:
+                        </label>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                            {["WINDY", "RAINY", "SNOWY", "SAND STORM", "HELL", "STARFALL", "CORRUPTION", "NULL", "AURORA", "HEAVEN", "EGGLAND", "SINGULARITY"].map(biome => {
+                                const isSelected = (config.disabled_biomes_br_sc || []).includes(biome);
+                                const biomeColors: Record<string, string> = { "WINDY": "#F2F6FF", "RAINY": "#027cbd", "SNOWY": "#Dceff9", "SAND STORM": "#8F7057", "HELL": "#ff4719", "STARFALL": "#011ab7", "CORRUPTION": "#6d32a8", "NULL": "#838383", "AURORA": "#0047ab", "HEAVEN": "#FFE8A0", "EGGLAND": "#d4fc8d", "SINGULARITY": "#cf4023" };
+                                const color = biomeColors[biome] || "#ffffff";
+                                const r = parseInt(color.slice(1, 3), 16), g = parseInt(color.slice(3, 5), 16), b = parseInt(color.slice(5, 7), 16);
+                                
+                                return (
+                                    <button
+                                        key={biome}
+                                        onClick={() => {
+                                            const current = config.disabled_biomes_br_sc || [];
+                                            updateConfig("disabled_biomes_br_sc", 
+                                                isSelected ? current.filter((b: string) => b !== biome) : [...current, biome]
+                                            );
+                                        }}
+                                        style={{
+                                            padding: "3px 6px",
+                                            fontFamily: '"Sarpanch", sans-serif',
+                                            fontSize: "11px",
+                                            fontWeight: 600,
+                                            letterSpacing: "0.03em",
+                                            borderRadius: "3px",
+                                            border: `1px solid ${isSelected ? color : `rgba(${r},${g},${b},0.15)`}`,
+                                            background: isSelected ? `rgba(${r},${g},${b},0.15)` : "rgba(0,0,0,0.3)",
+                                            color: isSelected ? color : `rgba(${r},${g},${b},0.5)`,
+                                            cursor: "pointer",
+                                            transition: "all 0.15s ease-in-out",
+                                            textTransform: "uppercase"
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isSelected) {
+                                                e.currentTarget.style.borderColor = `rgba(${r},${g},${b},0.4)`;
+                                                e.currentTarget.style.color = `rgba(${r},${g},${b},0.8)`;
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isSelected) {
+                                                e.currentTarget.style.borderColor = `rgba(${r},${g},${b},0.15)`;
+                                                e.currentTarget.style.color = `rgba(${r},${g},${b},0.5)`;
+                                            }
+                                        }}
+                                    >
+                                        {biome}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <span style={{ color: "rgba(255,255,255,0.25)", fontSize: "10px", display: "block", marginTop: "8px", fontFamily: '"Sarpanch", sans-serif', letterSpacing: "0.02em" }}>
+                            Note: GLITCHED, DREAMSPACE, CYBERSPACE are always blocked when using br/sc :aga:
+                        </span>
+                    </div>
+                )}
+
                 <ToggleSwitch
                     label="Auto reconnect to your PS (experimental)"
                     description="When Roblox disconnects, relaunch and rejoin using your private server link."
