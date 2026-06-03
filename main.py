@@ -32,21 +32,40 @@ os.chdir(APPDATA_BASE)
 
 _mutex = ctypes.windll.kernel32.CreateMutexW(None, True, "CoteabMacroSingleInstance")
 if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
-    ctypes.windll.user32.MessageBoxW(
-        0,
-        "Coteab Macro is already running!\n\nPlease close the existing instance before opening a new one.",
-        "Coteab Macro",
-        0x30
-    )
-    sys.exit(0)
+    _old_pid_arg = None
+    try:
+        if "--coteab-old-pid" in sys.argv:
+            _idx = sys.argv.index("--coteab-old-pid")
+            if _idx + 1 < len(sys.argv): _old_pid_arg = int(sys.argv[_idx + 1])
+    except Exception:
+        pass
+
+    if _old_pid_arg is not None:
+        for _ in range(90):
+            try:
+                p = psutil.Process(_old_pid_arg)
+                if not p.is_running(): break
+                p.wait(timeout=0.5)
+            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                break
+            except Exception:
+                time.sleep(0.5)
+
+        ctypes.windll.kernel32.CloseHandle(_mutex)
+        _mutex = ctypes.windll.kernel32.CreateMutexW(None, True, "CoteabMacroSingleInstance")
+        if ctypes.windll.kernel32.GetLastError() == 183:
+            ctypes.windll.user32.MessageBoxW(0, "Coteab Macro is already running!\n\nPlease close the existing instance before opening a new one.", "Coteab Macro", 0x30)
+            sys.exit(0)
+    else:
+        ctypes.windll.user32.MessageBoxW(0, "Coteab Macro is already running!\n\nPlease close the existing instance before opening a new one.", "Coteab Macro", 0x30)
+        sys.exit(0)
 
 try:
     import numpy
-    import cv2
     import pyautogui
 except Exception as e:
     err_text = str(e)
-    if "numpy" in err_text.lower() or "c-extension" in err_text.lower() or "dll" in err_text.lower() or "cv2" in err_text.lower():
+    if "numpy" in err_text.lower() or "c-extension" in err_text.lower() or "dll" in err_text.lower():
         msg = (
             "Coteab Macro failed to load required components.\n\n"
             "This is because your computer is missing the standard 'Visual C++ Redistributable (x64)' (i think so).\n\n"
@@ -62,9 +81,10 @@ except Exception as e:
     else:
         raise
 
+
 # i added this so we can easily change macro version upon releases without having to change multiple back-end & front-end behaviours
 # for future people that is reading the open source code, hello :p
-current_version = "v2.1.7"
+current_version = "v2.1.8-hotfix1"
 os.environ["COTEAB_MACRO_VERSION"] = current_version
 UPDATE_LATEST_RELEASE_API_URL = "https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest"
 os.environ["COTEAB_UPDATE_API_URL"] = UPDATE_LATEST_RELEASE_API_URL
@@ -96,6 +116,7 @@ from biome_tracker.config import (
     save_config,
     normalize_auto_pop_biomes,
 )
+from biome_tracker.core import BiomeTracker
 
 def get_base_path(): return sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.dirname(ORIGINAL_ABS_FILE)
 
@@ -480,7 +501,7 @@ class Api:
         def _run():
             try:
                 server = ThreadingHTTPServer(('127.0.0.1', self.emergency_port), SafeModeHandler)
-                print(f"Emergency Server running on http://127.0.0.1:{self.emergency_port}")
+                print(f"Browser mode running on http://127.0.0.1:{self.emergency_port}")
                 server.serve_forever()
             except Exception as e:
                 print(f"Server failed: {e}")
@@ -508,37 +529,101 @@ class Api:
         t = self._tracker
         cfg = t.config
         
-        modules = {
-            "Biome Detection": { "active": t.detection_running, "enabled": True },
-            "Aura Detection": { "active": t.detection_running and bool(cfg.get("enable_aura_detection", False)), "enabled": bool(cfg.get("enable_aura_detection", False)) },
-            "Fishing Mode": { "active": t.detection_running and self._is_fishing_mode_enabled(), "enabled": bool(cfg.get("fishing_mode", False)) },
-            "Auto Pop Buff": { "active": bool(getattr(t, "auto_pop_state", False)), "enabled": True },
-            "Anti-AFK": { "active": t.detection_running and bool(cfg.get("anti_afk", True)), "enabled": bool(cfg.get("anti_afk", True)) },
-            "Auto Merchant": { "active": bool(getattr(t, "on_auto_merchant_state", False)), "enabled": bool(cfg.get("merchant_teleporter", False)) },
-            "BR / SC Sequence": { "active": bool(getattr(t, "_br_sc_running", False)), "enabled": bool(cfg.get("biome_randomizer", False)) or bool(cfg.get("strange_controller", False)) },
-            "Eden Path": { "active": bool(getattr(t, "_eden_running", False)), "enabled": bool(cfg.get("go_to_eden_spawn", False)) },
-            "Auto Eden Contract": { "active": bool(getattr(t, "_eden_running", False)), "enabled": bool(cfg.get("auto_eden_contract", False)) },
-            "Egg Pathing": { "active": bool(getattr(t, "_egg_collecting", False)), "enabled": bool(cfg.get("collect_easter_egg", False)) },
-            "Basic Obby": { "active": bool(getattr(t, "_obby_running", False)), "enabled": bool(cfg.get("enable_auto_obby", False)) },
-            "Daily Quests": { "active": t.detection_running and bool(cfg.get("auto_claim_daily_quests", False)), "enabled": bool(cfg.get("auto_claim_daily_quests", False)) },
-            "Potion Crafting": { "active": bool(getattr(t, "_potion_thread_active", False)), "enabled": bool(cfg.get("enable_potion_crafting", False)) },
-            "Macro Idle Mode": { "active": bool(cfg.get("enable_idle_mode", False)), "enabled": bool(cfg.get("enable_idle_mode", False)) },
+        modules = {}
+        det = t.detection_running
+        
+        categories = {
+            "Core Features": {
+                "Biome Detection": {"active": det, "enabled": True},
+                "Aura Detection": {"active": det and _cfg_bool(cfg, "enable_aura_detection"), "enabled": _cfg_bool(cfg, "enable_aura_detection")},
+                "Macro Idle Mode": {"active": _cfg_bool(cfg, "enable_idle_mode"), "enabled": _cfg_bool(cfg, "enable_idle_mode")},
+                "Anti-AFK": {"active": det and _cfg_bool(cfg, "anti_afk", True), "enabled": _cfg_bool(cfg, "anti_afk", True)},
+                "Auto Reconnect": {"active": det and _cfg_bool(cfg, "auto_reconnect"), "enabled": _cfg_bool(cfg, "auto_reconnect")},
+                "OCR Failsafe": {"active": det and _cfg_bool(cfg, "enable_ocr_failsafe"), "enabled": _cfg_bool(cfg, "enable_ocr_failsafe")},
+                "Remote Control (Discord)": {"active": bool(getattr(t, "_remote_bot_running", False)), "enabled": _cfg_bool(cfg, "remote_access_enabled")},
+                "Player Logger": {"active": det and _cfg_bool(cfg, "player_logger", True), "enabled": _cfg_bool(cfg, "player_logger", True)},
+            },
+            "Fishing": {
+                "Fishing Mode": {"active": det and self._is_fishing_mode_enabled(), "enabled": _cfg_bool(cfg, "fishing_mode")},
+                "Fishing Selling": {"active": _cfg_bool(cfg, "fishing_enable_selling") and _cfg_bool(cfg, "fishing_mode"), "enabled": _cfg_bool(cfg, "fishing_enable_selling")},
+                "Fishing Failsafe (rejoin)": {"active": _cfg_bool(cfg, "fishing_failsafe_rejoin") and _cfg_bool(cfg, "fishing_mode"), "enabled": _cfg_bool(cfg, "fishing_failsafe_rejoin")},
+                "Fishing UI Nav Close": {"active": _cfg_bool(cfg, "fishing_ui_nav_close") and _cfg_bool(cfg, "fishing_mode"), "enabled": _cfg_bool(cfg, "fishing_ui_nav_close")},
+                "Fishing Aura Equip": {"active": _cfg_bool(cfg, "fishing_equip_aura_before_movement") and _cfg_bool(cfg, "fishing_mode"), "enabled": _cfg_bool(cfg, "fishing_equip_aura_before_movement")},
+            },
+            "Pathing & Movement": {
+                "Eden Path": {"active": bool(getattr(t, "_eden_running", False)), "enabled": _cfg_bool(cfg, "go_to_eden_spawn")},
+                "Eden Detection": {"active": det and _cfg_bool(cfg, "eden_detection"), "enabled": _cfg_bool(cfg, "eden_detection")},
+                "Auto Eden Contract": {"active": bool(getattr(t, "_eden_running", False)) and _cfg_bool(cfg, "auto_eden_contract"), "enabled": _cfg_bool(cfg, "auto_eden_contract")},
+                "Basic Obby": {"active": bool(getattr(t, "_obby_running", False)), "enabled": _cfg_bool(cfg, "enable_obby_path") or _cfg_bool(cfg, "enable_auto_obby")},
+                "Easter Egg Path": {"active": bool(getattr(t, "_egg_running", False)), "enabled": _cfg_bool(cfg, "collect_easter_egg")},
+                "Reset on Rare Biomes": {"active": det and _cfg_bool(cfg, "reset_on_rare"), "enabled": _cfg_bool(cfg, "reset_on_rare")},
+                "Teleport Back to Limbo": {"active": det and _cfg_bool(cfg, "teleport_back_to_limbo"), "enabled": _cfg_bool(cfg, "teleport_back_to_limbo")},
+                "Auto Roblox Fullscreen": {"active": det and _cfg_bool(cfg, "auto_roblox_fullscreen"), "enabled": _cfg_bool(cfg, "auto_roblox_fullscreen")},
+                "Auto Chat Close": {"active": det and _cfg_bool(cfg, "auto_chat_close"), "enabled": _cfg_bool(cfg, "auto_chat_close")},
+            },
+            "Item Usage & Buffs": {
+                "Auto Pop Buff": {"active": bool(getattr(t, "auto_pop_state", False)), "enabled": True}, # It's a dict of settings so generally enabled
+                "Auto Pop Glitched": {"active": det and _cfg_bool(cfg, "auto_pop_glitched"), "enabled": _cfg_bool(cfg, "auto_pop_glitched")},
+                "Auto Pop Dreamspace": {"active": det and _cfg_bool(cfg, "auto_pop_dreamspace"), "enabled": _cfg_bool(cfg, "auto_pop_dreamspace")},
+                "Auto Pop Cyberspace": {"active": det and _cfg_bool(cfg, "auto_pop_cyberspace"), "enabled": _cfg_bool(cfg, "auto_pop_cyberspace")},
+                "Cyberspace Only Warp": {"active": det and _cfg_bool(cfg, "cyberspace_only_warp"), "enabled": _cfg_bool(cfg, "cyberspace_only_warp")},
+                "Glitched Buff Enable": {"active": det and _cfg_bool(cfg, "enable_buff_glitched"), "enabled": _cfg_bool(cfg, "enable_buff_glitched")},
+                "BR / SC Sequence": {"active": bool(getattr(t, "_br_sc_running", False)), "enabled": _cfg_bool(cfg, "biome_randomizer") or _cfg_bool(cfg, "strange_controller")},
+                "Float Aura": {"active": det and _cfg_bool(cfg, "use_float_aura"), "enabled": _cfg_bool(cfg, "use_float_aura")},
+            },
+            "Merchants & Economy": {
+                "Auto Merchant": {"active": bool(getattr(t, "on_auto_merchant_state", False)), "enabled": _cfg_bool(cfg, "merchant_teleporter")},
+                "Merchant OCR": {"active": det and _cfg_bool(cfg, "merchant_ocr"), "enabled": _cfg_bool(cfg, "merchant_ocr")},
+                "Auto Merchant in Limbo": {"active": det and _cfg_bool(cfg, "auto_merchant_in_limbo"), "enabled": _cfg_bool(cfg, "auto_merchant_in_limbo")},
+                "Jester Exchange": {"active": bool(getattr(t, "_jester_exchange_running", False)), "enabled": _cfg_bool(cfg, "enable_jester_exchange")},
+                "Daily Quests": {"active": det and _cfg_bool(cfg, "auto_claim_daily_quests"), "enabled": _cfg_bool(cfg, "auto_claim_daily_quests")},
+            },
+            "Crafting": {
+                "Potion Crafting": {"active": bool(getattr(t, "_potion_thread_active", False)), "enabled": _cfg_bool(cfg, "enable_potion_crafting")},
+                "Potion Switching": {"active": _cfg_bool(cfg, "enable_potion_switching") and _cfg_bool(cfg, "enable_potion_crafting"), "enabled": _cfg_bool(cfg, "enable_potion_switching")},
+            },
+            "Recording & Screenshots": {
+                "Aura Recording": {"active": det and _cfg_bool(cfg, "enable_aura_record"), "enabled": _cfg_bool(cfg, "enable_aura_record")},
+                "Aura Screenshot": {"active": det and _cfg_bool(cfg, "aura_detection_screenshot"), "enabled": _cfg_bool(cfg, "aura_detection_screenshot")},
+                "Rare Biome Recording": {"active": det and _cfg_bool(cfg, "record_rare_biome"), "enabled": _cfg_bool(cfg, "record_rare_biome")},
+                "Rare Biome Screenshot": {"active": det and _cfg_bool(cfg, "rare_biome_screenshot"), "enabled": _cfg_bool(cfg, "rare_biome_screenshot")},
+                "Periodic Aura Screenshot": {"active": det and _cfg_bool(cfg, "periodical_aura_screenshot"), "enabled": _cfg_bool(cfg, "periodical_aura_screenshot")},
+                "Periodic Inventory Screenshot": {"active": det and _cfg_bool(cfg, "periodical_inventory_screenshot"), "enabled": _cfg_bool(cfg, "periodical_inventory_screenshot")},
+                "Glitch Effect UI": {"active": det and _cfg_bool(cfg, "enable_glitch_effect"), "enabled": _cfg_bool(cfg, "enable_glitch_effect")},
+            }
         }
         
+        for cat_name, cat_modules in categories.items():
+            for mod_name, mod_data in cat_modules.items():
+                modules[mod_name] = mod_data
+                
         incompatibilities = []
-        if cfg.get("enable_idle_mode", False):
+        if _cfg_bool(cfg, "enable_idle_mode"):
             incompatibilities.append("Idle Mode is ON: Most automated actions are paused infinitely.")
         
-        if cfg.get("go_to_eden_spawn", False) and bool(cfg.get("fishing_mode", False)):
+        if _cfg_bool(cfg, "go_to_eden_spawn") and _cfg_bool(cfg, "fishing_mode"):
             incompatibilities.append("Conflict: Both Eden Path and Fishing Mode are enabled. Fishing will take priority unless blocked.")
 
-        if bool(cfg.get("enable_potion_crafting", False)) and bool(cfg.get("fishing_mode", False)):
+        if _cfg_bool(cfg, "enable_potion_crafting") and _cfg_bool(cfg, "fishing_mode"):
             incompatibilities.append("Potion Crafting is enabled: It has the highest priority take over from Fishing Mode and cancels any automated actions.")
 
         return {
             "modules": modules,
             "incompatibilities": incompatibilities
         }
+
+    def get_macro_logs(self, max_lines=100):
+        try:
+            log_path = os.path.join(os.getcwd(), "macro_logs.txt")
+            if not os.path.exists(log_path):
+                return {"lines": []}
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                all_lines = f.readlines()
+            tail = all_lines[-max_lines:] if len(all_lines) > max_lines else all_lines
+            cleaned = [line.rstrip("\n\r") for line in tail if line.strip()]
+            return {"lines": cleaned}
+        except Exception as e:
+            return {"lines": [f"[Error reading logs: {e}]"]}
 
     def _is_fishing_mode_enabled(self):
         cfg = getattr(self._tracker, "config", None) if self._tracker else None
@@ -561,7 +646,7 @@ class Api:
 
         _STALE_TIMEOUT = 240
         now = time.time()
-        blocking_flags = ("_egg_collecting", "_egg_collection_pending", "auto_pop_state")
+        blocking_flags = ("auto_pop_state",)
         any_blocking = False
 
         for flag_name in blocking_flags:
@@ -703,7 +788,6 @@ class Api:
                         runtime_state=self._fishing_runtime_state,
                         set_fishing_busy_cb=lambda busy: setattr(self._tracker, "_fishing_busy", busy),
                         on_f2_pressed_cb=lambda: (self.set_biome_detection(False), self._emit_shortcut("STOP")),
-                        egg_ocr_check_cb=self._tracker._perform_egg_ocr_check,
                         merchant_ocr_check_cb=getattr(self._tracker, "_scheduled_merchant_ocr_check", None),
                     )
                 except Exception as e:
@@ -1172,6 +1256,7 @@ def stop_app(tracker):
 
 def main():
     ensure_workspace_files()
+    
     tracker = None
     api = Api(tracker=None)
     api._setup_emergency_server()
@@ -1209,7 +1294,6 @@ def main():
                     if tracker.apply_startup_auto_update():
                         window.destroy()
                         return
-
 
                 api._tracker = tracker
                 tracker.on_stats_update = api._emit_config_update
