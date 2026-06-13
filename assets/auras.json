@@ -88,7 +88,6 @@
     "Magnetic_Reverse Polarity": {"rarity": 1024000, "exclusive_biome": ["None", 1]},
     "Undefined": {"rarity": 1111000, "exclusive_biome": ["None", 1]},
     "Rage_Brawler": {"rarity": 1280000, "exclusive_biome": ["None", 1]},
-    "SYMBIOSIS": {"rarity": 1331201, "exclusive_biome": ["CORRUPTION", 5]},
     "Astral": {"rarity": 1336000, "exclusive_biome": ["STARFALL", 5]},
     "Cosmos": {"rarity": 1520000, "exclusive_biome": ["None", 1]},
     "Archmage": {"rarity": 1766000, "exclusive_biome": ["None", 1]},
@@ -100,7 +99,6 @@
     "Defined": {"rarity": 2222000, "exclusive_biome": ["NULL", 1000]},
     "Virtual": {"rarity": 2500000, "exclusive_biome": ["CYBERSPACE", 2]},
     "Parasite": {"rarity": 3000000, "exclusive_biome": ["CORRUPTION", 5]},
-    "Orion": {"rarity": 3000000, "exclusive_biome": ["STARFALL", 5]},
     "Apatite": {"rarity": 3133133, "exclusive_biome": ["None", 1]},
     "Savior": {"rarity": 3200000, "exclusive_biome": ["None", 1]},
     "Shiftlock": {"rarity": 3325000, "exclusive_biome": ["NULL", 1000]},
@@ -291,5 +289,13 @@
     "HARNESSED": {"rarity": 8500000, "exclusive_biome": ["None", 1]},
     "Amethyst": {"rarity": 9333700, "exclusive_biome": ["None", 1]},
     "Blizzard": {"rarity": 27315000, "exclusive_biome": ["SNOWY", 3]},
-    "HARNESSED_Elements": {"rarity": 85000000, "exclusive_biome": ["None", 1]}
+    "Orion": {"rarity": 3000000, "exclusive_biome": ["STARFALL", 5]},
+    "HARNESSED_Elements": {"rarity": 85000000, "exclusive_biome": ["None", 1]},
+    "Soultorn": {"rarity": 8333333, "exclusive_biome": ["None:", 1]},
+    "Quartz_Rose": {"rarity": 97500000, "exclusive_biome": ["None:", 1]},
+    "Hellbound": {"rarity": 85000000, "exclusive_biome": ["HELL:", 6]},
+    "Dream_Catcher": {"rarity": 2222222222, "exclusive_biome": ["None"]},
+    "imaginary": {"rarity": 12200200, "exclusive_biome": ["None"]},
+    "Sloth": {"rarity": 650000000, "exclusive_biome": ["None"]},
+    "Empty": {"rarity": 11111111, "exclusive_biome": ["NULL"]}
 }
