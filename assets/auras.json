@@ -298,5 +298,9 @@
     "Dream_Catcher": {"rarity": 2222222222, "exclusive_biome": ["None"]},
     "imaginary": {"rarity": 12200200, "exclusive_biome": ["None"]},
     "Sloth": {"rarity": 650000000, "exclusive_biome": ["None"]},
-    "Empty": {"rarity": 11111111, "exclusive_biome": ["NULL"]}
+    "Empty": {"rarity": 11111111, "exclusive_biome": ["NULL"]},
+    "Jade_Purity": {"rarity": 9200000, "exclusive_biome": ["None"]},
+    "Runic_Wilt": {"rarity": 87388744, "exclusive_biome": ["None"]},
+    "Obsidian": {"rarity": 1750000, "exclusive_biome": ["None"]},
+    "BOUNDED_AICHMALATOS": {"rarity": 170000000, "exclusive_biome": ["None"]}
 }
