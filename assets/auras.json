@@ -1,4 +1,4 @@
-{
+
     "Nothing": {"rarity": 1, "exclusive_biome": ["None", 1]},
     "Common": {"rarity": 2, "exclusive_biome": ["None", 1]},
     "Uncommon": {"rarity": 4, "exclusive_biome": ["None", 1]},
@@ -292,8 +292,8 @@
     "Blizzard": {"rarity": 27315000, "exclusive_biome": ["SNOWY", 3]},
     "Orion": {"rarity": 3000000, "exclusive_biome": ["STARFALL", 5]},
     "HARNESSED_Elements": {"rarity": 85000000, "exclusive_biome": ["None", 1]},
-    "Soultorn": {"rarity": 8333333, "exclusive_biome": ["None:", 1]},
-    "Quartz_Rose": {"rarity": 97500000, "exclusive_biome": ["None:", 1]},
+    "Soultorn": {"rarity": 8333333, "exclusive_biome": ["None", 1]},
+    "Quartz_Rose": {"rarity": 97500000, "exclusive_biome": ["None", 1]},
     "Hellbound": {"rarity": 85000000, "exclusive_biome": ["HELL:", 6]},
     "Dream_Catcher": {"rarity": 2222222222, "exclusive_biome": ["None"]},
     "imaginary": {"rarity": 12200200, "exclusive_biome": ["None"]},
@@ -307,6 +307,14 @@
     "Eisveil": {"rarity": 830000000, "exclusive_biome": ["SNOWY", 3]},
     "Graffiti": {"rarity": 12000000, "exclusive_biome": ["None"]},
     "Poseidon_Atlantis": {"rarity": 850000000, "exclusive_biome": ["RAINY", 4]},
-    "Spectre_Requiem": {"rarity": 8222000, "exclusive_biome": ["None"]}
+    "Spectre_Requiem": {"rarity": 8222000, "exclusive_biome": ["None"]},
+    "Bayview": {"rarity": 60000000, "exclusive_biome": ["None"]},
+    "vacation": {"rarity": 58620000, "exclusive_biome": ["None"]},
+    "Beach Ball": {"rarity": 1938000, "exclusive_biome": ["None"]},
+    "Floaty": {"rarity": 600000, "exclusive_biome": ["None"]},
+    "Goose Rave": {"rarity": 50000000, "exclusive_biome": ["None"]},
+    "Pool Party": {"rarity": 972000000, "exclusive_biome": ["None"]},
+    "nostalgia": {"rarity": 20270000, "exclusive_biome": ["None"]}
+
     
 }
