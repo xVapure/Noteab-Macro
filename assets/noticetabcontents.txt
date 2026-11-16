@@ -1,3 +1,8 @@
-- COTEAB MACRO IS BACK IN DEVELOPMENT.
-- JOIN discord.gg/coteab (permanent link https://discord.vapure.xyz).
-- WE ARE MAKING COTEAB BETTER EVERYDAY, THE LONG AWAITED COMEBACK.
+# Well, I'm back. v2.2.1
+- Fixed majority of bugs reported from v2.2.0 including memory leaks, Remote Access not working. What else?
+- Fixed issues with auto merchant.
+- Improved auto merchant with merchant detection from logs reimplemented and improved OCR methods.
+- Improved fishing x merchants, it is very compatible with fishing now and makes a lot of fishing points even with this option on.
+- Fixed a few bugs with fishing, made selling upon rejoining optional AND path to fishing upon start optional.
+- This update is not really completed in a sense because I wanted to release it, so if there are any bugs please report, be patient and I'll fix it on v2.2.2 along with other features because I wanted to release a functioning version first.
+- Thank you guys for have always been looking up to what I do, really do appreciate it. Join our discord @ https://discord.vapure.xyz/
