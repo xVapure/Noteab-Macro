@@ -314,7 +314,29 @@
     "Floaty": {"rarity": 600000, "exclusive_biome": ["None"]},
     "Goose Rave": {"rarity": 50000000, "exclusive_biome": ["None"]},
     "Pool Party": {"rarity": 972000000, "exclusive_biome": ["None"]},
-    "nostalgia": {"rarity": 20270000, "exclusive_biome": ["None"]}
-
-    
+    "nostalgia": {"rarity": 20270000, "exclusive_biome": ["None"]},
+    "Flushed : Pumpkinity": {"rarity": 69000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Enchanted": {"rarity": 445000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Lost Soul : Styx": {"rarity": 2000000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Nightlight": {"rarity": 2666666, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Embercrypt": {"rarity": 9700000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Cauldron": {"rarity": 24000000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Hylophobia": {"rarity": 66363166, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Hallow Treat": {"rarity": 70000000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Memphis": {"rarity": 98000000, "exclusive_biome": ["PUMPKIN MOON", 1]},
+    "Wraith : Phasmophobia": {"rarity": 6620000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Ghost": {"rarity": 10414606, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Dementor": {"rarity": 69000000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Harvester : Necromancy": {"rarity": 225000000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Withered": {"rarity": 283299000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Gaze": {"rarity": 977000000, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Graftshifter": {"rarity": 1134903170, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Hollow": {"rarity": 2666666666, "exclusive_biome": ["GRAVEYARD", 1]},
+    "Former Garden": {"rarity": 63000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Hanaki": {"rarity": 66000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Rejoice": {"rarity": 700000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Hellhound": {"rarity": 800000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Death": {"rarity": 1400000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Ashraem": {"rarity": 2000000000, "exclusive_biome": ["BLOOD RAIN", 1]},
+    "Vamp is the goodest goy he updated the auras": {"rarity": 0, "exclusive_biome": ["goy biome", 0]}
 }
