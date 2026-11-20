@@ -22,6 +22,7 @@ import CalibrationOverlay from "./components/CalibrationOverlay";
 import GlitchOverlay from "./components/GlitchOverlay";
 import UpdateBanner from "./components/UpdateBanner";
 import CustomizationPage from "./pages/CustomizationPage";
+import ThemeDesignPage from "./pages/ThemeDesignPage";
 import MovementsPage from "./pages/MovementsPage";
 import RecorderWindow from "./pages/RecorderWindow";
 import BiomeConfirmWindow from "./pages/BiomeConfirmWindow";
@@ -71,6 +72,7 @@ const pages: Record<string, React.FC> = {
   status: StatusPage,
   otherfeatures: OtherFeaturesPage,
   customization: CustomizationPage,
+  themedesign: ThemeDesignPage,
   credits: CreditsPage,
   donations: DonationsPage,
   // puzzle: PuzzlePage,
@@ -98,7 +100,7 @@ function App() {
     }
     try {
       if (window.pywebview && window.pywebview.api) {
-        await window.pywebview.api.set_biome_detection(true);
+        await window.pywebview.api.start_from_hotkey();
       }
     } catch (e) {
       console.error("Failed to start macro api:", e);
@@ -379,8 +381,17 @@ function App() {
 
   // Apply theme
   useEffect(() => {
-    document.body.setAttribute("data-theme", theme);
-  }, [theme]);
+    if (theme === 'custom' && config?.custom_theme_data) {
+        document.body.setAttribute("data-theme", "custom");
+        const vars = config.custom_theme_data.variables || {};
+        for (const [k, v] of Object.entries(vars)) {
+            document.body.style.setProperty(k, v as string);
+        }
+    } else {
+        document.body.style.cssText = "";
+        document.body.setAttribute("data-theme", theme);
+    }
+  }, [theme, config?.custom_theme_data]);
 
   const handleThemeChange = (newTheme: string) => {
     setTheme(newTheme);
@@ -412,15 +423,37 @@ function App() {
   return (
 
     <div className={`window-frame ${isGlitching ? 'is-glitching' : ''}`} style={{
-      backgroundImage: config?.custom_background_image ? `url("file://${config.custom_background_image}")` : undefined,
-      backgroundSize: "cover",
+      backgroundImage: "var(--custom-bg-img)",
+      backgroundSize: "var(--bg-size, cover)",
       backgroundPosition: "center",
-      backgroundRepeat: "no-repeat"
+      backgroundRepeat: "no-repeat",
+      animation: "var(--bg-animation, none)"
     }}>
       <div className="corner-bracket tl" />
       <div className="corner-bracket tr" />
       <div className="corner-bracket bl" />
       <div className="corner-bracket br" />
+      
+      {/* Global Custom CSS Injection from Theme */}
+      {theme === 'custom' && config?.custom_theme_data?.custom_css ? (
+        <style id="coteab-custom-css">{config.custom_theme_data.custom_css}</style>
+      ) : config?.custom_css && (
+        <style id="coteab-custom-css">{config.custom_css}</style>
+      )}
+
+      {/* Global Custom Font Injection */}
+      {theme === 'custom' && config?.custom_theme_data?.raw_font_url && (
+        <style id="coteab-custom-font">{`
+          @font-face {
+              font-family: 'ThemeCustomFontGlobal';
+              src: url('${config.custom_theme_data.raw_font_url.trim()}');
+          }
+          body, * {
+              font-family: 'ThemeCustomFontGlobal', sans-serif !important;
+          }
+        `}</style>
+      )}
+
       <div className="app-layout" style={(!isApiReady && !(window as any).isSafeMode) ? { pointerEvents: 'none', opacity: 0.7 } : {}}>
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} isGlitching={isGlitching} macroVersion={macroVersion} />
         <div className="main-content" style={{ position: "relative" }}>

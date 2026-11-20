@@ -21,6 +21,7 @@ const FISHING_CALIBRATIONS: FishingCalibrationItem[] = [
     { key: "fishing_shop_first_fish", label: "First Fish In Shop", fallback: [827, 404] },
     { key: "fishing_shop_sell_all_button", label: "Sell All Button", fallback: [662, 799] },
     { key: "fishing_confirm_sell_all_button", label: "Confirm Sell All Button", fallback: [800, 619] },
+    { key: "fishing_bugged_ui_pos", label: "Bugged Fishing UI (click when stuck)", fallback: [1167, 477] },
 ];
 
 function formatPoint(value: any, fallback: number[]) {
@@ -63,27 +64,18 @@ export default function FishingPage() {
     };
 
     const handleFishingMerchantMTPToggle = (enabled: boolean) => {
-        if (enabled && config.fishing_use_merchant_ocr_every_x_fish) {
-            alert("Please disable 'Check merchant on roblox chat (OCR) every x fishes' before enabling the Auto Merchant using Merchant Teleporter every x fishes.");
-            return;
-        }
-        updateConfig("fishing_use_merchant_every_x_fish", enabled);
-    };
-
-    const handleFishingMerchantOCRToggle = (enabled: boolean) => {
-        if (enabled && config.fishing_use_merchant_every_x_fish) {
-            alert("Please disable 'Use merchant teleporter every x fishes' before enabling merchant OCR detection.");
-            return;
-        }
-        updateConfig("fishing_use_merchant_ocr_every_x_fish", enabled);
+        updateConfig("fishing_auto_merchant", enabled);
     };
 
     const fishingMode = config.fishing_mode || false;
+    const pathToFishingOnStart = config.fishing_path_on_start !== false;
+    const sellFishOnRejoin = config.fishing_sell_on_rejoin !== false;
     const fishingFailsafe = config.fishing_failsafe_rejoin || false;
     const fishSellingEnabled = config.fishing_enable_selling || false;
     const equipAuraBeforeMovement = config.fishing_equip_aura_before_movement || false;
-    const fishingMerchantEnabled = config.fishing_use_merchant_every_x_fish || false;
+    const fishingMerchantEnabled = config.fishing_auto_merchant || false;
     const fishingBrScEnabled = config.fishing_use_br_sc_every_x_fish || false;
+    const buggedUiFailsafe = config.fishing_bugged_ui_rejoin_failsafe !== false;
 
     const displayAllCalibrationsOnScreen = async () => {
         try {
@@ -119,11 +111,22 @@ export default function FishingPage() {
                     onChange={(val) => updateConfig("fishing_mode", val)}
                 />
 
+                <ToggleSwitch
+                    label="Path to fishing upon macro start"
+                    description="Walk to the fishing spot when fishing first starts. Later returns from selling or reconnecting still use the path."
+                    checked={pathToFishingOnStart}
+                    onChange={(val) => updateConfig("fishing_path_on_start", val)}
+                />
+
                 <div className="form-row" style={{ marginTop: "8px" }}>
                     <div className="form-group">
                         <label className="form-label">Fishing actions delay (in miliseconds)</label>
+                        <p style={{ margin: "2px 0 6px 0", fontSize: "0.82em", color: "var(--text-color)", opacity: 0.7 }}>
+                            Use negative values (e.g. -200) to speed up fishing actions beyond default timing
+                        </p>
                         <input
                             className="form-input"
+                            type="number"
                             value={config.fishing_actions_delay_ms ?? "100"}
                             onChange={(e) => updateConfig("fishing_actions_delay_ms", e.target.value)}
                             style={{ width: "90px" }}
@@ -167,11 +170,26 @@ export default function FishingPage() {
                 />
 
                 <ToggleSwitch
+                    label="Bugged fishing UI failsafe (on by default)"
+                    description="On timeout, click the Bugged Fishing UI calibration point first. If still no fish after 60s, then trigger rejoin. Disable to skip the bugged UI click step."
+                    checked={buggedUiFailsafe}
+                    onChange={(val) => updateConfig("fishing_bugged_ui_rejoin_failsafe", val)}
+                />
+
+                <ToggleSwitch
                     label="Enable fish selling"
                     description="Automatically run fish selling flow after enough catches."
                     checked={fishSellingEnabled}
                     onChange={(val) => updateConfig("fishing_enable_selling", val)}
                 />
+                {fishSellingEnabled && (
+                    <ToggleSwitch
+                        label="Sell fish upon rejoining"
+                        description="Sell the configured number of fish after reconnecting. If disabled, keep the catch count and sell when the threshold is reached."
+                        checked={sellFishOnRejoin}
+                        onChange={(val) => updateConfig("fishing_sell_on_rejoin", val)}
+                    />
+                )}
                 {fishSellingEnabled && (
                     <div className="form-row" style={{ marginTop: "8px" }}>
                         <div className="form-group">
@@ -217,44 +235,11 @@ export default function FishingPage() {
                 )}
 
                 <ToggleSwitch
-                    label="Use merchant teleporter every x fishes"
-                    description="Runs full auto-merchant flow directly from fishing mode."
+                    label="Auto merchant while fishing"
+                    description="Runs the auto-merchant routine when a merchant appears in Roblox logs."
                     checked={fishingMerchantEnabled}
                     onChange={handleFishingMerchantMTPToggle}
                 />
-                {fishingMerchantEnabled && (
-                    <div className="form-row" style={{ marginTop: "8px" }}>
-                        <div className="form-group">
-                            <label className="form-label">Use merchant teleporter every x fish</label>
-                            <input
-                                className="form-input"
-                                value={config.fishing_merchant_every_x_fish ?? "30"}
-                                onChange={(e) => updateConfig("fishing_merchant_every_x_fish", e.target.value)}
-                                style={{ width: "90px" }}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                <ToggleSwitch
-                    label="Check merchant on roblox chat (OCR) every x fishes"
-                    description="Check chat for merchant spawns via OCR directly from fishing mode."
-                    checked={config.fishing_use_merchant_ocr_every_x_fish || false}
-                    onChange={handleFishingMerchantOCRToggle}
-                />
-                {config.fishing_use_merchant_ocr_every_x_fish && (
-                    <div className="form-row" style={{ marginTop: "8px" }}>
-                        <div className="form-group">
-                            <label className="form-label">Check OCR every x fish</label>
-                            <input
-                                className="form-input"
-                                value={config.fishing_merchant_ocr_every_x_fish_amt ?? "30"}
-                                onChange={(e) => updateConfig("fishing_merchant_ocr_every_x_fish_amt", e.target.value)}
-                                style={{ width: "90px" }}
-                            />
-                        </div>
-                    </div>
-                )}
 
                 <ToggleSwitch
                     label="Use BR/SC every x fishes"

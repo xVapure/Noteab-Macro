@@ -10,7 +10,7 @@ interface MerchantItem {
     buyAll: boolean;
 }
 
-// Helper to parse config object to array
+
 const parseItems = (itemsObj: any): MerchantItem[] => {
     if (!itemsObj) return [];
     return Object.entries(itemsObj).map(([name, val]: [string, any]) => ({
@@ -22,7 +22,7 @@ const parseItems = (itemsObj: any): MerchantItem[] => {
     }));
 };
 
-// Helper to convert array back to config object
+
 const serializeItems = (items: MerchantItem[]): any => {
     const obj: any = {};
     items.forEach(item => {
@@ -93,18 +93,16 @@ function ItemTable({ items, onChange, accent }: {
 }
 
 export default function MerchantPage() {
-    const { config, saveConfig, error } = useConfig();
+    const { config, saveConfigPatch, error } = useConfig();
 
-    // Local state for items to avoid jitter, sync on change
+
     const [mariItems, setMariItems] = useState<MerchantItem[]>([]);
     const [jesterItems, setJesterItems] = useState<MerchantItem[]>([]);
-    const [jesterExchangeItems, setJesterExchangeItems] = useState<MerchantItem[]>([]);
     const [rinItems, setRinItems] = useState<MerchantItem[]>([]);
 
-    // Collapsible states (default collapsed for faster scrolling)
+
     const [mariOpen, setMariOpen] = useState(false);
     const [jesterOpen, setJesterOpen] = useState(false);
-    const [jesterExchangeOpen, setJesterExchangeOpen] = useState(false);
     const [rinOpen, setRinOpen] = useState(false);
 
     useEffect(() => {
@@ -112,25 +110,6 @@ export default function MerchantPage() {
             setMariItems(parseItems(config.Mari_Items));
             setJesterItems(parseItems(config.Jester_Items));
 
-            const jesterExchangeDefaults = [
-                "Icicle",
-                "Wind Essence",
-                "Rainy Bottle",
-                "Stella's Star",
-                "Hour Glass",
-                "Eternal Flame",
-                "Piece of Star",
-                "Feather Vial",
-                "Curruptaine",
-                "NULL"
-            ];
-            let loadedJesterExchange = parseItems(config.Jester_Exchange_Items);
-            jesterExchangeDefaults.forEach(name => {
-                if (!loadedJesterExchange.find(i => i.name === name)) {
-                    loadedJesterExchange.push({ name, enabled: false, amount: 1, stopAfterBuy: false, buyAll: false });
-                }
-            });
-            setJesterExchangeItems(loadedJesterExchange);
 
             const rinDefaults = [
                 "Sunstone Talisman",
@@ -155,7 +134,7 @@ export default function MerchantPage() {
     if (!config) return <div style={{ padding: "20px" }}>Loading...</div>;
 
     const updateConfig = (key: string, value: any) => {
-        saveConfig({ ...config, [key]: value });
+        saveConfigPatch(key, value);
     };
 
     const handleMariChange = (items: MerchantItem[]) => {
@@ -168,10 +147,6 @@ export default function MerchantPage() {
         updateConfig("Jester_Items", serializeItems(items));
     };
 
-    const handleJesterExchangeChange = (items: MerchantItem[]) => {
-        setJesterExchangeItems(items);
-        updateConfig("Jester_Exchange_Items", serializeItems(items));
-    };
 
     const handleRinChange = (items: MerchantItem[]) => {
         setRinItems(items);
@@ -179,18 +154,10 @@ export default function MerchantPage() {
     };
 
     const handleMerchantTeleporterToggle = (enabled: boolean) => {
-        if (enabled && config.merchant_ocr) {
-            alert("Please disable 'Detect merchant on chat (using OCR)' before enabling the Auto Merchant using Merchant Teleporter.");
-            return;
-        }
         updateConfig("merchant_teleporter", enabled);
     };
 
     const handleMerchantOcrToggle = (enabled: boolean) => {
-        if (enabled && config.merchant_teleporter) {
-            alert("Please disable 'Enable Auto Merchant (requires merchant teleporter)' before enabling merchant OCR detection.");
-            return;
-        }
         updateConfig("merchant_ocr", enabled);
     };
 
@@ -201,7 +168,7 @@ export default function MerchantPage() {
                 <p>Configure merchant detection and auto-purchase settings</p>
             </div>
 
-            {/* Merchant Settings */}
+
             <div className="card">
                 <div className="card-header">
                     <div className="card-icon">🏪</div>
@@ -230,27 +197,14 @@ export default function MerchantPage() {
                 )}
 
                 <ToggleSwitch
-                    label="Detect merchant on chat (using OCR)"
-                    description="Periodically check the Roblox chat for merchant spawn messages"
+                    label="Merchant log notifications"
+                    description="Send merchant arrivals detected from logs to your webhook. Shop screenshots are still sent after merchant interaction."
                     checked={config.merchant_ocr || false}
                     onChange={handleMerchantOcrToggle}
                 />
                 {config.merchant_ocr && (
                     <div className="info-banner" style={{ marginTop: "10px", marginBottom: "10px" }}>
-                        <strong>Reminder:</strong> This only detects the merchant and pings you if found on Roblox chat, so you have to interact with the merchant yourself.
-                        <div className="form-row" style={{ marginTop: "10px" }}>
-                            <div className="form-group">
-                                <label className="form-label">Check interval (in secs)</label>
-                                <input
-                                    className="form-input"
-                                    type="number"
-                                    value={config.merchant_ocr_interval ?? "60"}
-                                    min="1"
-                                    onChange={(e) => updateConfig("merchant_ocr_interval", e.target.value)}
-                                    style={{ width: "90px" }}
-                                />
-                            </div>
-                        </div>
+                        Merchant cache detection and auto-merchant still work. Disabling this only suppresses the log-detected arrival message; shop screenshots are still sent.
                     </div>
                 )}
 
@@ -275,59 +229,8 @@ export default function MerchantPage() {
                 </div>
             </div>
 
-            {/* Jester Exchange Settings */}
-            <div className="card">
-                <div className="card-header">
-                    <div className="card-icon">💱</div>
-                    <div>
-                        <h3>Jester Exchange Settings</h3>
-                        <p>Configure auto-exchange logic after a certain amount of Jester autobuy</p>
-                    </div>
-                </div>
 
-                <ToggleSwitch
-                    label="Enable Jester Auto Exchange"
-                    checked={config.enable_jester_exchange || false}
-                    onChange={(val) => updateConfig("enable_jester_exchange", val)}
-                />
-                
-                {config.enable_jester_exchange && (
-                    <div className="form-row" style={{ marginTop: "10px", marginBottom: "10px" }}>
-                        <div className="form-group">
-                            <label className="form-label">Exchange every X jester spawns</label>
-                            <input
-                                className="form-input"
-                                type="number"
-                                value={config.jester_exchange_threshold ?? "3"}
-                                min="1"
-                                onChange={(e) => updateConfig("jester_exchange_threshold", e.target.value)}
-                                style={{ width: "90px" }}
-                            />
-                        </div>
-                    </div>
-                )}
-                
-                {config.enable_jester_exchange && (
-                    <div style={{ marginTop: "15px" }}>
-                        <div
-                            className="card-header"
-                            onClick={() => setJesterExchangeOpen(!jesterExchangeOpen)}
-                            style={{ cursor: "pointer", userSelect: "none", padding: "10px", background: "rgba(0,0,0,0.1)", borderRadius: "6px" }}
-                            title="Click to toggle"
-                        >
-                            <div style={{ flexGrow: 1 }}>
-                                <h4>Select Items to Exchange</h4>
-                            </div>
-                            <div style={{ fontSize: "1.2rem", color: "var(--text-secondary)", transform: jesterExchangeOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
-                                ▼
-                            </div>
-                        </div>
-                        {jesterExchangeOpen && <ItemTable items={jesterExchangeItems} onChange={handleJesterExchangeChange} accent="#10b981" />}
-                    </div>
-                )}
-            </div>
 
-            {/* Ping Settings */}
             <div className="card">
                 <div className="card-header">
                     <div className="card-icon">🔔</div>
@@ -395,7 +298,7 @@ export default function MerchantPage() {
                 )}
             </div>
 
-            {/* Mari stuff*/}
+
             <div className="card">
                 <div
                     className="card-header"
@@ -415,7 +318,7 @@ export default function MerchantPage() {
                 {mariOpen && <ItemTable items={mariItems} onChange={handleMariChange} accent="#7c5bf5" />}
             </div>
 
-            {/* Jester stuffs */}
+
             <div className="card">
                 <div
                     className="card-header"
@@ -435,7 +338,7 @@ export default function MerchantPage() {
                 {jesterOpen && <ItemTable items={jesterItems} onChange={handleJesterChange} accent="#f59e0b" />}
             </div>
 
-            {/* Rin stuff*/}
+
             <div className="card">
                 <div
                     className="card-header"

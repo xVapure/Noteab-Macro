@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 // Remove tauri invoke
 
@@ -20,6 +20,7 @@ interface ConfigContextType {
     config: AppConfig | null;
     setConfig: (config: AppConfig) => void;
     saveConfig: (newConfig: AppConfig) => Promise<void>;
+    saveConfigPatch: (key: string, value: any) => Promise<void>;
     isLoading: boolean;
     error: string | null;
     // Session Timer & Macro State
@@ -33,7 +34,15 @@ interface ConfigContextType {
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
 export function ConfigProvider({ children }: { children: ReactNode }) {
-    const [config, setConfig] = useState<AppConfig | null>(null);
+    const [config, setConfigState] = useState<AppConfig | null>(null);
+    const configRef = useRef<AppConfig | null>(null);
+    const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+    const readyRef = useRef(false);
+    const setConfig = useCallback((next: AppConfig) => {
+        configRef.current = next;
+        setConfigState(next);
+    }, []);
+
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -76,8 +85,32 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
             loadConfig();
         };
 
+        (window as any).onStatsUpdated = async () => {
+            try {
+                if (window.pywebview?.api?.get_stats) {
+                    const stats = await window.pywebview.api.get_stats();
+                    if (configRef.current) {
+                        setConfig({ ...configRef.current, ...stats });
+                    }
+                    if (stats.session_time) {
+                        const parts = stats.session_time.split(":");
+                        if (parts.length === 3) {
+                            const h = parseInt(parts[0], 10) || 0;
+                            const m = parseInt(parts[1], 10) || 0;
+                            const s = parseInt(parts[2], 10) || 0;
+                            setSessionDuration((h * 3600 + m * 60 + s) * 1000);
+                            setLastStartTime(Date.now());
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Stats update failed:", e);
+            }
+        };
+
         return () => {
             delete (window as any).onConfigUpdated;
+            delete (window as any).onStatsUpdated;
         };
     }, []);
 
@@ -105,6 +138,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
             }
 
             setConfig(data);
+            readyRef.current = true;
             setIsLoading(false);
 
             // Fetch biome colors from the tracker's GitHub-fetched biome_data
@@ -126,21 +160,47 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     };
 
     const saveConfig = async (newConfig: AppConfig) => {
-        try {
-            setConfig(newConfig); // Optimistic update
-            if (window.pywebview && window.pywebview.api) {
+        configRef.current = newConfig;
+        setConfig(newConfig);
+        if (!readyRef.current) return;
+        const request = saveQueueRef.current.then(async () => {
+            if (window.pywebview?.api) {
                 await window.pywebview.api.save_config(newConfig);
             }
-            console.log("Config saved successfully");
+        });
+        saveQueueRef.current = request.then(() => undefined, () => undefined);
+        try {
+            await request;
         } catch (err) {
             console.error("Failed to save config:", err);
             setError(String(err));
         }
     };
 
+    const saveConfigPatch = async (key: string, value: any) => {
+        const current = configRef.current;
+        if (!current || !readyRef.current) return;
+        const next = { ...current, [key]: value };
+        configRef.current = next;
+        setConfig(next);
+        const request = saveQueueRef.current.then(async () => {
+            if (window.pywebview?.api?.save_config_patch) {
+                await window.pywebview.api.save_config_patch(key, value);
+            } else if (window.pywebview?.api) {
+                await window.pywebview.api.save_config(next);
+            }
+        });
+        saveQueueRef.current = request.then(() => undefined, () => undefined);
+        try {
+            await request;
+        } catch (err) {
+            console.error("Failed to save config:", err);
+            setError(String(err));
+        }
+    };
     return (
         <ConfigContext.Provider value={{
-            config, setConfig, saveConfig, isLoading, error,
+            config, setConfig, saveConfig, saveConfigPatch, isLoading, error,
             isMacroRunning, setMacroRunning, sessionDuration, lastStartTime,
             biomeColors
         }}>

@@ -8,7 +8,6 @@ from typing import Literal, Union
 
 RemoteCommandType = Literal[
     "__rejoin__",
-    "__check_merchant__",
     "__screenshot__",
     "__reroll__",
     "use_item",

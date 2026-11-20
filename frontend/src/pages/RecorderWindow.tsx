@@ -11,18 +11,18 @@ export default function RecorderWindow({ initialMode, onClose }: RecorderWindowP
     const [elapsed, setElapsed] = useState(0);
     const [statusMsg, setStatusMsg] = useState("Ready");
 
-    // Mode: "obby" (default) or "potion"
+
     const [mode, setMode] = useState<"obby" | "potion">(initialMode || "obby");
     const [potionName, setPotionName] = useState("");
 
-    // Track active replay state to ignore clicks (only for Obby currently)
+
     const [isReplaying, setIsReplaying] = useState(false);
 
     const [replayCountdown, setReplayCountdown] = useState<number | null>(null);
     const [pendingAction, setPendingAction] = useState<"replay" | "align" | null>(null);
 
     useEffect(() => {
-        // Only check URL params when not rendered inline with props
+
         if (initialMode) {
             if (initialMode === "potion") setStatusMsg("Potion Mode: Ready");
             return;
@@ -47,7 +47,7 @@ export default function RecorderWindow({ initialMode, onClose }: RecorderWindowP
         return () => clearInterval(interval);
     }, [recording]);
 
-    // Countdown Effect
+
     useEffect(() => {
         let interval: any;
         if (replayCountdown !== null && replayCountdown > 0) {
@@ -55,7 +55,7 @@ export default function RecorderWindow({ initialMode, onClose }: RecorderWindowP
                 setReplayCountdown(prev => (prev !== null ? prev - 1 : null));
             }, 1000);
         } else if (replayCountdown === 0) {
-            // Trigger Pending Action
+
             setReplayCountdown(null);
 
             if (pendingAction === "replay") {
@@ -183,7 +183,7 @@ export default function RecorderWindow({ initialMode, onClose }: RecorderWindowP
             border: "1px solid var(--border-color)",
             position: "relative"
         }}>
-            {/* Corner Brackets for consistency */}
+
             <div className="corner-bracket tl" style={{ top: 5, left: 5 }} />
             <div className="corner-bracket tr" style={{ top: 5, right: 5 }} />
             <div className="corner-bracket bl" style={{ bottom: 5, left: 5 }} />

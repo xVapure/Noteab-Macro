@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useConfig } from "../contexts/ConfigContext";
 
 interface HeaderBarProps {
     isRunning: boolean;
@@ -19,6 +20,7 @@ const themes = [
     { id: "forest", label: "Forest" },
     { id: "cyberpunk", label: "Cyberpunk" },
     { id: "lavender", label: "Lavender" },
+    { id: "custom", label: "Custom Theme" },
 ];
 
 const SEARCH_INDEX = [
@@ -37,11 +39,19 @@ const SEARCH_INDEX = [
 ];
 
 export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, isGlitching, setActiveTab }: HeaderBarProps) {
+    const { config } = useConfig();
     const [alwaysOnTop, setAlwaysOnTop] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    
+    const dynamicThemes = themes.map(t => {
+        if (t.id === "custom") {
+            return { ...t, label: config?.custom_theme_data?.theme_name || "Custom Theme" };
+        }
+        return t;
+    });
 
     const toggleAlwaysOnTop = async () => {
         const next = !alwaysOnTop;
@@ -270,7 +280,7 @@ export default function HeaderBar({ isRunning, onToggle, theme, onThemeChange, i
                         cursor: "pointer",
                     }}
                 >
-                    {themes.map((t) => (
+                    {dynamicThemes.map((t) => (
                         <option key={t.id} value={t.id}>{t.label}</option>
                     ))}
                 </select>

@@ -65,13 +65,13 @@ export default function RemoteAccessPage() {
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label">Allowed User ID:</label>
+                            <label className="form-label">Allowed User ID(s):</label>
                             <input
                                 className="form-input"
                                 value={config.remote_allowed_user_id || ""}
                                 onChange={(e) => handleUserIdChange(e.target.value)}
-                                placeholder="123456789012345678"
-                                style={{ width: "220px" }}
+                                placeholder="12345678, 87654321"
+                                style={{ width: "300px" }}
                             />
                         </div>
 

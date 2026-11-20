@@ -1,8 +1,9 @@
 from __future__ import annotations
-
+import copy
 import traceback
 import json
 import threading
+import queue
 from typing import Optional, Any
 import ctypes
 import win32gui, win32con, win32api
@@ -10,9 +11,17 @@ import webbrowser
 import webview
 import os
 import sys
+
+# i added this so we can easily change macro version upon releases without having to change multiple back-end & front-end behaviours
+# for future people that is reading the open source code, hello :p
+current_version = "v2.2.1_test32"
+os.environ["COTEAB_MACRO_VERSION"] = current_version
+UPDATE_LATEST_RELEASE_API_URL = "https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest"
+os.environ["COTEAB_UPDATE_API_URL"] = UPDATE_LATEST_RELEASE_API_URL
+os.environ["WEBKIT_DISABLE_COMPOSITING_MODE"] = "1"
 import time
 import psutil
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import shutil
 import urllib.request
@@ -22,40 +31,41 @@ import random
 from pathlib import Path
 from biome_tracker.config import APPDATA_BASE
 import keyboard
-
+from tkinter import filedialog as FileDialog
 ORIGINAL_ABS_FILE = os.path.abspath(__file__)
 os.environ['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = '--disable-gpu'
+debug_mode = False # This mode should only be used by people who knows what they're doing.
+
 
 # paths crafting_files_do_not_open and macoroni logs go into appdata/local instead of next to the EXE (maybe)
 APPDATA_BASE.mkdir(parents=True, exist_ok=True)
 os.chdir(APPDATA_BASE)
 
-_mutex = ctypes.windll.kernel32.CreateMutexW(None, True, "CoteabMacroSingleInstance")
-if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
-    _old_pid_arg = None
+kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+kernel32.CreateMutexW.argtypes = (ctypes.c_void_p, ctypes.c_int, ctypes.c_wchar_p)
+kernel32.CreateMutexW.restype = ctypes.c_void_p
+kernel32.WaitForSingleObject.argtypes = (ctypes.c_void_p, ctypes.c_uint32)
+kernel32.WaitForSingleObject.restype = ctypes.c_uint32
+ctypes.set_last_error(0)
+macro_mutex = kernel32.CreateMutexW(None, True, "CoteabMacroSingleInstance")
+mutexerror = ctypes.get_last_error()
+if not macro_mutex:
+    ctypes.windll.user32.MessageBoxW(0, "Coteab Macro could not create its single-instance lock.", "Coteab Macro", 0x30)
+    sys.exit(1)
+if mutexerror == 183:
+    oldpidarg = None
     try:
         if "--coteab-old-pid" in sys.argv:
-            _idx = sys.argv.index("--coteab-old-pid")
-            if _idx + 1 < len(sys.argv): _old_pid_arg = int(sys.argv[_idx + 1])
+            idx = sys.argv.index("--coteab-old-pid")
+            if idx + 1 < len(sys.argv): oldpidarg = int(sys.argv[idx + 1])
     except Exception:
         pass
 
-    if _old_pid_arg is not None:
-        for _ in range(90):
-            try:
-                p = psutil.Process(_old_pid_arg)
-                if not p.is_running(): break
-                p.wait(timeout=0.5)
-            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
-                break
-            except Exception:
-                time.sleep(0.5)
-
-        ctypes.windll.kernel32.CloseHandle(_mutex)
-        _mutex = ctypes.windll.kernel32.CreateMutexW(None, True, "CoteabMacroSingleInstance")
-        if ctypes.windll.kernel32.GetLastError() == 183:
-            ctypes.windll.user32.MessageBoxW(0, "Coteab Macro is already running!\n\nPlease close the existing instance before opening a new one.", "Coteab Macro", 0x30)
-            sys.exit(0)
+    if oldpidarg is not None:
+        waitresult = kernel32.WaitForSingleObject(macro_mutex, 60000)
+        if waitresult not in (0, 0x80):
+            ctypes.windll.user32.MessageBoxW(0, "Coteab Macro could not finish restarting. Please close it and try again.", "Coteab Macro", 0x30)
+            sys.exit(1)
     else:
         ctypes.windll.user32.MessageBoxW(0, "Coteab Macro is already running!\n\nPlease close the existing instance before opening a new one.", "Coteab Macro", 0x30)
         sys.exit(0)
@@ -80,15 +90,6 @@ except Exception as e:
         sys.exit(1)
     else:
         raise
-
-
-# i added this so we can easily change macro version upon releases without having to change multiple back-end & front-end behaviours
-# for future people that is reading the open source code, hello :p
-current_version = "v2.1.8-hotfix1"
-os.environ["COTEAB_MACRO_VERSION"] = current_version
-UPDATE_LATEST_RELEASE_API_URL = "https://api.github.com/repos/xVapure/Noteab-Macro/releases/latest"
-os.environ["COTEAB_UPDATE_API_URL"] = UPDATE_LATEST_RELEASE_API_URL
-os.environ["WEBKIT_DISABLE_COMPOSITING_MODE"] = "1" 
 
 _wv2_user_data_base = os.path.join(
     os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
@@ -123,14 +124,14 @@ def get_base_path(): return sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.pat
 def _get_frontend_dist_dirs() -> list[str]:
     base_path = get_base_path()
     from biome_tracker.config import APPDATA_BASE
-    
+
     dirs = [
         os.path.join(str(APPDATA_BASE), "dist"),
         os.path.join(str(APPDATA_BASE), "frontend", "dist"),
         os.path.join(os.getcwd(), "frontend", "dist"),
         os.path.join(os.getcwd(), "dist"),
     ]
-    
+
     if getattr(sys, "frozen", False):
         dirs.append(os.path.join(base_path, "lib", "dist"))
         dirs.append(os.path.join(base_path, "dist"))
@@ -234,6 +235,11 @@ sys.stderr = LoggerWriter("macro_logs.txt", sys.stderr)
 class Api:
     def __init__(self, tracker=None):
         self._tracker = tracker
+        config = tracker.config if tracker and isinstance(getattr(tracker, "config", None), dict) else load_config()
+        self.config_baseline = self.config_snapshot(config)
+        self.config_dirty = False
+        if tracker is not None:
+            tracker._fishing_api = self
         self._window = None
         self._calib_mgr = None
 
@@ -241,19 +247,50 @@ class Api:
         self._fishing_stop_event = threading.Event()
         self._fishing_thread = None
         self._fishing_lock = threading.Lock()
+        self._macro_toggle_lock = threading.Lock()
+        self._start_hotkey_lock = threading.Lock()
+        self._restart_pending = False
+        self._merchant_event_lock = threading.Lock()
         self._fishing_runtime_state = {
             "fish_caught_count": 0,
             "fish_caught_since_merchant": 0,
             "fish_caught_since_br_sc": 0,
             "rejoin_in_progress": False,
             "force_sell_on_next_cycle": False,
+            "initial_start_pending": False,
             "merchant_requires_reset": False,
+            "merchant_event_pending": False,
+            "merchant_event_queue": [],
+            "merchant_event_active_name": "",
+            "merchant_reset_pending": False,
+            "fish_sale_remaining": 0,
+            "merchant_retry_delay": 0.0,
+            "merchant_retry_after": 0.0,
         }
 
         # rare biome pop up confirmation
         self._biome_confirm_evt = threading.Event()
         self._biome_confirm_result = None
         self.emergency_port = None
+
+    def config_snapshot(self, config):
+        ignored = {
+            "session_time", "session_window_start", "macro_last_start",
+            "biome_counts", "merchant_counts", "potion_last_file",
+            "custom_theme_data", "custom_labels", "custom_icons",
+            "custom_macro_title", "custom_macro_version",
+        }
+        if not isinstance(config, dict):
+            return {}
+        return {key: copy.deepcopy(value) for key, value in config.items() if key not in ignored}
+
+    def reset_config_baseline(self):
+        config = self._tracker.config if self._tracker and isinstance(getattr(self._tracker, "config", None), dict) else load_config()
+        self.config_baseline = self.config_snapshot(config)
+        self.config_dirty = False
+
+    def mark_config_dirty(self, config):
+        self.config_dirty = self.config_snapshot(config) != self.config_baseline
 
     def set_window(self, window):
         self._window = window
@@ -263,7 +300,7 @@ class Api:
         self._calib_mgr.set_refs(
             window=window,
             tracker=self._tracker,
-            save_fn=save_config,
+            save_fn=self.save_config,
             emit_fn=self.emit_calibration_result
         )
 
@@ -272,6 +309,19 @@ class Api:
         if t and isinstance(getattr(t, 'config', None), dict) and t.config:
             return t.config
         return load_config()
+
+    def get_screen_resolution(self):
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            user32.SetProcessDPIAware()
+            width = user32.GetSystemMetrics(0)
+            height = user32.GetSystemMetrics(1)
+            scale = user32.GetDpiForSystem() / 96.0
+            return {"width": width, "height": height, "resolution": f"{width}x{height}", "scale": scale}
+        except Exception as e:
+            print(f"get_screen_resolution error: {e}")
+            return {"width": 0, "height": 0, "resolution": "unknown", "scale": 1.0}
 
     def get_biome_data(self):
         if self._tracker and isinstance(getattr(self._tracker, "biome_data", None), dict):
@@ -295,52 +345,190 @@ class Api:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def save_config(self, config_data):
-        prev_anti_afk = False
-        if self._tracker and isinstance(getattr(self._tracker, "config", None), dict):
-            prev_anti_afk = bool(self._tracker.config.get("anti_afk", False))
+    def save_config_patch(self, key, value):
+        if not save_config({key: value}):
+            raise RuntimeError("Failed to write config.json")
+        if self._tracker:
+            previous = dict(self._tracker.config)
+            self._tracker.config[key] = value
+            self.mark_config_dirty(load_config())
+            self._apply_runtime_config(previous)
+        else:
+            self.mark_config_dirty(load_config())
 
+    def save_config(self, config_data):
+        previous = dict(self._tracker.config) if self._tracker and isinstance(getattr(self._tracker, "config", None), dict) else {}
         cfg = dict(config_data) if isinstance(config_data, dict) else dict(self.get_config())
 
-        # normalize auto pop biomes with whatever biome list we have
         biome_names = []
         if self._tracker and isinstance(getattr(self._tracker, "biome_data", None), dict):
             biome_names = list(self._tracker.biome_data.keys())
         cfg["auto_pop_biomes"] = normalize_auto_pop_biomes(cfg, biome_names=biome_names)
 
-
         if _cfg_bool(cfg, "fishing_failsafe_rejoin") and not _cfg_bool(cfg, "auto_reconnect"):
             cfg["fishing_failsafe_rejoin"] = False
 
-        save_config(cfg)
+        if not save_config(cfg):
+            raise RuntimeError("Failed to write config.json")
+        self.mark_config_dirty(load_config())
         if self._tracker:
             if not isinstance(getattr(self._tracker, "config", None), dict):
                 self._tracker.config = {}
             self._tracker.config.update(cfg)
-
-            # sync webhook urls to the tracker
-            if 'webhook_url' in cfg:
-                self._tracker.webhook_urls = cfg['webhook_url']
+            if "webhook_url" in cfg:
+                self._tracker.webhook_urls = cfg["webhook_url"]
                 try:
                     if hasattr(self._tracker, "refresh_active_webhook_channels"):
                         self._tracker.refresh_active_webhook_channels(force=True)
                 except Exception:
                     pass
+            self._apply_runtime_config(previous)
 
-            if self._tracker.detection_running:
-                # hot-swap fishing mode
-                if self._is_fishing_mode_enabled():
-                    self._start_fishing_worker()
-                else:
-                    self._stop_fishing_worker()
+    def _apply_runtime_config(self, previous):
+        tracker = self._tracker
+        if not tracker:
+            return
+        was_remote = bool(previous.get("remote_access_enabled", False))
+        remote = bool(tracker.config.get("remote_access_enabled", False))
+        remote_thread = getattr(tracker, "remote_bot_thread", None)
+        if not remote:
+            if was_remote or (remote_thread and remote_thread.is_alive()):
+                tracker.stop_remote_bot()
+        elif (not was_remote or previous.get("remote_bot_token") != tracker.config.get("remote_bot_token")) and not (remote_thread and remote_thread.is_alive()):
+            tracker.start_remote_bot()
+        if not tracker.detection_running:
+            return
+        if self._is_fishing_mode_enabled():
+            tracker.stop_potion_crafting()
+            self._start_fishing_worker()
+        else:
+            self._stop_fishing_worker()
+            tracker.start_potion_crafting()
+        if previous.get("anti_afk") != tracker.config.get("anti_afk") or previous.get("anti_afk_interval") != tracker.config.get("anti_afk_interval"):
+            wake = getattr(tracker, "_anti_afk_wake_event", None)
+            if wake:
+                wake.set()
 
-                if not prev_anti_afk and self._tracker.config.get("anti_afk", False):
-                    try:
-                        threading.Thread(target=self._tracker.perform_anti_afk_action, daemon=True).start()
-                    except Exception:
-                        pass
+    def restart_app(self, start_macro=False):
+        import subprocess
+        if getattr(sys, "frozen", False):
+            args = [sys.executable] + sys.argv[1:]
+        else:
+            args = [sys.executable] + sys.argv
+        index = 0
+        while index < len(args):
+            if args[index] == "--coteab-old-pid":
+                del args[index:index + 2]
+            elif args[index] == "--coteab-start-after-restart":
+                del args[index]
+            else:
+                index += 1
+        args.extend(["--coteab-old-pid", str(os.getpid())])
+        if start_macro:
+            args.append("--coteab-start-after-restart")
+        if not getattr(sys, "frozen", False):
+            args[1] = ORIGINAL_ABS_FILE
+        env = os.environ.copy()
+        if getattr(sys, "frozen", False):
+            env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+        try:
+            subprocess.Popen(args, env=env)
+        except Exception as e:
+            print(f"Failed to spawn restart process: {e}")
+            return False
+        threading.Thread(target=lambda: (time.sleep(0.5), os._exit(0)), daemon=True).start()
+        return True
+
+    def start_from_hotkey(self):
+        if not self._tracker:
+            return
+        with self._start_hotkey_lock:
+            if self._tracker.detection_running or self._restart_pending:
+                return
+            if self.config_dirty:
+                self._restart_pending = True
+                if not self.restart_app(start_macro=True):
+                    self._restart_pending = False
+                    self.set_biome_detection(True)
+                    self._emit_shortcut("START")
+                return
+            self.set_biome_detection(True)
+            self._emit_shortcut("START")
+
+    def run_git_cmd(self, cmd_str):
+        try:
+            import subprocess
+            res = subprocess.run(cmd_str, shell=True, capture_output=True, text=True)
+            return {"stdout": res.stdout, "stderr": res.stderr, "returncode": res.returncode}
+        except Exception as e:
+            return {"error": str(e)}
 
     def import_config(self):
+        try:
+            if not self._window:
+                return {"success": False, "error": "Window not available"}
+            result = self._window.create_file_dialog(
+                webview.FileDialog.OPEN, allow_multiple=False,
+                file_types=("JSON Files (*.json)",),
+            )
+            if not result:
+                return {"success": False, "error": "No file selected"}
+            path = result[0] if isinstance(result, (list, tuple)) else result
+            with open(path, "r", encoding="utf-8") as f:
+                imported = json.loads(f.read())
+            if not isinstance(imported, dict):
+                return {"success": False, "error": "Invalid config file: must be a JSON object"}
+            previous = dict(self._tracker.config) if self._tracker and isinstance(getattr(self._tracker, "config", None), dict) else {}
+            if not save_config(imported):
+                return {"success": False, "error": "Failed to write config.json"}
+            if self._tracker:
+                self._tracker.config.update(imported)
+                if "webhook_url" in imported:
+                    self._tracker.webhook_urls = imported["webhook_url"]
+                try:
+                    if hasattr(self._tracker, "refresh_active_webhook_channels"):
+                        self._tracker.refresh_active_webhook_channels(force=True)
+                except Exception:
+                    pass
+                self.mark_config_dirty(self._tracker.config)
+                self._apply_runtime_config(previous)
+            else:
+                self.mark_config_dirty(load_config())
+            return {"success": True, "config": imported}
+        except json.JSONDecodeError:
+            return {"success": False, "error": "Invalid JSON file"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    def export_calibration_data_to_downloads(self, calibration_data=None):
+        try:
+            export_data = dict(calibration_data) if isinstance(calibration_data, dict) else {}
+            if not export_data:
+                export_data = self.get_config() or {}
+
+            downloads_dir = Path(os.path.expanduser("~/Downloads"))
+            downloads_dir.mkdir(parents=True, exist_ok=True)
+            selected_dir = FileDialog.askdirectory(initialdir=str(downloads_dir), title="Select Downloads Folder")
+            if not selected_dir:
+                return {"success": False, "error": "No directory selected"}
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = Path(selected_dir) / f"macro_calibrations_{timestamp}.json"
+            with open(output_path, "w", encoding="utf-8") as handle:
+                json.dump({
+                    "presets": [
+                        {
+                            "resolution": "",
+                            "scale": "",
+                            "mode": "",
+                            "calibrations": export_data,
+                        }
+                    ]
+                }, handle, indent=4)
+
+            return {"success": True, "path": str(output_path)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def import_calibration_data_from_file(self):
         try:
             if not self._window:
                 return {"success": False, "error": "Window not available"}
@@ -356,24 +544,31 @@ class Api:
             with open(path, "r", encoding="utf-8") as f:
                 imported = json.loads(f.read())
             if not isinstance(imported, dict):
-                return {"success": False, "error": "Invalid config file: must be a JSON object"}
+                return {"success": False, "error": "Invalid calibration file: must be a JSON object"}
 
-            save_config(imported)
-
-            if self._tracker:
-                if not isinstance(getattr(self._tracker, "config", None), dict):
-                    self._tracker.config = {}
-                self._tracker.config.update(imported)
-                if 'webhook_url' in imported:
-                    self._tracker.webhook_urls = imported['webhook_url']
-                try:
-                    if hasattr(self._tracker, "refresh_active_webhook_channels"):
-                        self._tracker.refresh_active_webhook_channels(force=True)
-                except Exception: pass
-
-            return {"success": True, "config": imported}
+            return {"success": True, "calibrations": imported}
         except json.JSONDecodeError:
             return {"success": False, "error": "Invalid JSON file"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def export_theme(self, theme_data, filename="coteab_theme.json"):
+        try:
+            if not self._window:
+                return {"success": False, "error": "Window not available"}
+
+            result = self._window.create_file_dialog(
+                webview.FileDialog.SAVE, save_filename=filename,
+                file_types=("JSON Files (*.json)",)
+            )
+            if not result:
+                return {"success": False, "error": "Cancelled"}
+
+            path = result[0] if isinstance(result, (list, tuple)) else result
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(theme_data, f, indent=4)
+
+            return {"success": True, "path": path}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -384,7 +579,7 @@ class Api:
                 self._window.destroy()
             except Exception:
                 pass
-        
+
         def delayed_exit():
             time.sleep(1.5)
             os._exit(0)
@@ -407,7 +602,7 @@ class Api:
                      hwnd = self._window.gui.hwnd
                 else:
                      hwnd = win32gui.FindWindow(None, self._window.title)
-                     
+
                 if hwnd:
                      flag = win32con.HWND_TOPMOST if enabled else win32con.HWND_NOTOPMOST
                      win32gui.SetWindowPos(hwnd, flag, 0, 0, 0, 0,
@@ -441,14 +636,14 @@ class Api:
                     file_path = self.path.split('?')[0].lstrip('/')
                     if not file_path or file_path == 'index.html':
                         file_path = 'index.html'
-                    
+
                     found_full_path = None
                     for dist_dir in _get_frontend_dist_dirs():
                         full_path = os.path.join(dist_dir, file_path)
                         if os.path.exists(full_path) and os.path.isfile(full_path):
                             found_full_path = full_path
                             break
-                    
+
                     if found_full_path:
                         self.send_response(200)
                         if file_path.endswith('.js'): self.send_header('Content-type', 'application/javascript')
@@ -470,14 +665,14 @@ class Api:
                         args = json.loads(post_data) if post_data else []
                     except:
                         args = []
-                    
+
                     method = getattr(self.api, method_name, None)
                     if method and callable(method):
                         try:
                             if isinstance(args, list): result = method(*args)
                             elif isinstance(args, dict): result = method(**args)
                             else: result = method()
-                            
+
                             self.send_response(200)
                             self.send_header('Content-type', 'application/json')
                             self.send_header('Access-Control-Allow-Origin', '*')
@@ -487,7 +682,7 @@ class Api:
                             self.send_response(500)
                             self.end_headers()
                             self.wfile.write(str(e).encode())
-                
+
             def do_OPTIONS(self):
                 self.send_response(200)
                 self.send_header('Access-Control-Allow-Origin', '*')
@@ -528,10 +723,10 @@ class Api:
         if not self._tracker: return {}
         t = self._tracker
         cfg = t.config
-        
+
         modules = {}
         det = t.detection_running
-        
+
         categories = {
             "Core Features": {
                 "Biome Detection": {"active": det, "enabled": True},
@@ -575,7 +770,6 @@ class Api:
                 "Auto Merchant": {"active": bool(getattr(t, "on_auto_merchant_state", False)), "enabled": _cfg_bool(cfg, "merchant_teleporter")},
                 "Merchant OCR": {"active": det and _cfg_bool(cfg, "merchant_ocr"), "enabled": _cfg_bool(cfg, "merchant_ocr")},
                 "Auto Merchant in Limbo": {"active": det and _cfg_bool(cfg, "auto_merchant_in_limbo"), "enabled": _cfg_bool(cfg, "auto_merchant_in_limbo")},
-                "Jester Exchange": {"active": bool(getattr(t, "_jester_exchange_running", False)), "enabled": _cfg_bool(cfg, "enable_jester_exchange")},
                 "Daily Quests": {"active": det and _cfg_bool(cfg, "auto_claim_daily_quests"), "enabled": _cfg_bool(cfg, "auto_claim_daily_quests")},
             },
             "Crafting": {
@@ -586,21 +780,20 @@ class Api:
                 "Aura Recording": {"active": det and _cfg_bool(cfg, "enable_aura_record"), "enabled": _cfg_bool(cfg, "enable_aura_record")},
                 "Aura Screenshot": {"active": det and _cfg_bool(cfg, "aura_detection_screenshot"), "enabled": _cfg_bool(cfg, "aura_detection_screenshot")},
                 "Rare Biome Recording": {"active": det and _cfg_bool(cfg, "record_rare_biome"), "enabled": _cfg_bool(cfg, "record_rare_biome")},
-                "Rare Biome Screenshot": {"active": det and _cfg_bool(cfg, "rare_biome_screenshot"), "enabled": _cfg_bool(cfg, "rare_biome_screenshot")},
                 "Periodic Aura Screenshot": {"active": det and _cfg_bool(cfg, "periodical_aura_screenshot"), "enabled": _cfg_bool(cfg, "periodical_aura_screenshot")},
                 "Periodic Inventory Screenshot": {"active": det and _cfg_bool(cfg, "periodical_inventory_screenshot"), "enabled": _cfg_bool(cfg, "periodical_inventory_screenshot")},
                 "Glitch Effect UI": {"active": det and _cfg_bool(cfg, "enable_glitch_effect"), "enabled": _cfg_bool(cfg, "enable_glitch_effect")},
             }
         }
-        
+
         for cat_name, cat_modules in categories.items():
             for mod_name, mod_data in cat_modules.items():
                 modules[mod_name] = mod_data
-                
+
         incompatibilities = []
         if _cfg_bool(cfg, "enable_idle_mode"):
             incompatibilities.append("Idle Mode is ON: Most automated actions are paused infinitely.")
-        
+
         if _cfg_bool(cfg, "go_to_eden_spawn") and _cfg_bool(cfg, "fishing_mode"):
             incompatibilities.append("Conflict: Both Eden Path and Fishing Mode are enabled. Fishing will take priority unless blocked.")
 
@@ -639,6 +832,7 @@ class Api:
         # pause during reconnect, but mark that we need to sell when we come back
         if getattr(t, "reconnecting_state", False):
             self._fishing_runtime_state["rejoin_in_progress"] = True
+            self._fishing_runtime_state["initial_start_pending"] = False
             return False
         if self._fishing_runtime_state.get("rejoin_in_progress"):
             self._fishing_runtime_state["rejoin_in_progress"] = False
@@ -674,6 +868,88 @@ class Api:
         if any_blocking: return False
         return True
 
+    def queue_fishing_action(self, fn, name="fishing_action"):
+        t = self._tracker
+        if not t or not getattr(t, "_fishing_worker_active", False):
+            return fn()
+        with t._fishing_action_lock:
+            if name in t._fishing_action_pending:
+                return False
+            t._fishing_action_pending.add(name)
+            t._fishing_action_queue.put((fn, name))
+        return True
+
+    def _clear_fishing_actions(self):
+        t = self._tracker
+        if not t:
+            return
+        with t._fishing_action_lock:
+            t._fishing_action_pending.clear()
+            while True:
+                try:
+                    t._fishing_action_queue.get_nowait()
+                except queue.Empty:
+                    break
+                except Exception:
+                    break
+
+    def _run_fishing_action_request(self):
+        t = self._tracker
+        if not t:
+            return False
+        try:
+            fn, name = t._fishing_action_queue.get_nowait()
+        except Exception:
+            return False
+        t._fishing_action_override = True
+        t._fishing_busy = False
+        try:
+            fn()
+        except Exception as e:
+            print(f"Fishing action {name} failed: {e}")
+        finally:
+            t._fishing_action_override = False
+            with t._fishing_action_lock:
+                t._fishing_action_pending.discard(name)
+        return True
+
+    def _on_fishing_event(self, event):
+        t = self._tracker
+        if not t or event not in ("catch", "sale") or not self._is_fishing_mode_enabled():
+            return
+        if not getattr(t, "periodical_inventory_var", None) or not t.periodical_inventory_var.get():
+            return
+        try:
+            interval = float(t.periodical_inventory_interval_var.get())
+        except Exception:
+            interval = float(t.config.get("periodical_inventory_interval", "5"))
+        if (datetime.now() - getattr(t, "last_inventory_screenshot_time", datetime.min)) < timedelta(minutes=max(0.0, interval)):
+            return
+        self.queue_fishing_action(
+            lambda: t.take_inventory_screenshot_now(fishing_safe=True),
+            "inventory_screenshot"
+        )
+
+
+    def _set_fishing_busy(self, busy):
+        t = self._tracker
+        if not t:
+            return
+        t._fishing_busy = bool(busy)
+        t._daily_reward_wake_event.set()
+
+    def _pause_fishing_for_daily_reward(self):
+        t = self._tracker
+        if not t or not t._daily_reward_pause_requested.is_set():
+            return False
+        t._fishing_busy = False
+        t._daily_reward_fishing_paused.set()
+        t._daily_reward_wake_event.set()
+        while t._daily_reward_pause_requested.is_set() and t.detection_running and not t._daily_reward_stop_event.is_set():
+            time.sleep(0.05)
+        t._daily_reward_fishing_paused.clear()
+        t._daily_reward_wake_event.set()
+        return True
     def _fishing_config_provider(self):
         t = self._tracker
         if t and isinstance(getattr(t, "config", None), dict):
@@ -734,16 +1010,100 @@ class Api:
             t._fishing_br_sc_override = old_override
         return ran
 
+    def _on_merchant_cache_event(self, name):
+        t = self._tracker
+        if not t or not getattr(t, "detection_running", False):
+            return
+        cfg = getattr(t, "config", {})
+        if self._is_fishing_mode_enabled():
+            if cfg.get("fishing_auto_merchant", False) or cfg.get("merchant_teleporter", False):
+                with self._merchant_event_lock:
+                    events = self._fishing_runtime_state.setdefault("merchant_event_queue", [])
+                    if not isinstance(events, list):
+                        events = []
+                        self._fishing_runtime_state["merchant_event_queue"] = events
+                    events.append(str(name))
+                    self._fishing_runtime_state["merchant_event_pending"] = True
+                    if not self._fishing_runtime_state.get("merchant_event_active_name"):
+                        self._fishing_runtime_state["merchant_event_name"] = str(events[0])
+                    self._fishing_runtime_state["merchant_event_pending_name"] = str(events[0])
+            return
+        if not cfg.get("merchant_teleporter", False):
+            return
+        t._merchant_log_event_pending_name = str(name)
+        lock = getattr(t, "_merchant_log_event_lock", None)
+        if lock is None:
+            lock = threading.Lock()
+            t._merchant_log_event_lock = lock
+        with lock:
+            if getattr(t, "_merchant_log_event_queued", False):
+                t._merchant_log_event_pending = True
+                return
+            t._merchant_log_event_queued = True
+            t._merchant_log_event_pending = False
+
+        def run():
+            try:
+                while t.detection_running and not t.reconnecting_state:
+                    if not (
+                        getattr(t, "_br_sc_running", False)
+                        or getattr(t, "_mt_running", False)
+                        or getattr(t, "_portable_crack_running", False)
+                        or getattr(t, "_remote_running", False)
+                        or getattr(t, "_fishing_busy", False)
+                        or getattr(t, "auto_pop_state", False)
+                        or getattr(t, "on_auto_merchant_state", False)
+                        or getattr(t, "_egg_collecting", False)
+                        or getattr(t, "_eden_running", False)
+                        or getattr(t, "_potion_thread_active", False)
+                    ):
+                        break
+                    time.sleep(0.1)
+                if not t.detection_running or t.reconnecting_state or not t.config.get("merchant_teleporter", False):
+                    return
+                t._merchant_log_event_override = True
+                try:
+                    t.activate_roblox_window()
+                except Exception:
+                    pass
+                t._merchant_teleporter_impl(merchant_name=str(name))
+                if getattr(t, "_last_merchant_sequence_ran", False):
+                    t.last_mt_time = datetime.now()
+            except Exception as e:
+                print(f"Merchant log auto-merchant failed: {e}")
+            finally:
+                t._merchant_log_event_override = False
+                with lock:
+                    pending = bool(getattr(t, "_merchant_log_event_pending", False))
+                    t._merchant_log_event_queued = False
+                    t._merchant_log_event_pending = False
+                if pending and t.detection_running and not t.reconnecting_state and t.config.get("merchant_teleporter", False):
+                    self._on_merchant_cache_event(getattr(t, "_merchant_log_event_pending_name", ""))
+
+        try:
+            t._action_scheduler.enqueue_action(run, name="merchant_log_event", priority=0)
+        except Exception:
+            run()
     def _run_fishing_merchant_sequence(self):
         if not self._tracker: return False
         t = self._tracker
         self._fishing_runtime_state["merchant_requires_reset"] = False
         old_override = getattr(t, "_fishing_br_sc_override", False)
+        old_log_override = getattr(t, "_merchant_log_event_override", False)
         t._fishing_br_sc_override = True
+        t._merchant_log_event_override = True
+        merchant_name = (
+            self._fishing_runtime_state.get("merchant_event_active_name")
+            or self._fishing_runtime_state.get("merchant_event_name", "")
+        )
         ran = False
         try:
             try: t.activate_roblox_window()
             except Exception: pass
+
+            t._last_merchant_sequence_ran = False
+            t._last_merchant_sequence_requires_reset = False
+            t._last_merchant_sequence_skipped = False
 
             merchant_fn = getattr(t, "_merchant_teleporter_impl", None)
             if not callable(merchant_fn):
@@ -751,16 +1111,20 @@ class Api:
                 return False
 
             # reuse the same merchant logic so we get buy, webhook, limbo, everything
-            merchant_fn()
+            merchant_fn(merchant_name=merchant_name)
             ran = bool(getattr(t, "_last_merchant_sequence_ran", False))
+            if getattr(t, "_last_merchant_sequence_skipped", False):
+                print(f"Fishing merchant sequence deferred for {merchant_name}: merchant cooldown active")
             self._fishing_runtime_state["merchant_requires_reset"] = bool(
                 getattr(t, "_last_merchant_sequence_requires_reset", False)
             )
-            if ran: t.last_mt_time = datetime.now()
+            if ran:
+                t.last_mt_time = datetime.now()
         except Exception as e:
             print(f"Fishing merchant sequence failed: {e}")
         finally:
             t._fishing_br_sc_override = old_override
+            t._merchant_log_event_override = old_log_override
         return ran
 
     def _start_fishing_worker(self) -> None:
@@ -768,14 +1132,20 @@ class Api:
             return
         with self._fishing_lock:
             if self._fishing_thread and self._fishing_thread.is_alive():
-                return
+                if not self._fishing_stop_event.is_set():
+                    return
+                if self._fishing_thread is not threading.current_thread():
+                    self._fishing_thread.join()
+            self._fishing_thread = None
             self._fishing_stop_event.clear()
+            stop_event = self._fishing_stop_event
 
             def _run_fishing():
+                self._tracker._fishing_worker_active = True
                 try:
                     from biome_tracker.fishing import run_fishing_loop
                     run_fishing_loop(
-                        stop_event=self._fishing_stop_event,
+                        stop_event=stop_event,
                         can_run_cb=self._fishing_can_run,
                         config_provider=self._fishing_config_provider,
                         log_prefix="[FishingMode]",
@@ -784,43 +1154,59 @@ class Api:
                         run_br_sc_sequence_cb=self._run_fishing_br_sc_sequence,
                         run_merchant_sequence_cb=self._run_fishing_merchant_sequence,
                         activate_roblox_cb=self._tracker.activate_roblox_window,
-                        close_chat_fn=self._tracker.close_chat_if_open,
                         runtime_state=self._fishing_runtime_state,
-                        set_fishing_busy_cb=lambda busy: setattr(self._tracker, "_fishing_busy", busy),
+                        set_fishing_busy_cb=self._set_fishing_busy,
+                        pause_daily_reward_cb=self._pause_fishing_for_daily_reward,
+                        run_fishing_action_cb=self._run_fishing_action_request,
+                        on_fishing_event_cb=self._on_fishing_event,
+                        merchant_event_lock=self._merchant_event_lock,
                         on_f2_pressed_cb=lambda: (self.set_biome_detection(False), self._emit_shortcut("STOP")),
-                        merchant_ocr_check_cb=getattr(self._tracker, "_scheduled_merchant_ocr_check", None),
+                        is_failsafe_ignored_cb=lambda: getattr(self._tracker, "_br_sc_running", False) or getattr(self._tracker, "_mt_running", False) or getattr(self._tracker, "auto_pop_state", False) or getattr(self._tracker, "on_auto_merchant_state", False) or getattr(self._tracker, "_egg_collecting", False),
                     )
                 except Exception as e:
                     print(f"Fishing worker failed: {e}")
+                finally:
+                    self._tracker._fishing_worker_active = False
+                    self._clear_fishing_actions()
+                    self._tracker._daily_reward_wake_event.set()
 
             self._fishing_thread = threading.Thread(target=_run_fishing, daemon=True)
             self._fishing_thread.start()
 
     def _stop_fishing_worker(self) -> None:
-        with self._fishing_lock:
-            self._fishing_stop_event.set()
-            t = self._fishing_thread
-            if t and t.is_alive():
-                t.join(timeout=1.0)
-            if not t or not t.is_alive():
-                self._fishing_thread = None
+        self._fishing_stop_event.set()
+        t = self._fishing_thread
+        if t and t.is_alive() and t is not threading.current_thread():
+            t.join()
+        if not t or not t.is_alive():
+            self._fishing_thread = None
 
     def set_biome_detection(self, enabled):
-        if not self._tracker: return
-        if enabled:
-            if not self._tracker.detection_running:
-                threading.Thread(target=self._tracker.start_detection, daemon=True).start()
-            if self._is_fishing_mode_enabled():
-                self._start_fishing_worker()
-            else:
+        if not self._tracker:
+            return
+        was_running = self._tracker.detection_running
+        with self._macro_toggle_lock:
+            if enabled:
+                if not was_running and self._is_fishing_mode_enabled():
+                    self._fishing_runtime_state["initial_start_pending"] = True
                 self._stop_fishing_worker()
-                try: self._tracker.start_potion_crafting()
-                except Exception: pass
-        else:
-            self._stop_fishing_worker()
-            self._tracker.stop_detection()
+                if not self._tracker.detection_running:
+                    self._tracker.start_detection()
+                if self._is_fishing_mode_enabled():
+                    self._tracker.stop_potion_crafting()
+                    self._start_fishing_worker()
+                else:
+                    try:
+                        self._tracker.start_potion_crafting()
+                    except Exception:
+                        pass
+                if not was_running and self._tracker.detection_running:
+                    self.reset_config_baseline()
+            else:
+                self._fishing_runtime_state["initial_start_pending"] = False
+                self._tracker.stop_detection()
+                self._stop_fishing_worker()
         self._emit_macro_status()
-
     # --- frontend event emitters (JS bridge) ---
 
     def _safe_eval_js(self, js_code):
@@ -831,6 +1217,19 @@ class Api:
 
     def _emit_macro_status(self):
         self._safe_eval_js(f'if(window.onMacroStatus) window.onMacroStatus("{self.get_macro_status()}");')
+
+    def _emit_stats_update(self):
+        self._safe_eval_js('if(window.onStatsUpdated) window.onStatsUpdated();')
+
+    def get_stats(self):
+        t = self._tracker
+        if not t:
+            return {}
+        r = {"biome_counts": t.biome_counts, "merchant_counts": t.config.get("merchant_counts", {})}
+        st = getattr(t, "get_total_session_time", None)
+        if callable(st):
+            r["session_time"] = st()
+        return r
 
     def _emit_config_update(self):
         self._safe_eval_js('if(window.onConfigUpdated) window.onConfigUpdated();')
@@ -983,14 +1382,17 @@ class Api:
         if self._tracker and hasattr(self._tracker, 'send_webhook_status'):
             self._tracker.send_webhook_status(status, color)
 
-    def check_winocr_status(self):
+    def check_rapidocr_status(self):
         try:
-            import winocr
-            return {"installed": True, "version": getattr(winocr, "__version__", "unknown")}
-        except ImportError:
+            import rapidocr_onnxruntime
+            try:
+                from importlib.metadata import version
+                ver = version("rapidocr-onnxruntime")
+            except Exception:
+                ver = "bundled"
+            return {"installed": True, "version": ver}
+        except Exception:
             return {"installed": False, "version": None}
-        except Exception as e:
-            return {"installed": False, "version": None, "error": str(e)}
 
     def test_webhook(self, url): return True  # placeholder
 
@@ -1092,9 +1494,8 @@ class Api:
                  try:
                     keybind = self._tracker.aura_record_keybind_var.get()
                     if not keybind: return
-                    keys = [key.strip() for key in keybind.split('+')]
                     time.sleep(2)
-                    pyautogui.hotkey(*keys)
+                    self._tracker._press_hotkey_via_pynput(keybind)
                  except Exception as e:
                     print(f"Error testing aura keybind: {e}")
              threading.Thread(target=test_record, daemon=True).start()
@@ -1105,9 +1506,8 @@ class Api:
                  try:
                     keybind = self._tracker.rarest_biome_keybind_var.get()
                     if not keybind: return
-                    keys = [key.strip() for key in keybind.split('+')]
                     time.sleep(2)
-                    pyautogui.hotkey(*keys)
+                    self._tracker._press_hotkey_via_pynput(keybind)
                  except Exception as e:
                     print(f"Error testing biome keybind: {e}")
              threading.Thread(target=test_record, daemon=True).start()
@@ -1157,6 +1557,7 @@ class Api:
                 {"key": "fishing_shop_first_fish", "label": "First Fish In Shop", "value": cfg.get("fishing_shop_first_fish", [827, 404])},
                 {"key": "fishing_shop_sell_all_button", "label": "Sell All Button", "value": cfg.get("fishing_shop_sell_all_button", [662, 799])},
                 {"key": "fishing_confirm_sell_all_button", "label": "Confirm Sell All Button", "value": cfg.get("fishing_confirm_sell_all_button", [800, 619])},
+                {"key": "fishing_bugged_ui_pos", "label": "Bugged Fishing UI (click when stuck)", "value": cfg.get("fishing_bugged_ui_pos", [1167, 477])},
             ]
             self._calib_mgr.request_display_many(items=items, duration_ms=duration_ms)
             return True
@@ -1166,13 +1567,15 @@ class Api:
 
 def launch_app(api_class, tracker=None):
     tracker = tracker or BiomeTracker()
+    tracker.debug_mode = debug_mode
     api = api_class(tracker)
-    tracker.on_stats_update = api._emit_config_update
+    tracker.on_stats_update = api._emit_stats_update
     tracker.on_biome_update = api._emit_biome_update
     tracker.on_update_available = api._emit_update_available
     tracker.on_update_status = api._emit_update_status
     tracker.on_biome_confirm_request = api._request_biome_confirm
     tracker.on_status_change = lambda status: api._emit_macro_status()
+    tracker.on_merchant_cache_event = api._on_merchant_cache_event
 
     fe = get_frontend_entry()
     win_args = {
@@ -1187,6 +1590,8 @@ def launch_app(api_class, tracker=None):
 
     window = webview.create_window(**win_args)
     api.set_window(window)
+    if "--coteab-start-after-restart" in sys.argv:
+        threading.Timer(1.0, api.start_from_hotkey).start()
 
     # F1 = start, F2 = stop
     _VK_F1 = 0x70
@@ -1206,8 +1611,7 @@ def launch_app(api_class, tracker=None):
                     def _do_start():
                         try:
                             if not api._tracker.detection_running:
-                                api.set_biome_detection(True)
-                                api._emit_shortcut("START")
+                                api.start_from_hotkey()
                         except Exception:
                             pass
                     threading.Thread(target=_do_start, daemon=True).start()
@@ -1256,7 +1660,17 @@ def stop_app(tracker):
 
 def main():
     ensure_workspace_files()
-    
+
+    # ---- Beta whitelist----
+    # try:
+    #     from biome_tracker.beta_auth import show_auth_popup
+    #     if not show_auth_popup():
+    #         print("[BetaAuth] Access denied or cancelled. Exiting.")
+    #         return 0
+    # except Exception as e:
+    #     print(f"[BetaAuth] Auth module error: {e}")
+    #     traceback.print_exc()
+
     tracker = None
     api = Api(tracker=None)
     api._setup_emergency_server()
@@ -1275,12 +1689,12 @@ def main():
 
         window = webview.create_window(**win_args)
         api._window = window
-
         def _background_init():
             nonlocal tracker
             try:
                 from biome_tracker.core import BiomeTracker
                 tracker = BiomeTracker()
+                tracker.debug_mode = debug_mode
                 canonical = _read_cli_value("--coteab-target", "CoteabMacro.exe")
                 old_pid_raw = _read_cli_value("--coteab-old-pid", "")
                 try: old_pid = int(old_pid_raw) if old_pid_raw else None
@@ -1296,15 +1710,21 @@ def main():
                         return
 
                 api._tracker = tracker
-                tracker.on_stats_update = api._emit_config_update
+                if not api.config_dirty:
+                    api.reset_config_baseline()
+                tracker.on_stats_update = api._emit_stats_update
                 tracker.on_biome_update = api._emit_biome_update
                 tracker.on_update_available = api._emit_update_available
                 tracker.on_update_status = api._emit_update_status
                 tracker.on_biome_confirm_request = api._request_biome_confirm
                 tracker.on_status_change = lambda status: api._emit_macro_status()
+                tracker.on_merchant_cache_event = api._on_merchant_cache_event
                 tracker.on_remote_start = lambda: api.set_biome_detection(True)
                 tracker.on_remote_stop = lambda: api.set_biome_detection(False)
+                tracker._fishing_api = api
                 api.set_window(window)
+                if "--coteab-start-after-restart" in sys.argv:
+                    threading.Timer(1.0, api.start_from_hotkey).start()
 
             except Exception as exc:
                 print(f"Background init error: {exc}")
@@ -1324,30 +1744,19 @@ def main():
                     if api._tracker is None:
                         _hotkey_stop.wait(0.2)
                         continue
-
                     f1_now = bool(_user32.GetAsyncKeyState(_VK_F1) & 0x8000)
                     f2_now = bool(_user32.GetAsyncKeyState(_VK_F2) & 0x8000)
-
-                    if f1_now and not f1_was:
-                        def _do_start():
-                            try:
-                                if not api._tracker.detection_running:
-                                    api.set_biome_detection(True)
-                                    api._emit_shortcut("START")
-                            except Exception:
-                                pass
-                        threading.Thread(target=_do_start, daemon=True).start()
-
-                    if f2_now and not f2_was:
-                        def _do_stop():
-                            try:
-                                if api._tracker.detection_running:
-                                    api.set_biome_detection(False)
-                                    api._emit_shortcut("STOP")
-                            except Exception:
-                                pass
-                        threading.Thread(target=_do_stop, daemon=True).start()
-
+                    if f1_now and not f1_was and api._tracker and not api._tracker.detection_running:
+                        try:
+                            api.start_from_hotkey()
+                        except Exception as e:
+                            print(f"[Hotkey] Start failed: {e}")
+                    if f2_now and not f2_was and api._tracker and api._tracker.detection_running:
+                        try:
+                            api.set_biome_detection(False)
+                            api._emit_shortcut("STOP")
+                        except Exception as e:
+                            print(f"[Hotkey] Stop failed: {e}")
                     f1_was = f1_now
                     f2_was = f2_now
                 except Exception:

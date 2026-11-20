@@ -44,13 +44,11 @@ class ConfigMixin:
             "auto_update_enabled": self.auto_update_enabled_var.get() if hasattr(self, "auto_update_enabled_var") else self.config.get("auto_update_enabled", True),
             "anti_afk": self.anti_afk_var.get(),
             "enable_idle_mode": self.macro_idle_mode_var.get() if hasattr(self, "macro_idle_mode_var") else self.config.get("enable_idle_mode", False),
-            "auto_roblox_fullscreen": self.auto_roblox_fullscreen_var.get() if hasattr(self, "auto_roblox_fullscreen_var") else self.config.get("auto_roblox_fullscreen", False),
+            "auto_roblox_fullscreen": self.auto_roblox_fullscreen_var.get() if hasattr(self, "auto_roblox_fullscreen_var") else self.config.get("auto_roblox_fullscreen", True),
             "enable_glitch_effect": self.enable_glitch_effect_var.get() if hasattr(self, "enable_glitch_effect_var") else self.config.get("enable_glitch_effect", False),
             "auto_chat_close": self.config.get("auto_chat_close", False),
             "azerty_mode": self.azerty_mode_var.get() if hasattr(self, "azerty_mode_var") else self.config.get("azerty_mode", False),
             "fishing_mode": self.config.get("fishing_mode", False),
-            "fishing_use_merchant_ocr_every_x_fish": self.config.get("fishing_use_merchant_ocr_every_x_fish", False),
-            "fishing_merchant_ocr_every_x_fish_amt": self.config.get("fishing_merchant_ocr_every_x_fish_amt", "30"),
             "fishing_ui_nav_close": self.fishing_ui_nav_close_var.get() if hasattr(self, "fishing_ui_nav_close_var") else self.config.get("fishing_ui_nav_close", False),
 
             # ── Item Use (BR / SC / MT) ──
@@ -62,7 +60,6 @@ class ConfigMixin:
             "merchant_teleporter": self.mt_var.get(),
             "mt_duration": self.mt_duration_var.get(),
             "merchant_ocr": self.config.get("merchant_ocr", False),
-            "merchant_ocr_interval": self.config.get("merchant_ocr_interval", "60"),
             "auto_merchant_in_limbo": self.auto_merchant_in_limbo_var.get(),
             "merchant_extra_slot": self.merchant_extra_slot_var.get(),
 
@@ -94,19 +91,13 @@ class ConfigMixin:
             "ping_rin": self.ping_rin_var.get(),
             "rin_user_id": self.rin_user_id_var.get(),
             "merchant_open_button": self.config.get("merchant_open_button", [579, 906]),
-            "jester_exchange_button": self.config.get("jester_exchange_button", [851, 880]),
-            "jester_exchange_count": self.config.get("jester_exchange_count", 0),
-            "enable_jester_exchange": self.enable_jester_exchange_var.get() if hasattr(self, "enable_jester_exchange_var") else self.config.get("enable_jester_exchange", False),
-            "jester_exchange_threshold": self.jester_exchange_threshold_var.get() if hasattr(self, "jester_exchange_threshold_var") else self.config.get("jester_exchange_threshold", "3"),
-            "Jester_Exchange_Items": self.config.get("Jester_Exchange_Items", {}),
             "merchant_dialogue_box": self.config.get("merchant_dialogue_box", [1114, 796]),
             "purchase_amount_button": self.config.get("purchase_amount_button", [700, 584]),
             "purchase_button": self.config.get("purchase_button", [739, 635]),
             "autobuy_set_to_max_button": self.config.get("autobuy_set_to_max_button", [1333, 595]),
-            "jester_exchange_set_to_max_button": self.config.get("jester_exchange_set_to_max_button", [1627, 593]),
             "first_item_merchant_slot_pos": self.config.get("first_item_merchant_slot_pos", [954, 696]),
             "merchant_name_ocr_pos": self.config.get("merchant_name_ocr_pos", [746, 680, 103, 32]),
-            "item_name_ocr_pos": self.config.get("item_name_ocr_pos", [728, 731, 218, 24]),
+            "item_name_ocr_pos": self.config.get("item_name_ocr_pos", [870, 697, 946, 48]),
             "merchant_close_button": self.config.get("merchant_close_button", [1086, 342]),
 
             # ── Aura Detection ──
@@ -121,7 +112,6 @@ class ConfigMixin:
             "aura_detection_screenshot": self.aura_screenshot_var.get(),
             "record_rare_biome": self.record_rarest_biome_var.get(),
             "rare_biome_record_keybind": self.rarest_biome_keybind_var.get(),
-            "rare_biome_screenshot": self.rare_biome_screenshot_var.get() if hasattr(self, "rare_biome_screenshot_var") else self.config.get("rare_biome_screenshot", False),
 
             # ── Periodical Screenshots ──
             "periodical_aura_screenshot": self.periodical_aura_var.get() if hasattr(self, "periodical_aura_var") else self.config.get("periodical_aura_screenshot", False),
@@ -156,6 +146,10 @@ class ConfigMixin:
             # ── Quest System ──
             "auto_claim_daily_quests": self.auto_claim_quests_var.get() if hasattr(self, "auto_claim_quests_var") else self.config.get("auto_claim_daily_quests", False),
             "auto_claim_interval": self.auto_claim_interval_var.get() if hasattr(self, "auto_claim_interval_var") else self.config.get("auto_claim_interval", "30"),
+            "claim_daily_rewards": self.config.get("claim_daily_rewards", True),
+            "claim_daily_rewards_delay": self.config.get("claim_daily_rewards_delay", 0.4),
+            "daily_reward_claim_button": self.config.get("daily_reward_claim_button", [964, 661]),
+            "daily_reward_close_button": self.config.get("daily_reward_close_button", [1418, 395]),
             "quest_menu": self.config.get("quest_menu", [0, 0]),
             "quest1_button": self.config.get("quest1_button", [0, 0]),
             "quest2_button": self.config.get("quest2_button", [0, 0]),
@@ -196,14 +190,17 @@ class ConfigMixin:
             "fishing_shop_first_fish": self.config.get("fishing_shop_first_fish", [827, 404]),
             "fishing_shop_sell_all_button": self.config.get("fishing_shop_sell_all_button", [662, 799]),
             "fishing_confirm_sell_all_button": self.config.get("fishing_confirm_sell_all_button", [800, 619]),
+            "fishing_bugged_ui_pos": self.config.get("fishing_bugged_ui_pos", [1167, 477]),
             "fishing_failsafe_rejoin": self.config.get("fishing_failsafe_rejoin", False),
+            "fishing_path_on_start": self.config.get("fishing_path_on_start", True),
+            "fishing_bugged_ui_rejoin_failsafe": self.config.get("fishing_bugged_ui_rejoin_failsafe", True),
             "fishing_enable_selling": self.config.get("fishing_enable_selling", False),
+            "fishing_sell_on_rejoin": self.config.get("fishing_sell_on_rejoin", True),
             "fishing_sell_after_x_fish": self.config.get("fishing_sell_after_x_fish", "30"),
             "fishing_sell_how_many_fish": self.config.get("fishing_sell_how_many_fish", "1"),
             "fishing_equip_aura_before_movement": self.config.get("fishing_equip_aura_before_movement", False),
             "fishing_movement_aura_name": self.config.get("fishing_movement_aura_name", ""),
-            "fishing_use_merchant_every_x_fish": self.config.get("fishing_use_merchant_every_x_fish", False),
-            "fishing_merchant_every_x_fish": self.config.get("fishing_merchant_every_x_fish", "30"),
+            "fishing_auto_merchant": self.config.get("fishing_auto_merchant", self.config.get("fishing_use_merchant_every_x_fish", False)),
             "fishing_use_br_sc_every_x_fish": self.config.get("fishing_use_br_sc_every_x_fish", False),
             "fishing_br_sc_every_x_fish": self.config.get("fishing_br_sc_every_x_fish", "30"),
             "fishing_actions_delay_ms": self.config.get("fishing_actions_delay_ms", "100"),
@@ -315,6 +312,8 @@ class ConfigMixin:
                     "Xyz Potion": [ False, 1 ]
                 },
                 "auto_claim_daily_quests": False,
+                "claim_daily_rewards": True,
+                "claim_daily_rewards_delay": 0.4,
                 "auto_claim_interval": "30",
                 "auto_merchant_in_limbo": False,
                 "auto_obby_interval": "25",
@@ -327,7 +326,7 @@ class ConfigMixin:
                 "biome_counts": {
                     "AURORA": 0, "CORRUPTION": 0, "CYBERSPACE": 0, "DREAMSPACE": 0,
                     "GLITCHED": 0, "HEAVEN": 0, "HELL": 0, "NORMAL": 0, "NULL": 0,
-                    "RAINY": 0, "SAND STORM": 0, "SNOWY": 0, "STARFALL": 0, "WINDY": 0
+                    "RAINY": 0, "SAND STORM": 0, "SNOWY": 0, "STARFALL": 0, "WINDY": 0, "SINGULARITY": 0, "BLAZING SUN": 0
                 },
                 "biome_notifier": {
                     "CORRUPTION": "Message", "CYBERSPACE": "Message", "DREAMSPACE": "Message",
@@ -353,6 +352,7 @@ class ConfigMixin:
                     "RAINY": { "color": "0x027cbd", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/RAINY.png" },
                     "SAND STORM": { "color": "0x8F7057", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SAND%20STORM.png" },
                     "SINGULARITY": { "color": "0xcf4023", "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/SINGULARITY.png" },
+                    "BLAZING SUN": { "color": "0xFF8C00", "thumbnail_url": "https://raw.githubusercontent.com/vexsyx/OysterDetector/refs/heads/main/assets/blazing%20sun.png" },
                     "SNOWY": { "color": "0xDceff9", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/SNOWY.png" },
                     "STARFALL": { "color": "0x011ab7", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/STARFALL.png" },
                     "WINDY": { "color": "0xF2F6FF", "thumbnail_url": "https://maxstellar.github.io/biome_thumb/WINDY.png" }
@@ -387,14 +387,17 @@ class ConfigMixin:
                 "fishing_shop_first_fish": [ 827, 404 ],
                 "fishing_shop_sell_all_button": [ 662, 799 ],
                 "fishing_confirm_sell_all_button": [ 800, 619 ],
+                "fishing_bugged_ui_pos": [ 1167, 477 ],
                 "fishing_failsafe_rejoin": False,
+                "fishing_sell_on_rejoin": True,
+                "fishing_path_on_start": True,
+                "fishing_bugged_ui_rejoin_failsafe": True,
                 "fishing_enable_selling": False,
                 "fishing_sell_after_x_fish": "30",
                 "fishing_sell_how_many_fish": "1",
                 "fishing_equip_aura_before_movement": False,
                 "fishing_movement_aura_name": "",
-                "fishing_use_merchant_every_x_fish": False,
-                "fishing_merchant_every_x_fish": "30",
+                "fishing_auto_merchant": False,
                 "fishing_use_br_sc_every_x_fish": False,
                 "fishing_br_sc_every_x_fish": "30",
                 "fishing_actions_delay_ms": "100",
@@ -414,11 +417,6 @@ class ConfigMixin:
                 "item_name_ocr_pos": [ 1095, 348, 389, 46 ],
                 "items_tab": [ 1267, 313 ],
                 "jester_user_id": "",
-                "jester_exchange_button": [851, 880],
-                "jester_exchange_count": 0,
-                "enable_jester_exchange": False,
-                "jester_exchange_threshold": "3",
-                "Jester_Exchange_Items": {},
                 "macro_last_start": "",
                 "mari_user_id": "",
                 "merchant_close_button_pos": [ 1811, 325 ],
@@ -428,6 +426,7 @@ class ConfigMixin:
                 "merchant_name_ocr_pos": [ 740, 651, 141, 54 ],
                 "merchant_open_button": [ 629, 895 ],
                 "merchant_teleporter": False,
+                "merchant_ocr": True,
                 "mt_duration": "1",
                 "periodical_aura_interval": "25",
                 "periodical_aura_screenshot": False,
@@ -451,14 +450,12 @@ class ConfigMixin:
                 "purchase_amount_button": [ 1101, 594 ],
                 "purchase_button": [ 1172, 637 ],
                 "autobuy_set_to_max_button": [1333, 595],
-                "jester_exchange_set_to_max_button": [1627, 593],
                 "quest1_button": [ 1042, 511 ],
                 "quest2_button": [ 1062, 596 ],
                 "quest3_button": [ 1138, 659 ],
                 "quest_menu": [ 35, 607 ],
                 "quest_reroll_button": [ 615, 534 ],
                 "rare_biome_record_keybind": "F8",
-                "rare_biome_screenshot": True,
                 "reconnect_start_button": [ 271, 942 ],
                 "record_rare_biome": False,
                 "remote_access_enabled": False,
@@ -478,7 +475,7 @@ class ConfigMixin:
                 "use_button": [ 678, 563 ],
                 "use_float_aura": False,
                 "enable_idle_mode": False,
-                "auto_roblox_fullscreen": False,
+                "auto_roblox_fullscreen": True,
                 "auto_chat_close": False,
                 "enable_obby_path": False,
                 "obby_claim_interval": "15",
@@ -517,15 +514,21 @@ class ConfigMixin:
                 "quest2_button": [894, 612],
                 "quest3_button": [871, 668],
                 "claim_quest_button": [616, 770],
+                "daily_reward_claim_button": [964, 661],
+                "daily_reward_close_button": [1418, 395],
                 "quest_reroll_button": [622, 566],
                 "merchant_open_button": [595, 942],
                 "merchant_dialogue_box": [975, 810],
                 "purchase_amount_button": [1055, 609],
                 "purchase_button": [1180, 655],
-                "first_item_merchant_slot_pos": [907, 716],
+                "first_item_merchant_slot_pos": [907, 719],
+                "second_item_merchant_slot_pos": [1015, 719],
+                "third_item_merchant_slot_pos": [1123, 719],
+                "fourth_item_merchant_slot_pos": [1231, 719],
+                "fifth_item_merchant_slot_pos": [1339, 719],
                 "merchant_close_button": [1810, 347],
                 "merchant_name_ocr_pos": [731, 682, 278, 52],
-                "item_name_ocr_pos": [1106, 372, 708, 35],
+                "item_name_ocr_pos": [870, 697, 946, 48],
                 "glitched_menu_button": [37, 674],
                 "glitched_settings_button": [964, 590],
                 "glitched_buff_enable_button": [929, 653],
@@ -568,6 +571,12 @@ class ConfigMixin:
             if not disk_config:
                 needs_save = True
 
+            if any(key not in disk_config for key in ("claim_daily_rewards", "claim_daily_rewards_delay", "daily_reward_claim_button", "daily_reward_close_button")):
+                needs_save = True
+
+            if any(key not in disk_config for key in ("fishing_sell_on_rejoin", "fishing_path_on_start")):
+                needs_save = True
+
             # Merge disk_config into default_config (1 level deep overwrite is fine for our usage here, but we will preserve nested dicts like biome_counts)
             for k, v in disk_config.items():
                 if isinstance(v, dict) and k in default_config and isinstance(default_config[k], dict):
@@ -575,6 +584,16 @@ class ConfigMixin:
                 else:
                     default_config[k] = v
             
+            if not disk_config.get("merchant_ocr_default_migrated", False):
+                default_config["merchant_ocr"] = True
+                default_config["merchant_ocr_default_migrated"] = True
+                needs_save = True
+
+            if not disk_config.get("auto_roblox_fullscreen_default_migrated", False):
+                default_config["auto_roblox_fullscreen"] = True
+                default_config["auto_roblox_fullscreen_default_migrated"] = True
+                needs_save = True
+
             # Optional backwards-compatibility hook for very old biome counts or webhook logic
             raw_webhook = default_config.get("webhook_url", [])
             if isinstance(raw_webhook, str):
@@ -582,6 +601,14 @@ class ConfigMixin:
 
             deprecated_keys = ()
             for key in deprecated_keys:
+                if key in default_config:
+                    default_config.pop(key, None)
+                    needs_save = True
+
+            if "fishing_auto_merchant" not in disk_config and "fishing_use_merchant_every_x_fish" in disk_config:
+                default_config["fishing_auto_merchant"] = bool(disk_config.get("fishing_use_merchant_every_x_fish", False))
+                needs_save = True
+            for key in ("fishing_use_merchant_every_x_fish", "fishing_merchant_every_x_fish", "fishing_use_merchant_ocr_every_x_fish", "fishing_merchant_ocr_every_x_fish_amt"):
                 if key in default_config:
                     default_config.pop(key, None)
                     needs_save = True
@@ -617,7 +644,7 @@ class ConfigMixin:
                 self.error_logging(e, "Error at loading config")
             except Exception:
                 pass
-            return {"biome_counts": {}, "session_time": "0:00:00"}
+            return {"biome_counts": {}, "session_time": "00:00:00"}
 
     def import_config(self):
         try:
@@ -664,8 +691,7 @@ class ConfigMixin:
             self.auto_reconnect_var.set(config.get("auto_reconnect", False))
             self.player_logger_var.set(config.get("player_logger", True))
             self.anti_afk_var.set(config.get("anti_afk", True))
-            if hasattr(self, "rare_biome_screenshot_var"): self.rare_biome_screenshot_var.set(config.get("rare_biome_screenshot", False))
-            if hasattr(self, "auto_roblox_fullscreen_var"): self.auto_roblox_fullscreen_var.set(config.get("auto_roblox_fullscreen", False))
+            if hasattr(self, "auto_roblox_fullscreen_var"): self.auto_roblox_fullscreen_var.set(config.get("auto_roblox_fullscreen", True))
             if hasattr(self, "auto_update_enabled_var"): self.auto_update_enabled_var.set(config.get("auto_update_enabled", True))
             if hasattr(self, "enable_glitch_effect_var"): self.enable_glitch_effect_var.set(config.get("enable_glitch_effect", False))
             self.click_delay_var.set(config.get("inventory_click_delay", "0"))

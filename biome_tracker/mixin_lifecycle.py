@@ -10,6 +10,7 @@ class LifecycleMixin:
 
         self.logs_dir = os.path.join(os.getenv('LOCALAPPDATA'), 'Roblox', 'logs')
         self.config = self.load_config()
+        install_idle_mouse_guard(self)
         raw_webhook = self.config.get("webhook_url", "")
         if isinstance(raw_webhook, list):
             self.webhook_urls = [u for u in raw_webhook if isinstance(u, str) and u.strip()]
@@ -71,7 +72,7 @@ class LifecycleMixin:
         self.config["merchant_counts"] = self.merchant_counts
 
         self.start_time = None
-        self.saved_session = self.parse_session_time(self.config.get("session_time", "0:00:00"))
+        self.saved_session = self.parse_session_time(self.config.get("session_time", "00:00:00"))
         self._session_window_reset_performed = False
         self.current_session = 0
         self.session_window_start = None
@@ -91,11 +92,21 @@ class LifecycleMixin:
         self._stop_player_logger_thread()
         self.detection_thread = None
         self.lock = threading.Lock()
+        self._detection_start_lock = threading.Lock()
+        self._detection_threads = []
+        self._detection_stop_event = threading.Event()
+        self._anti_afk_wake_event = threading.Event()
         self.logs = self.load_logs()
         self.player_log_queue = queue.Queue()
         self.player_log_send_delay = float(self.config.get("player_log_send_delay", 2.0))
         self.biome_history = []
         self.player_log_sender_running = False
+        self._biome_webhook_queue = queue.Queue(maxsize=100)
+        threading.Thread(
+            target=self._biome_webhook_sender_loop,
+            daemon=True,
+            name="BiomeWebhookSender",
+        ).start()
 
         # item use
         self.last_br_time = datetime.min
@@ -111,6 +122,21 @@ class LifecycleMixin:
         self._mt_running = getattr(self, "_mt_running", False)
         self.auto_pop_state = getattr(self, "auto_pop_state", False)
         self._action_scheduler = ActionScheduler(self)
+        self._daily_reward_state_lock = threading.Lock()
+        self._daily_reward_wake_event = threading.Event()
+        self._daily_reward_stop_event = threading.Event()
+        self._daily_reward_claim_stop_event = threading.Event()
+        self._daily_reward_clock_started = False
+        self._daily_reward_time_synced = threading.Event()
+        self._daily_reward_claim_pending = False
+        self._daily_reward_initial_claim_pending = False
+        self._daily_reward_initial_claim_done = threading.Event()
+        self._daily_reward_initial_claim_inflight = threading.Event()
+        self._daily_reward_reconnect_claim_pending = False
+        self._daily_reward_reconnect_claim_done = threading.Event()
+        self._daily_reward_next_claim_at = None
+        self._daily_reward_pause_requested = threading.Event()
+        self._daily_reward_fishing_paused = threading.Event()
         # Buff variables
         self.auto_pop_state = False
         self.buff_vars = {}
@@ -132,7 +158,21 @@ class LifecycleMixin:
         self._eden_running = False
         self._eden_path_pending = False
         self._potion_thread_active = False
+        self._potion_gen = 0
+        self._potion_active_gen = None
+        self._potion_craft_thread = None
+        self._potion_craft_worker_gen = 0
+        self._potion_craft_lock = threading.Lock()
         self._fishing_busy = False
+        self._fishing_worker_active = False
+        self._fishing_action_queue = queue.Queue()
+        self._fishing_action_pending = set()
+        self._fishing_action_lock = threading.RLock()
+        self._fishing_action_override = False
+        self._merchant_log_event_queued = False
+        self._merchant_log_event_pending = False
+        self._merchant_log_event_name = ""
+        self._merchant_log_event_pending_name = ""
         self.last_egg_collect_time = datetime.min
         screenshot_dir = os.path.join(os.getcwd(), "images")
         try:
@@ -167,7 +207,7 @@ class LifecycleMixin:
         self.anti_afk_interval_var = ConfigVar(self.config, "anti_afk_interval", "5")
         self.auto_reconnect_var   = ConfigVar(self.config, "auto_reconnect", False)
         self.macro_idle_mode_var  = ConfigVar(self.config, "enable_idle_mode", False)
-        self.auto_roblox_fullscreen_var = ConfigVar(self.config, "auto_roblox_fullscreen", False)
+        self.auto_roblox_fullscreen_var = ConfigVar(self.config, "auto_roblox_fullscreen", True)
         self.auto_chat_close_var  = ConfigVar(self.config, "auto_chat_close", False)
         self.auto_pop_glitched_var = ConfigVar(self.config, "auto_pop_glitched", False)
         self.enable_aura_detection_var = ConfigVar(self.config, "enable_aura_detection", False)
@@ -181,6 +221,7 @@ class LifecycleMixin:
         self.periodical_inventory_interval_var = ConfigVar(self.config, "periodical_inventory_interval", "5")
         self.auto_merchant_in_limbo_var = ConfigVar(self.config, "auto_merchant_in_limbo", False)
         self.auto_claim_quests_var     = ConfigVar(self.config, "auto_claim_daily_quests", False)
+        self.claim_daily_rewards_var   = ConfigVar(self.config, "claim_daily_rewards", True)
         self.auto_claim_interval_var   = ConfigVar(self.config, "auto_claim_interval", "30")
         self.enable_snowman_var         = ConfigVar(self.config, "enable_snowman_path", False)
         self.snowman_claim_interval_var = ConfigVar(self.config, "snowman_claim_interval", "15")
@@ -205,8 +246,6 @@ class LifecycleMixin:
         self.mari_user_id_var           = ConfigVar(self.config, "mari_user_id", "")
         self.ping_jester_var            = ConfigVar(self.config, "ping_jester", False)
         self.jester_user_id_var         = ConfigVar(self.config, "jester_user_id", "")
-        self.enable_jester_exchange_var = ConfigVar(self.config, "enable_jester_exchange", False)
-        self.jester_exchange_threshold_var = ConfigVar(self.config, "jester_exchange_threshold", "3")
         self.ping_rin_var               = ConfigVar(self.config, "ping_rin", False)
         self.rin_user_id_var            = ConfigVar(self.config, "rin_user_id", "")
         self.merchant_extra_slot_var    = ConfigVar(self.config, "merchant_extra_slot", "0")
@@ -224,8 +263,6 @@ class LifecycleMixin:
         
         if not hasattr(self, "remote_command_queue"):
             self.remote_command_queue = queue.Queue()
-        if not hasattr(self, "_remote_check_merchant_results"):
-            self._remote_check_merchant_results = {}
         if not hasattr(self, "_help_command_list"):
             self._help_command_list = [
                 ("start", "", "Start the macro (biome detection)."),
@@ -235,9 +272,10 @@ class LifecycleMixin:
                 ("screenshot", "[target]", "Take an in-game screenshot and send it to you."),
                 ("equip_aura", "{name}", "Search for and equip an aura by name."),
                 ("reroll_quest", "{quest name}", "Reroll a daily quest."),
-                ("check_merchant", "", "Use merchant teleporter and check for merchant."),
                 ("use", "{item_name} {amount}", "Use an item remotely."),
                 ("rejoin", "", "Close Roblox to force rejoin (requires Auto Reconnect enabled)."),
+                ("clip", "", "Trigger the configured clipping keybind. The clipping option does not need to be enabled."),
+                ("send_debug_info", "{user}", "Send sanitized config data and macro/error logs to a Discord user by DM."),
             ]
         if not hasattr(self, "remote_worker_running"):
             self.remote_worker_running = False
@@ -265,6 +303,10 @@ class LifecycleMixin:
         except Exception:
             pass
 
+        self.start_daily_reward_clock()
+
+        self.start_merchant_cache_monitor()
+
     def is_fishing_mode_enabled(self):
         try:
             return bool(self.config.get("fishing_mode", False))
@@ -287,6 +329,10 @@ class LifecycleMixin:
 
     def _on_exit_handler(self):
         try:
+            self.stop_daily_reward_clock()
+            self._daily_reward_claim_stop_event.set()
+            self._detection_stop_event.set()
+            self.stop_merchant_cache_monitor()
             self.detection_running = False
             self.player_log_sender_running = False
             self.player_logger_running = False

@@ -73,7 +73,7 @@ export default function CustomizationPage() {
 
         const overridesToSave: Record<string, any> = {};
 
-        // Only save biomes that differ from the GitHub defaults
+
         for (const [biome, data] of Object.entries(biomes)) {
             const def = defaultData[biome] || {};
             const hasColorDiff = data.color !== def.color && data.color !== undefined;
@@ -123,12 +123,12 @@ export default function CustomizationPage() {
         return () => el.removeEventListener("wheel", handleNativeWheel);
     }, [biomeKeys]);
     
-    // Fallbacks just in case
+
     const currentBiomeData = biomes[selectedBiome] || { color: "#ffffff", thumbnail_url: "" };
     const rawColor = currentBiomeData.color || "#ffffff";
     const cssColor = rawColor.startsWith("0x") ? "#" + rawColor.slice(2) : rawColor;
     
-    // current timestamp
+
     const now = new Date();
     const timeOptions: Intl.DateTimeFormatOptions = { 
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', 
@@ -145,7 +145,7 @@ export default function CustomizationPage() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "10px", minHeight: "0", maxWidth: "560px", margin: "0 auto", paddingBottom: "30px" }}>
 
-                {/* TOP: Discord Simulator */}
+
                 <div 
                     style={{ 
                         backgroundColor: "#313338", 
@@ -158,9 +158,9 @@ export default function CustomizationPage() {
                         fontFamily: "'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif"
                     }}
                 >
-                    {/* Simulated Discord Message */}
+
                     <div style={{ display: "flex", gap: "12px", width: "100%" }}>
-                        {/* Avatar */}
+
                         <div style={{ 
                             width: "40px", height: "40px", borderRadius: "50%", 
                             backgroundColor: "#5865F2", flexShrink: 0,
@@ -168,7 +168,7 @@ export default function CustomizationPage() {
                             backgroundSize: "cover"
                         }}></div>
                         
-                        {/* Message Content */}
+
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
                             <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "2px", flexWrap: "wrap" }}>
                                 <span style={{ color: "#F2F3F5", fontSize: "15px", fontWeight: "500", lineHeight: "1.2" }}>Your webhook name go here cuz idk</span>
@@ -180,7 +180,7 @@ export default function CustomizationPage() {
                                 <span style={{ color: "#949BA4", fontSize: "11px", marginLeft: "2px" }}>Today at {now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                             </div>
 
-                            {/* Embed Container */}
+
                             <div style={{ 
                                 backgroundColor: "#2b2d31", 
                                 borderLeft: `4px solid ${cssColor || '#FFFFFF'}`,
@@ -191,7 +191,7 @@ export default function CustomizationPage() {
                             }}>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1, minWidth: 0 }}>
                                     
-                                    {/* Embed Title (Timestamp markdown emulation) */}
+
                                     <div style={{ 
                                         color: "#F2F3F5", 
                                         fontSize: "14px", 
@@ -208,14 +208,14 @@ export default function CustomizationPage() {
                                         </span>
                                     </div>
 
-                                    {/* Embed Description (Markdown Emulation) */}
+
                                     <div style={{ 
                                         fontSize: "13px", 
                                         color: "#DBDEE1", 
                                         lineHeight: "1.2",
                                         whiteSpace: "pre-wrap"
                                     }}>
-                                        {/* Blockquote wrapper */}
+
                                         <div style={{
                                             borderLeft: "4px solid #4e5058",
                                             padding: "0 10px",
@@ -245,7 +245,7 @@ export default function CustomizationPage() {
                                         </div>
                                     </div>
 
-                                    {/* Footer */}
+
                                     <div style={{ 
                                         display: "flex", 
                                         alignItems: "center", 
@@ -257,7 +257,7 @@ export default function CustomizationPage() {
                                     </div>
                                 </div>
                                 
-                                {/* Thumbnail */}
+
                                 {currentBiomeData.thumbnail_url && (
                                     <div style={{ marginLeft: "12px", flexShrink: 0 }}>
                                         <img 
@@ -278,7 +278,7 @@ export default function CustomizationPage() {
                     </div>
                 </div>
                 
-                {/* MIDDLE: Select Biome */}
+
                 <div className="card" title="Scroll with your mouse wheel here to quickly cycle through biomes!">
                     <label className="form-label" style={{ display: "flex", justifyContent: "space-between" }}>
                         Select Biome
@@ -297,7 +297,7 @@ export default function CustomizationPage() {
                     </select>
                 </div>
 
-                {/* BOTTOM: Config Inputs */}
+
                 <div className="card" style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
                         <div>
                             <label className="form-label" style={{ display: "flex", justifyContent: "space-between" }}>

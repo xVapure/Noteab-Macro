@@ -349,13 +349,12 @@ class GuiMixin:
         self.remote_status_label = ttk.Label(frame, text="Bot: stopped")
         self.remote_status_label.pack(anchor="w", padx=8, pady=(6,0))
         self.remote_command_queue = queue.Queue()
-        self._remote_check_merchant_results = {}
         self._help_command_list = [
-            ("screenshot", "", "Take current ingame screenshot and send to webhooks. For inventory/aura screenshot, you'll need periodical inventory screenshot/aura enabled. For full screenshot you need neither of them."),
+            ("screenshot", "", "Take current ingame screenshot and send to webhooks. Inventory and aura screenshots do not require periodic screenshot options."),
             ("reroll_quest", "{quest name}", "Reroll a daily quest. Quest 1 is the first quest on the list and so on."),
-            ("check_merchant", "", "Use merchant teleporter immediately and check whether if a merchant has spawned or not."),
             ("use", "{item_name} {amount}", "Use item remotely."),
             ("rejoin", "", "Close Roblox to force rejoin (requires Auto Reconnect enabled)."),
+            ("clip", "", "Trigger the configured clipping keybind. The clipping option does not need to be enabled."),
         ]
         self.remote_worker_running = False
         self.remote_bot_thread = None
@@ -716,7 +715,7 @@ class GuiMixin:
         auto_claim_interval_entry.grid(row=11, column=2, padx=5, pady=5, sticky="w")
         auto_claim_interval_entry.bind("<FocusOut>", lambda event: self.save_config())
         ttk.Label(hp2_frame, text="### MACRO IDLE MODE ###").grid(row=12, column=0, padx=5, sticky="w")
-        self.macro_idle_mode_var = ttk.BooleanVar(value=self.config.get("macro_idle_mode", False))
+        self.macro_idle_mode_var = ttk.BooleanVar(value=self.config.get("enable_idle_mode", False))
         macro_idle_mode_check = ttk.Checkbutton(
             hp2_frame,
             text="Enable macro idle mode (it will disable all mouse actions and make the macro do nothing aside from detecting biomes/auras)",

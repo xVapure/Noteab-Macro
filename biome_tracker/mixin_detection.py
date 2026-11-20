@@ -5,7 +5,7 @@ class DetectionMixin:
         if os.path.exists('macro_logs.txt'):
             with open('macro_logs.txt', 'r', encoding='utf-8', errors='ignore') as file:
                 lines = file.read().splitlines()
-                return lines
+                return lines[-1000:]
         return []
 
     def load_biome_data(self):
@@ -64,7 +64,11 @@ class DetectionMixin:
             "CYBERSPACE": {
                 "color": "0x0A1A3D",
                 "thumbnail_url": "https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/images/CYBERSPACE.png"
-            }
+            }, 
+            "BLAZING SUN": {
+                "color": "0xffb300",
+                "thumbnail_url": "https://raw.githubusercontent.com/vexsyx/OysterDetector/refs/heads/main/assets/blazing%20sun.png"
+            },
         }
 
         try:
@@ -111,7 +115,7 @@ class DetectionMixin:
 
         return data
 
-    def error_logging(self, exception, custom_message=None, max_log_size=3 * 1024 * 1024):
+    def error_logging(self, exception, custom_message=None, max_log_size=1 * 1024 * 1024):
         log_file = "error_logs.txt"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         error_type = type(exception).__name__
@@ -143,7 +147,7 @@ class DetectionMixin:
     def save_logs(self):
         log_file_path = 'macro_logs.txt'
 
-        if os.path.exists(log_file_path) and os.path.getsize(log_file_path) > 10 * 1024 * 1024:
+        if os.path.exists(log_file_path) and os.path.getsize(log_file_path) > 1 * 1024 * 1024:
             with open(log_file_path, 'w', encoding='utf-8') as file:
                 file.write("")
 
@@ -366,10 +370,14 @@ class DetectionMixin:
         filtered_logs = [log for log in self.logs if keyword.lower() in log.lower()]
         self.display_logs(filtered_logs)
 
+    def _append_memory_log(self, message):
+        self.logs.append(message)
+        del self.logs[:-1000]
+
     def append_log(self, message):
         timestamp = datetime.now().strftime("%d/%m/%y %H:%M:%S")
         stamped = f"[{timestamp}] {message}"
-        self.logs.append(stamped)
+        self._append_memory_log(stamped)
         try:
             print(f"[log] {stamped}")
         except (UnicodeEncodeError, UnicodeDecodeError):
@@ -392,26 +400,56 @@ class DetectionMixin:
         )
 
     def start_detection(self):
-        with getattr(self, "lock", threading.Lock()):
-            if self.detection_running: return
-            now = datetime.now()
+        startlock = self._detection_start_lock
+        if not startlock.acquire(blocking=False):
+            return
+        try:
+            with self.lock:
+                if self.detection_running:
+                    return
+                oldthreads = list(getattr(self, "_detection_threads", []))
+            for thread in oldthreads:
+                if thread and thread.is_alive() and thread is not threading.current_thread():
+                    thread.join()
+            self._action_scheduler.cancel_pending_and_wait()
+            self._start_detection_transition()
+        finally:
+            startlock.release()
+
+    def _start_detection_transition(self):
+        with self.lock:
+            if self.detection_running:
+                return
+            self._detection_stop_event.clear()
+            self._anti_afk_wake_event.clear()
+            self._daily_reward_claim_stop_event = threading.Event()
+            self._daily_reward_initial_claim_done.clear()
+            self._daily_reward_pause_requested.clear()
+            self._daily_reward_wake_event.set()
+            self._detection_started_at = time.time()
             self.detection_running = True
-            
+            now = datetime.now()
+
         self._start_player_logger_thread()
+        self._egg_collection_pending = False
+        self._eden_checking_pending = False
+        self._eden_checking = False
+        self._eden_path_pending = False
+        self.auto_pop_state = False
+        self._merchant_log_event_queued = False
+        self._merchant_log_event_pending = False
+        self._merchant_log_event_override = False
         self.start_time = now
         self.current_session = 0
         self.has_started_once = True
         self._session_window_reset_performed = False
         self.stop_sent = False
         self.last_egg_collect_time = datetime.min
-
-        # reset disconnect tracking so the macro doesnt log old disconnect 
         self._disconnect_log_file = None
         self._last_position_disconnect = 0
         self._last_disconnect_time = 0
         self._disconnect_handled = False
         self.has_sent_disconnected_message = False
-        self._roblox_fullscreened = False
 
         if not self.session_window_start:
             self.session_window_start = now
@@ -428,10 +466,26 @@ class DetectionMixin:
         self.config["session_window_start"] = self.session_window_start.isoformat()
         self.config["macro_last_start"] = now.isoformat()
         self.save_config()
-        self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
+        self.set_title_threadsafe(f"Coteab Macro {current_ver} (Running)")
         self.send_webhook_status("Macro started!", color=0x64ff5e)
 
-        threads = [
+        try:
+            hwnds = self._find_roblox_hwnds()
+            if hwnds:
+                self._apply_roblox_fullscreen(hwnds[0])
+        except Exception:
+            pass
+
+        self.close_chat_if_open()
+
+        if not self.detection_running or self._detection_stop_event.is_set():
+            return
+        self.request_daily_reward_claim(initial=True)
+        if not self.detection_running or self._detection_stop_event.is_set():
+            return
+
+        funcs = [
+            (self._monitor_roblox_window, "Roblox Window Monitor"),
             (self.check_disconnect_loop, "Disconnect Check"),
             (self.biome_loop_check, "Biome Check"),
             (self.biome_itemchange_loop, "Item Change"),
@@ -440,78 +494,84 @@ class DetectionMixin:
             (self.quest_claim_loop, "Quest Claim"),
             (self.obby_path_loop, "Obby Path"),
             (self.eden_ocr_check_loop, "Eden OCR Check"),
-            (self.merchant_ocr_check_loop, "Merchant OCR Check"),
             (self.eden_contract_loop, "Eden Contract"),
         ]
-
-        for thread_func, name in threads:
-            thread = threading.Thread(target=thread_func, name=name, daemon=True)
+        self._detection_threads = []
+        for func, name in funcs:
+            if not self.detection_running or self._detection_stop_event.is_set():
+                return
+            thread = threading.Thread(target=func, name=name, daemon=True)
+            self._detection_threads.append(thread)
             thread.start()
 
-        # Fire one anti-AFK cycle immediately in background so users
-        # do not need to wait the first 268s interval.
-        try:
-            threading.Thread(
-                target=self.perform_anti_afk_action,
-                name="Anti-AFK Initial",
-                daemon=True,
-            ).start()
-        except Exception:
-            pass
-        
+        if self.detection_running and not self._detection_stop_event.is_set():
+            if self.anti_afk_var.get() and not self.is_fishing_mode_enabled():
+                initial = threading.Thread(target=self.perform_anti_afk_action, name="Anti-AFK Initial", daemon=True)
+                self._detection_threads.append(initial)
+                initial.start()
         print("Biome detection started.")
 
     def stop_detection(self):
-        with getattr(self, "lock", threading.Lock()):
-            if not getattr(self, "detection_running", False): return
+        with self.lock:
+            if not getattr(self, "detection_running", False):
+                return
             self.detection_running = False
-            
+            self._detection_stop_event.set()
+            self._anti_afk_wake_event.set()
+            self._daily_reward_claim_stop_event.set()
+            self._potion_gen = getattr(self, "_potion_gen", 0) + 1
+            self._potion_thread_active = False
+            self._potion_active_gen = None
+            self._potion_craft_worker_gen = getattr(self, "_potion_craft_worker_gen", 0) + 1
+            self._daily_reward_initial_claim_done.set()
+            self._daily_reward_pause_requested.clear()
+            self._daily_reward_wake_event.set()
+
+        self.stop_potion_crafting()
+
+        self._action_scheduler.cancel_pending()
+
         if hasattr(self, "on_status_change") and callable(self.on_status_change):
             try:
                 self.on_status_change("IDLE")
             except Exception:
                 pass
 
-        caller_stack = traceback.extract_stack()
-        if len(caller_stack) >= 2:
-            caller = caller_stack[-2]
-            stop_reason = f"[TRACEBACK] Macro stopped by {caller.filename}:{caller.lineno} in {caller.name}()"
+        callerstack = traceback.extract_stack()
+        if len(callerstack) >= 2:
+            caller = callerstack[-2]
+            reason = f"[TRACEBACK] Macro stopped by {caller.filename}:{caller.lineno} in {caller.name}()"
         else:
-            stop_reason = "[TRACEBACK] Macro stopped (unknown caller)"
+            reason = "[TRACEBACK] Macro stopped (unknown caller)"
         try:
-            self.append_log(stop_reason)
-        except Exception: pass
-        print(stop_reason)
+            self.append_log(reason)
+        except Exception:
+            pass
+        print(reason)
 
         now = datetime.now()
         self._stop_player_logger_thread()
         if getattr(self, "timer_paused_by_disconnect", False):
-            elapsed_time = 0
+            elapsed = 0
             self.timer_paused_by_disconnect = False
+        elif self.start_time:
+            elapsed = int((now - self.start_time).total_seconds())
         else:
-            if self.start_time:
-                elapsed_time = int((now - self.start_time).total_seconds())
-            else:
-                elapsed_time = 0
-
-        session_seconds = elapsed_time
+            elapsed = 0
 
         if self.session_window_start and (now - self.session_window_start).total_seconds() >= 86400:
-            last24h_seconds = session_seconds
+            last24h = elapsed
         else:
-            last24h_seconds = self.saved_session + elapsed_time
-            if last24h_seconds > 86400:
-                last24h_seconds = 86400
+            last24h = min(86400, self.saved_session + elapsed)
 
-        self.saved_session += elapsed_time
+        self.saved_session += elapsed
         self.start_time = None
         self.stop_sent = True
         self.set_title_threadsafe(f"Coteab Macro {current_ver} (Stopped)")
-        self.send_macro_summary(last24h_seconds)
+        self.send_macro_summary(last24h)
         print("closed", self.current_session)
         self.save_config()
         print("Biome detection stopped.")
-
     def get_latest_log_file(self):
         files = [os.path.join(self.logs_dir, f) for f in os.listdir(self.logs_dir) if f.endswith('.log')]
         latest_file = None
@@ -956,29 +1016,7 @@ class DetectionMixin:
                         self.append_log(f"[BiomeConfirm] User chose to stop macro for {biome}.")
                         self.stop_detection()
                         return
-
-                # rare biome sshot       
-                screenshot_path = None
-                if biome in rare_biomes and self.config.get("rare_biome_screenshot", False):
-                    try:
-                        for _ in range(5):
-                            self.activate_roblox_window()
-                            time.sleep(0.75)
-                        screenshot_dir = os.path.join(os.getcwd(), "images")
-                        os.makedirs(screenshot_dir, exist_ok=True)
-                        screenshot_path = os.path.join(screenshot_dir, f"rare_biome_{biome.lower()}_{int(time.time())}.png")
-                        if not self.is_roblox_focused():
-                            self.append_log(f"[Rare Biome Screenshot] Roblox not focused, skipping screenshot")
-                            screenshot_path = None
-                        else:
-                            img = pyautogui.screenshot()
-                            img.save(screenshot_path)
-                            self.append_log(f"[Rare Biome Screenshot] Saved screenshot: {screenshot_path}")
-                    except Exception as e:
-                        self.error_logging(e, "Error taking rare biome screenshot")
-                        screenshot_path = None
-
-                self.send_webhook(biome, message_type, "start", screenshot_path=screenshot_path)
+                self.send_webhook(biome, message_type, "start")
 
             if last_biome in rare_biomes and biome not in rare_biomes:
                 try:
@@ -1004,69 +1042,72 @@ class DetectionMixin:
                                f"Error in handle_biome_detection for biome: {biome}. Hell naw go fix your ass macro noteab! - Wise greenie word")
 
     def biome_loop_check(self):
-        last_log_file = None
-
-        while self.detection_running:
+        lastfile = None
+        stopevent = self._detection_stop_event
+        while self.detection_running and not stopevent.is_set():
             try:
-                current_log_file = self.get_latest_log_file()
-                if current_log_file != last_log_file:
+                currentfile = self.get_latest_log_file()
+                if currentfile != lastfile:
                     self.last_position = 0
-                    last_log_file = current_log_file
-
+                    lastfile = currentfile
                 self.check_biome_in_logs()
                 self.update_session_time()
-                time.sleep(1)
-
-            except Exception as e:
-                self.error_logging(e, "Error in biome_loop_check function.")
-
+                if stopevent.wait(1):
+                    return
+            except Exception as error:
+                self.error_logging(error, "Error in biome_loop_check function.")
+                if stopevent.wait(1):
+                    return
     def aura_loop_check(self):
-        last_log_file = None
-        while self.detection_running:
+        lastfile = None
+        stopevent = self._detection_stop_event
+        while self.detection_running and not stopevent.is_set():
             try:
-                current_log_file = self.get_latest_log_file()
-                if current_log_file != last_log_file:
-                    last_log_file = current_log_file
-
-                if self.enable_aura_detection_var.get(): self.check_aura_in_logs(current_log_file)
-                time.sleep(0.6)
-
-            except Exception as e:
-                self.error_logging(e, "Error in aura_loop_check function.")
-
+                currentfile = self.get_latest_log_file()
+                if currentfile != lastfile:
+                    lastfile = currentfile
+                if self.enable_aura_detection_var.get():
+                    self.check_aura_in_logs(currentfile)
+                if stopevent.wait(0.6):
+                    return
+            except Exception as error:
+                self.error_logging(error, "Error in aura_loop_check function.")
+                if stopevent.wait(1):
+                    return
     def biome_itemchange_loop(self):
-        while self.detection_running:
+        stopevent = self._detection_stop_event
+        while self.detection_running and not stopevent.is_set():
             try:
                 with self.lock:
                     self.auto_biome_change()
-                time.sleep(1)
-
-            except Exception as e:
-                self.error_logging(e, "Error in biome_itemchange_loop function.")
-
+                if stopevent.wait(1):
+                    return
+            except Exception as error:
+                self.error_logging(error, "Error in biome_itemchange_loop function.")
+                if stopevent.wait(1):
+                    return
     def _resume_timer_after_reconnect(self):
         try:
+            if self.detection_running and self.claim_daily_rewards_var.get():
+                if not self.perform_daily_reward_claim_after_reconnect():
+                    self.reconnecting_state = True
+                    self.timer_paused_by_disconnect = True
+                    self.pause_reason = "Roblox disconnected"
+                    return
             if getattr(self, "timer_paused_by_disconnect", False):
                 self.start_time = datetime.now()
                 self.timer_paused_by_disconnect = False
-                try:
-                    delattr = False
-                except Exception:
-                    pass
                 self.pause_reason = None
-            else:
-                if not self.start_time:
-                    self.start_time = datetime.now()
+            elif not self.start_time:
+                self.start_time = datetime.now()
             self.reconnecting_state = False
             self.has_sent_disconnected_message = False
             self.just_reconnected = True
-            self._roblox_fullscreened = False
             self.reconnect_confirm_deadline = time.monotonic() + 60
-            self.set_title_threadsafe(f"""Coteab Macro {current_ver} (Running)""")
+            self.set_title_threadsafe(f"Coteab Macro {current_ver} (Running)")
             self.save_config()
         except Exception as e:
             self.error_logging(e, "_resume_timer_after_reconnect")
-
     def fallback_reconnect(self, current_attempt):
         print(f"Attempting fallback reconnect from attempt {current_attempt}...")
         self.reconnecting_state = True
@@ -1076,39 +1117,145 @@ class DetectionMixin:
         self.reconnecting_state = False
 
     def _start_player_logger_thread(self):
-        if hasattr(self, "player_logger_thread") and self.player_logger_thread and self.player_logger_thread.is_alive():
-            return
+        self._stop_player_logger_thread()
         self.player_logger_running = True
+        self._player_logger_stop_event = threading.Event()
         self._start_player_log_sender_thread()
-        self.player_logger_thread = threading.Thread(target=self._player_logger_loop, daemon=True)
+        self.player_logger_thread = threading.Thread(
+            target=self._player_logger_loop,
+            args=(self._player_logger_stop_event,),
+            daemon=True,
+        )
         self.player_logger_thread.start()
 
     def _stop_player_logger_thread(self):
         self.player_logger_running = False
-        self._stop_player_log_sender_thread()
-
+        self.player_log_sender_running = False
+        loggerstop = getattr(self, "_player_logger_stop_event", None)
+        senderstop = getattr(self, "_player_log_stop_event", None)
+        if loggerstop:
+            loggerstop.set()
+        if senderstop:
+            senderstop.set()
+        try:
+            if hasattr(self, "player_log_queue"):
+                self.player_log_queue.put(None)
+        except Exception:
+            pass
+        for name in ("player_logger_thread", "player_log_sender_thread"):
+            thread = getattr(self, name, None)
+            if thread and thread.is_alive() and thread is not threading.current_thread():
+                thread.join(timeout=8)
     def _start_player_log_sender_thread(self):
-        if hasattr(self,
-                   "player_log_sender_thread") and self.player_log_sender_thread and self.player_log_sender_thread.is_alive():
+        thread = getattr(self, "player_log_sender_thread", None)
+        senderstop = getattr(self, "_player_log_stop_event", None)
+        if thread and thread.is_alive() and senderstop and not senderstop.is_set():
             return
+        self._player_log_stop_event = threading.Event()
         self.player_log_sender_running = True
         if not hasattr(self, "player_log_queue") or self.player_log_queue is None:
             self.player_log_queue = queue.Queue()
-        self.player_log_sender_thread = threading.Thread(target=self._player_log_sender_loop, daemon=True)
+        self.player_log_sender_thread = threading.Thread(
+            target=self._player_log_sender_loop,
+            args=(self._player_log_stop_event,),
+            daemon=True,
+        )
         self.player_log_sender_thread.start()
-
     def _stop_player_log_sender_thread(self):
         self.player_log_sender_running = False
+        stop_event = getattr(self, "_player_log_stop_event", None)
+        if stop_event:
+            stop_event.set()
         try:
             if hasattr(self, "player_log_queue"):
                 self.player_log_queue.put(None)
         except Exception:
             pass
 
-    def _player_log_sender_loop(self):
-        while getattr(self, "player_log_sender_running", False):
+    def _player_logger_loop(self, stop_event=None):
+        stop_event = stop_event or getattr(self, "_player_logger_stop_event", threading.Event())
+        last_file = None
+        last_pos = 0
+        sessions = {}
+        while getattr(self, "player_logger_running", False) and not stop_event.is_set():
+            if not getattr(self, "player_logger_var", None) or not self.player_logger_var.get():
+                if stop_event.wait(0.5):
+                    return
+                continue
+            path = self._find_latest_log_file()
+            if not path:
+                if stop_event.wait(0.5):
+                    return
+                continue
+            if path != last_file:
+                last_file = path
+                try:
+                    last_pos = os.path.getsize(path)
+                except:
+                    last_pos = 0
+            if not self._consume_log_username_validation(path):
+                if stop_event.wait(0.3):
+                    return
+                continue
             try:
-                embed = self.player_log_queue.get(timeout=1)
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                    f.seek(last_pos)
+                    line = f.readline()
+                    if not line:
+                        if stop_event.wait(0.2):
+                            return
+                        continue
+                    last_pos = f.tell()
+            except:
+                if stop_event.wait(0.5):
+                    return
+                continue
+            if not self._consume_log_username_validation(path):
+                continue
+            if "[ExpChat/mountClientApp (Trace)]" in line and ("Player added:" in line or "Player removed:" in line):
+                ts_str = line.split(",", 1)[0].strip()
+                ts = self._parse_iso_ts(ts_str)
+                if "Player added:" in line:
+                    m = re.search(r"Player added:\s+(\S+)\s+(\d+)", line)
+                    if m:
+                        name, pid = m.group(1), m.group(2)
+                        join_biome = self._biome_at(ts)
+                        sessions[pid] = {"ts": ts, "biome": join_biome}
+                        self._append_memory_log(f"[Player] Joined {name} ({pid})")
+                        self.save_logs()
+                        ts_iso = ts.astimezone(timezone.utc).isoformat()
+                        embed = self._make_player_embed("join", name, pid, ts_iso, None, join_biome)
+                        self._enqueue_player_embed(embed)
+                elif "Player removed:" in line:
+                    m = re.search(r"Player removed:\s+(\S+)\s+(\d+)", line)
+                    if m:
+                        name, pid = m.group(1), m.group(2)
+                        joined = sessions.pop(pid, None)
+                        left_biome = self._biome_at(ts)
+                        if joined and isinstance(joined, dict) and joined.get("ts"):
+                            joined_ts = joined.get("ts")
+                            joined_biome = joined.get("biome")
+                            secs = int((ts - joined_ts).total_seconds())
+                            h = secs // 3600
+                            m_ = (secs % 3600) // 60
+                            s_ = secs % 60
+                            dur = f"{h:02d}:{m_:02d}:{s_:02d}"
+                            self._append_memory_log(f"[Player] Left {name} ({pid}) after {dur}")
+                            self.save_logs()
+                            ts_iso = ts.astimezone(timezone.utc).isoformat()
+                            embed = self._make_player_embed("leave", name, pid, ts_iso, dur, joined_biome, left_biome)
+                            self._enqueue_player_embed(embed)
+                        else:
+                            self._append_memory_log(f"[Player] Left {name} ({pid})")
+                            self.save_logs()
+                            ts_iso = ts.astimezone(timezone.utc).isoformat()
+                            embed = self._make_player_embed("leave", name, pid, ts_iso, None, None, left_biome)
+                            self._enqueue_player_embed(embed)
+    def _player_log_sender_loop(self, stop_event=None):
+        stop_event = stop_event or getattr(self, "_player_log_stop_event", threading.Event())
+        while self.player_log_sender_running and not stop_event.is_set():
+            try:
+                embed = self.player_log_queue.get(timeout=0.2)
             except Exception:
                 continue
             if embed is None:
@@ -1117,29 +1264,27 @@ class DetectionMixin:
             if not urls:
                 continue
             payload = {"embeds": [embed]}
-            for webhook_url in urls:
+            for url in urls:
+                if not self.player_log_sender_running or stop_event.is_set():
+                    return
                 try:
-                    r = requests.post(webhook_url, json=payload, timeout=7)
-                    if getattr(r, "status_code", None) == 429:
-                        retry_after = r.headers.get("Retry-After")
+                    response = requests.post(url, json=payload, timeout=7)
+                    if getattr(response, "status_code", None) == 429:
                         try:
-                            retry = int(retry_after)
+                            retry = min(7, max(0, int(response.headers.get("Retry-After", 5))))
                         except Exception:
                             retry = 5
-                        time.sleep(retry)
-                        try:
-                            requests.post(webhook_url, json=payload, timeout=7)
-                        except Exception:
-                            pass
+                        if stop_event.wait(retry) or not self.player_log_sender_running:
+                            return
+                        requests.post(url, json=payload, timeout=7)
                 except Exception:
                     pass
-            delay = getattr(self, "player_log_send_delay", 2.0)
-            start = time.time()
-            while (time.time() - start) < delay:
-                if not getattr(self, "player_log_sender_running", False):
-                    break
-                time.sleep(0.1)
-
+            try:
+                delay = max(0.0, float(getattr(self, "player_log_send_delay", 2.0)))
+            except (TypeError, ValueError):
+                delay = 2.0
+            if stop_event.wait(delay):
+                return
     def _find_latest_log_file(self):
         try:
             if not os.path.isdir(self.logs_dir):
@@ -1179,80 +1324,6 @@ class DetectionMixin:
             return last if last is not None else self.current_biome
         except Exception:
             return self.current_biome
-
-    def _player_logger_loop(self):
-        last_file = None
-        last_pos = 0
-        sessions = {}
-        while getattr(self, "player_logger_running", False):
-            if not getattr(self, "player_logger_var", None) or not self.player_logger_var.get():
-                time.sleep(0.5)
-                continue
-            path = self._find_latest_log_file()
-            if not path:
-                time.sleep(0.5)
-                continue
-            if path != last_file:
-                last_file = path
-                try:
-                    last_pos = os.path.getsize(path)
-                except:
-                    last_pos = 0
-            if not self._consume_log_username_validation(path):
-                time.sleep(0.3)
-                continue
-            try:
-                with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                    f.seek(last_pos)
-                    line = f.readline()
-                    if not line:
-                        time.sleep(0.2)
-                        continue
-                    last_pos = f.tell()
-            except:
-                time.sleep(0.5)
-                continue
-            if not self._consume_log_username_validation(path):
-                continue
-            if "[ExpChat/mountClientApp (Trace)]" in line and ("Player added:" in line or "Player removed:" in line):
-                ts_str = line.split(",", 1)[0].strip()
-                ts = self._parse_iso_ts(ts_str)
-                if "Player added:" in line:
-                    m = re.search(r"Player added:\s+(\S+)\s+(\d+)", line)
-                    if m:
-                        name, pid = m.group(1), m.group(2)
-                        join_biome = self._biome_at(ts)
-                        sessions[pid] = {"ts": ts, "biome": join_biome}
-                        self.logs.append(f"[Player] Joined {name} ({pid})")
-                        self.save_logs()
-                        ts_iso = ts.astimezone(timezone.utc).isoformat()
-                        embed = self._make_player_embed("join", name, pid, ts_iso, None, join_biome)
-                        self._enqueue_player_embed(embed)
-                elif "Player removed:" in line:
-                    m = re.search(r"Player removed:\s+(\S+)\s+(\d+)", line)
-                    if m:
-                        name, pid = m.group(1), m.group(2)
-                        joined = sessions.pop(pid, None)
-                        left_biome = self._biome_at(ts)
-                        if joined and isinstance(joined, dict) and joined.get("ts"):
-                            joined_ts = joined.get("ts")
-                            joined_biome = joined.get("biome")
-                            secs = int((ts - joined_ts).total_seconds())
-                            h = secs // 3600
-                            m_ = (secs % 3600) // 60
-                            s_ = secs % 60
-                            dur = f"{h:02d}:{m_:02d}:{s_:02d}"
-                            self.logs.append(f"[Player] Left {name} ({pid}) after {dur}")
-                            self.save_logs()
-                            ts_iso = ts.astimezone(timezone.utc).isoformat()
-                            embed = self._make_player_embed("leave", name, pid, ts_iso, dur, joined_biome, left_biome)
-                            self._enqueue_player_embed(embed)
-                        else:
-                            self.logs.append(f"[Player] Left {name} ({pid})")
-                            self.save_logs()
-                            ts_iso = ts.astimezone(timezone.utc).isoformat()
-                            embed = self._make_player_embed("leave", name, pid, ts_iso, None, None, left_biome)
-                            self._enqueue_player_embed(embed)
 
     def auto_biome_change(self):
         if self.is_fishing_mode_enabled():
@@ -1414,12 +1485,13 @@ class DetectionMixin:
             except Exception:
                 pass
 
-    def _merchant_teleporter_impl(self):
+    def _merchant_teleporter_impl(self, merchant_name=None):
         if getattr(self, '_br_sc_running', False): return
         if (getattr(self, '_egg_collecting', False) or getattr(self, '_eden_running', False) or getattr(self, '_potion_thread_active', False)): return
-        if getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
+        if not getattr(self, "_fishing_br_sc_override", False) and getattr(self, "enable_potion_crafting_var", None) and self.enable_potion_crafting_var.get(): return
         self._last_merchant_sequence_ran = False
         self._last_merchant_sequence_requires_reset = False
+        self._last_merchant_sequence_skipped = False
         self._mt_running = True
         fishing_override = bool(getattr(self, "_fishing_br_sc_override", False))
         try:
@@ -1443,9 +1515,11 @@ class DetectionMixin:
 
             if _cancelled(): return
 
-            if hasattr(self, 'last_merchant_interaction') and self.last_merchant_interaction:
+            if not fishing_override and hasattr(self, 'last_merchant_interaction') and self.last_merchant_interaction:
                 merchant_cooldown_time = 300
-                if time.time() - self.last_merchant_interaction < merchant_cooldown_time: return
+                if time.time() - self.last_merchant_interaction < merchant_cooldown_time:
+                    self._last_merchant_sequence_skipped = True
+                    return
 
             time.sleep(0.75)
 
@@ -1494,7 +1568,7 @@ class DetectionMixin:
             self.Global_MouseClick(first_item_slot[0], first_item_slot[1])
             time.sleep(0.4 + inventory_click_delay)
             try:
-                if not self._ocr_first_slot_matches("teleport"):
+                if not self._ocr_first_slot_matches("Merchant Teleporter"):
                     inventory_close_button = self.config.get("inventory_close_button", [1418, 298])
                     self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
                     time.sleep(0.15 + inventory_click_delay)
@@ -1523,8 +1597,8 @@ class DetectionMixin:
 
             self.Global_MouseClick(inventory_close_button[0], inventory_close_button[1])
             time.sleep(0.23 + inventory_click_delay)
-            self._last_merchant_sequence_ran = True
-            merchant_completed = bool(self.Merchant_Handler())
+            merchant_completed = bool(self.Merchant_Handler(merchant_name))
+            self._last_merchant_sequence_ran = merchant_completed
             self._last_merchant_sequence_requires_reset = merchant_completed
 
             if _cancelled(): return
@@ -1575,14 +1649,50 @@ class DetectionMixin:
             self._mt_running = False
             self._cancel_next_actions_until = datetime.min
 
+    def _press_hotkey_via_pynput(self, keybind_str):
+        from pynput.keyboard import Controller as KbController, Key as PynKey
+        kb_ctrl = KbController()
+
+        key_map = {
+            'shift': PynKey.shift, 'ctrl': PynKey.ctrl, 'alt': PynKey.alt,
+            'tab': PynKey.tab, 'enter': PynKey.enter, 'esc': PynKey.esc,
+            'space': PynKey.space, 'backspace': PynKey.backspace, 'delete': PynKey.delete,
+            'up': PynKey.up, 'down': PynKey.down, 'left': PynKey.left, 'right': PynKey.right,
+            'home': PynKey.home, 'end': PynKey.end, 'insert': PynKey.insert,
+            'pageup': PynKey.page_up, 'page_up': PynKey.page_up,
+            'pagedown': PynKey.page_down, 'page_down': PynKey.page_down,
+            'capslock': PynKey.caps_lock, 'caps_lock': PynKey.caps_lock,
+            'numlock': PynKey.num_lock, 'num_lock': PynKey.num_lock,
+            'printscreen': PynKey.print_screen, 'print_screen': PynKey.print_screen,
+            'scrolllock': PynKey.scroll_lock, 'scroll_lock': PynKey.scroll_lock,
+            'pause': PynKey.pause, 'menu': PynKey.menu,
+            'win': PynKey.cmd, 'windows': PynKey.cmd, 'cmd': PynKey.cmd, 'super': PynKey.cmd,
+        }
+        for i in range(1, 25):
+            key_map[f'f{i}'] = getattr(PynKey, f'f{i}', None)
+
+        raw_keys = [k.strip().lower() for k in keybind_str.split('+')]
+        resolved = []
+        for k in raw_keys:
+            if k in key_map and key_map[k] is not None:
+                resolved.append(key_map[k])
+            elif len(k) == 1:
+                resolved.append(k)
+            else:
+                resolved.append(k)
+
+        for k in resolved:
+            kb_ctrl.press(k)
+        time.sleep(0.05)
+        for k in reversed(resolved):
+            kb_ctrl.release(k)
+
     def trigger_aura_record(self):
         def aura_record():
             try:
-                # print("hi me running aura record")
                 keybind = self.aura_record_keybind_var.get()
-                keys = [key.strip() for key in keybind.split('+')]
                 time.sleep(30)
-                pyautogui.hotkey(*keys)
+                self._press_hotkey_via_pynput(keybind)
             except Exception as e:
                 self.error_logging(e, "Error in trigger_aura_record")
 
@@ -1591,11 +1701,9 @@ class DetectionMixin:
     def trigger_biome_record(self):
         def record():
             try:
-                # print("hi me running biome record")
                 keybind = self.rarest_biome_keybind_var.get()
-                keys = [key.strip() for key in keybind.split('+')]
                 time.sleep(45)
-                pyautogui.hotkey(*keys)
+                self._press_hotkey_via_pynput(keybind)
             except Exception as e:
                 self.error_logging(e, "Error in trigger_biome_record")
         threading.Thread(target=record).start()

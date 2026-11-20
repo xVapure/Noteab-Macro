@@ -260,7 +260,6 @@ def _run_single_egg_route(
     can_run: Callable[[], bool],
     is_first_route: bool,
     activate_roblox_cb: Callable[[], None] | None = None,
-    close_chat_fn: Callable[[], None] | None = None,
     egg_ocr_check_cb: Callable[[], None] | None = None,
     log_prefix: str = "[EggCollect]",
 ) -> bool:
@@ -300,14 +299,6 @@ def _run_single_egg_route(
         return False
 
     if not sleep_interruptible(3.5, 0.02): return False
-
-    # Close chat if open (egg OCR may have left it open)
-    if close_chat_fn is not None:
-        try:
-            print(f"{log_prefix} Closing chat if open...")
-            close_chat_fn()
-        except Exception as e:
-            print(f"{log_prefix} close_chat_fn error: {e}")
 
     if not sleep_interruptible(0.5, 0.02): return False
 
@@ -465,7 +456,6 @@ def run_egg_collect_once(
     should_continue: Callable[[], bool],
     can_run: Callable[[], bool],
     activate_roblox_cb: Callable[[], None] | None = None,
-    close_chat_fn: Callable[[], None] | None = None,
     egg_ocr_check_cb: Callable[[], None] | None = None,
     log_prefix: str = "[EggCollect]",
 ) -> bool:
@@ -517,7 +507,6 @@ def run_egg_collect_once(
             can_run=can_run,
             is_first_route=(i == 0),
             activate_roblox_cb=activate_roblox_cb,
-            close_chat_fn=close_chat_fn,
             egg_ocr_check_cb=egg_ocr_check_cb,
             log_prefix=log_prefix,
         ):

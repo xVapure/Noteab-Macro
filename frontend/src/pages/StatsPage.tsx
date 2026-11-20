@@ -82,10 +82,10 @@ export default function StatsPage() {
             setElapsedDisplay(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
         };
 
-        // Update immediately
+
         updateTimer();
 
-        // Start interval
+
         const interval = setInterval(updateTimer, 1000);
 
         return () => clearInterval(interval);

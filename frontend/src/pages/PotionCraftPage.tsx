@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import ToggleSwitch from "../components/ToggleSwitch";
 
 export default function PotionCraftPage() {
-    // State
+
     const [enableCrafting, setEnableCrafting] = useState(false);
     const [selectedPotion, setSelectedPotion] = useState("");
     const [potionFiles, setPotionFiles] = useState<string[]>([]);
 
-    // Switching Logic
+
     const [enableSwitching, setEnableSwitching] = useState(false);
     const [switchInterval, setSwitchInterval] = useState(60);
     const [potion1, setPotion1] = useState("");
@@ -15,6 +15,7 @@ export default function PotionCraftPage() {
     const [potion3, setPotion3] = useState("");
     const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
     const configSnapshotRef = useRef<any>(null);
+    const configReadyRef = useRef(false);
 
     useEffect(() => {
         refreshFiles();
@@ -38,6 +39,7 @@ export default function PotionCraftPage() {
                 const config: any = await window.pywebview.api.get_config();
                 if (config) {
                     configSnapshotRef.current = config;
+                    configReadyRef.current = true;
                     if (typeof config.enable_potion_crafting === 'boolean') setEnableCrafting(config.enable_potion_crafting);
                     setSelectedPotion(config.selected_potion_file ?? "");
                     if (typeof config.enable_potion_switching === 'boolean') setEnableSwitching(config.enable_potion_switching);
@@ -53,6 +55,7 @@ export default function PotionCraftPage() {
     };
 
     const saveConfig = (key: string, value: any) => {
+        if (!configReadyRef.current) return;
         saveQueueRef.current = saveQueueRef.current
             .then(async () => {
                 if (window.pywebview && window.pywebview.api) {
@@ -67,7 +70,7 @@ export default function PotionCraftPage() {
             });
     };
 
-    // Generic handler to update state and save config
+
     const handleNumberChange = (val: string) => {
         const num = parseInt(val) || 0;
         setSwitchInterval(num);
@@ -84,7 +87,7 @@ export default function PotionCraftPage() {
         }
     };
 
-    // UI Helpers
+
     const PotionDropdown = ({ value, onChange, placeholder }: any) => (
         <div style={{ position: "relative", width: "100%" }}>
             <select
@@ -108,7 +111,7 @@ export default function PotionCraftPage() {
                 <p>Record and replay Stella's potion crafting sequences</p>
             </div>
 
-            {/* Corner Borders container style similar to Obby */}
+
             <div style={{ position: "relative", border: "1px solid var(--border-color)", padding: "20px", marginBottom: "20px", background: "var(--card-bg)" }}>
                 <div className="corner-bracket tl"></div>
                 <div className="corner-bracket tr"></div>
@@ -158,7 +161,7 @@ export default function PotionCraftPage() {
                 </div>
             </div>
 
-            {/* Switching Section */}
+
             <div style={{ position: "relative", border: "1px solid var(--border-color)", padding: "20px", background: "var(--card-bg)" }}>
                 <div className="corner-bracket tl"></div>
                 <div className="corner-bracket tr"></div>

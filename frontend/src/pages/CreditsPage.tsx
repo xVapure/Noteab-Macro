@@ -6,7 +6,7 @@ export default function CreditsPage() {
                 <p>The people behind Coteab Macro</p>
             </div>
 
-            {/* Developers Card */}
+
             <div className="card">
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
                     <img
@@ -29,7 +29,7 @@ export default function CreditsPage() {
                             <ul style={{ margin: 0, paddingLeft: "16px", listStyle: "disc" }}>
                                 <li><strong>Vapure/"@criticize."</strong> (Lead Developer, fullstack)</li>
                                 <li><strong>Akito</strong> (Lead Developer, fullstack)</li>
-                                <li><strong>ManasAarohi</strong> (Pathing Developer)</li>
+                                <li><strong>ManasAarohi</strong> (Developer, idea inspiration)</li>
                                 <li><strong>Matt</strong> (Developer)</li>
                                 <li><strong>spacedev0572</strong> (MacOS Developer)</li>
                             </ul>
@@ -48,7 +48,7 @@ export default function CreditsPage() {
                 </div>
             </div>
 
-            {/* Inspired By Card */}
+
             <div className="card" style={{ textAlign: "center" }}>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
                     <img
@@ -72,7 +72,7 @@ export default function CreditsPage() {
                 </p>
             </div>
 
-            {/* Extra Credits */}
+
             <div className="card">
                 <div className="card-header">
                     <div className="card-icon">🏅</div>
@@ -91,13 +91,10 @@ export default function CreditsPage() {
                     lineHeight: "1.8",
                     color: "var(--text-secondary)",
                 }}>
-                    <div>- maxstellar - Inspiration and I used some of his logic & former developer.</div>
-                    <div>- Vexthecoder - Thank you for the icons &lt;3</div>
-                    <div>- Cresqnt, Baz & the Scope Team - Anti-AFK inspiration.</div>
-                    <div>- rnd.xy, imsomeone - For doing external works that I was too lazy to do tysm.</div>
-                    <div>- Finnerinch - Former developer.</div>
+                    <div>- maxstellar - Inspiration & former developer.</div>
                     <div>- .ivelchampion249._30053 - Fishing logic inspiration.</div>
-                    <div>- All the testers that made the update possible with as less flaws as possible. Notably: "gummyballer", "mightbeanormalguest", "xdec27.", "gonebon", "kira_drago2",  and others.</div>
+                    <div>- Finnerinch - Former developer.</div>
+                    <div>- Vexthecoder - Icons provider. &lt;3</div>
                 </div>
             </div>
 

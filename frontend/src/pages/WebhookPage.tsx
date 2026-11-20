@@ -42,7 +42,7 @@ export default function WebhookPage() {
     const biomes = config.biome_notifier || {};
     const biomePings: Record<string, BiomePingEntry> = config.biome_pings || {};
 
-    // Build ordered biome list from biome_notifier keys (excluding NORMAL)
+
     const allBiomeNames = Object.keys(biomes)
         .filter(b => b !== "NORMAL")
         .sort((a, b) => {
@@ -159,7 +159,7 @@ export default function WebhookPage() {
                     borderBottom: "1px solid var(--border-color)",
                 }}
             >
-                {/* Biome label + message dropdown */}
+
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                     <span
                         style={{
@@ -184,7 +184,7 @@ export default function WebhookPage() {
                     </span>
                 </div>
 
-                {/* Controls row */}
+
                 <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
                     {!isRare && (
                         <select
@@ -334,7 +334,7 @@ export default function WebhookPage() {
                 />
             </div>
 
-            {/* Other Biomes */}
+
             <div className="card">
                 <div className="card-header">
                     <div className="card-icon">⚙️</div>
@@ -355,7 +355,7 @@ export default function WebhookPage() {
                     textAlign: "center",
                     fontWeight: 600
                 }}>
-                    GLITCHED, DREAMSPACE &amp; CYBERSPACE are both forced 'everyone' ping grrr &gt;:((
+                    GLITCHED, DREAMSPACE &amp; CYBERSPACE are all forced 'everyone' pings grrr &gt;:((
                 </div>
 
                 <div>

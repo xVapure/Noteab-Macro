@@ -1,0 +1,111 @@
+name: Publish Public EXE
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    env:
+      PUBLIC_REPO_TOKEN: ${{ secrets.COTEAB_PUBLIC_REPO_TOKEN }}
+
+    steps:
+      - name: Skip public publish without token
+        if: env.PUBLIC_REPO_TOKEN == ''
+        shell: pwsh
+        run: |
+          Write-Host "Skipping public publish because COTEAB_PUBLIC_REPO_TOKEN is not set."
+          Write-Host "Add that secret in mattstellar/coteabfork to enable automatic updates to mattstellar/Coteab."
+
+      - name: Checkout private source
+        if: env.PUBLIC_REPO_TOKEN != ''
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: env.PUBLIC_REPO_TOKEN != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python
+        if: env.PUBLIC_REPO_TOKEN != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install frontend dependencies
+        if: env.PUBLIC_REPO_TOKEN != ''
+        shell: pwsh
+        working-directory: frontend
+        run: |
+          npm ci
+
+      - name: Build frontend
+        if: env.PUBLIC_REPO_TOKEN != ''
+        shell: pwsh
+        working-directory: frontend
+        run: |
+          npm run build
+
+      - name: Copy frontend build into app bundle
+        if: env.PUBLIC_REPO_TOKEN != ''
+        shell: pwsh
+        run: |
+          Remove-Item -LiteralPath lib\dist -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path lib\dist -Force | Out-Null
+          Get-ChildItem -LiteralPath frontend\dist -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination lib\dist -Recurse -Force
+          }
+          if (-not (Test-Path -LiteralPath lib\dist\index.html)) {
+            throw "Frontend build copy failed: lib\dist\index.html was not created."
+          }
+
+      - name: Install Python dependencies
+        if: env.PUBLIC_REPO_TOKEN != ''
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+          .\.venv\Scripts\python.exe -m pip install pyinstaller
+
+      - name: Build executable
+        if: env.PUBLIC_REPO_TOKEN != ''
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\pyinstaller.exe CoteabMacro-onefile.spec --noconfirm
+          if (-not (Test-Path -LiteralPath dist\CoteabMacro.exe)) {
+            throw "PyInstaller did not create dist\CoteabMacro.exe"
+          }
+
+      - name: Publish executable to public repo
+        if: env.PUBLIC_REPO_TOKEN != ''
+        shell: pwsh
+        run: |
+          git clone "https://x-access-token:$env:PUBLIC_REPO_TOKEN@github.com/mattstellar/Coteab.git" public-release
+          Get-ChildItem -LiteralPath public-release -Force |
+            Where-Object { $_.Name -ne ".git" } |
+            Remove-Item -Recurse -Force
+
+          Copy-Item -LiteralPath dist\CoteabMacro.exe -Destination public-release\CoteabMacro.exe -Force
+
+          git -C public-release config user.name "github-actions[bot]"
+          git -C public-release config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C public-release add -A
+
+          $changes = git -C public-release status --porcelain
+          if (-not $changes) {
+            Write-Host "Public executable is already up to date."
+            return
+          }
+
+          git -C public-release commit -m "Update CoteabMacro.exe"
+          git -C public-release push origin main

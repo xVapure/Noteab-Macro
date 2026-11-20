@@ -114,9 +114,9 @@ export default function OtherFeaturesPage() {
                 />
 
                 <ToggleSwitch
-                    label="Make Roblox instance on fullscreen"
-                    description="Automatically fullscreen Roblox window when macro starts"
-                    checked={config.auto_roblox_fullscreen || false}
+                    label="Auto Fullscreen Roblox"
+                    description="Resize Roblox to your monitor's resolution when it opens. Enabled by default."
+                    checked={config.auto_roblox_fullscreen !== false}
                     onChange={(val) => updateConfig("auto_roblox_fullscreen", val)}
                 />
 
@@ -126,6 +126,25 @@ export default function OtherFeaturesPage() {
                     checked={config.azerty_mode || false}
                     onChange={(val) => updateConfig("azerty_mode", val)}
                 />
+                {/*<ToggleSwitch
+                    label="Enable Click to Move (experimental)"
+                    description="Allow clicking on the map to move your character (experimental feature)"
+                    checked={config.enable_click_to_move || false}
+                    onChange={(val) => updateConfig("enable_click_to_move", val)}
+                />
+                {config.enable_click_to_move && (
+                    <div className="form-group" style={{ marginTop: "15px", marginLeft: "10px" }}>
+                        <label className="form-label">Click to Move Interval (s):</label>
+                        <input
+                            className="form-input"
+                            type="number"
+                            min="5"
+                            value={config.click_to_move_interval || "13"}
+                            onChange={(e) => updateConfig("click_to_move_interval", e.target.value)}
+                            style={{ width: "80px" }}
+                        />
+                    </div>
+                )}*/}
             </div>
         </>
     );

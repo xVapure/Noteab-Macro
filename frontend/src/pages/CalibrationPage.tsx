@@ -49,18 +49,29 @@ const CALIBRATION_GROUPS: CalibrationGroup[] = [
         ]
     },
     {
+        id: "dailyRewards",
+        label: "Claim Daily Quest Calibration",
+        color: "#d4a843",
+        fields: [
+            { key: "daily_reward_claim_button", label: "Claim Button" },
+            { key: "daily_reward_close_button", label: "Close Button" },
+        ]
+    },
+    {
         id: "merchant",
         label: "Merchant Calibrations",
         color: "#7c5bf5",
         fields: [
             { key: "merchant_open_button", label: "Open Button" },
-            { key: "jester_exchange_button", label: "Jester Exchange Button" },
             { key: "merchant_dialogue_box", label: "Dialogue Box" },
             { key: "purchase_amount_button", label: "Amount Input" },
             { key: "purchase_button", label: "Purchase Button" },
             { key: "autobuy_set_to_max_button", label: "Autobuy - Set to Max" },
-            { key: "jester_exchange_set_to_max_button", label: "Jester Exchange - Set to Max" },
             { key: "first_item_merchant_slot_pos", label: "First Item Slot" },
+            { key: "second_item_merchant_slot_pos", label: "Second Item Slot" },
+            { key: "third_item_merchant_slot_pos", label: "Third Item Slot" },
+            { key: "fourth_item_merchant_slot_pos", label: "Fourth Item Slot" },
+            { key: "fifth_item_merchant_slot_pos", label: "Fifth Item Slot" },
             { key: "merchant_close_button", label: "Sell Menu Close Button" },
             { key: "merchant_name_ocr_pos", label: "Merchant Name OCR Region", isRegion: true },
             { key: "item_name_ocr_pos", label: "Item Name OCR Region", isRegion: true },
@@ -132,6 +143,7 @@ const CALIBRATION_GROUPS: CalibrationGroup[] = [
             { key: "fishing_shop_first_fish", label: "First Fish In Shop" },
             { key: "fishing_shop_sell_all_button", label: "Sell All Button" },
             { key: "fishing_confirm_sell_all_button", label: "Confirm Sell All Button" },
+            { key: "fishing_bugged_ui_pos", label: "Bugged Fishing UI (click when stuck)" },
         ]
     }
 ];
@@ -159,6 +171,7 @@ const MOUSE_ACTION_REQUIREMENTS: MouseActionRequirement[] = [
     { page: "Misc", feature: "Periodical Aura Screenshot", calibrations: ["Equip Aura Calibration", "Inventory Click Calibration"] },
     { page: "Misc", feature: "Periodical Inventory Screenshot", calibrations: ["Inventory Click Calibration"] },
     { page: "Misc", feature: "Auto Claim Daily Quests", calibrations: ["Quest Claim Calibration"] },
+    { page: "Misc", feature: "Claim Daily Rewards", calibrations: ["Claim Daily Quest Calibration"] },
     { page: "Misc", feature: "OCR Failsafe", calibrations: ["Inventory Click Calibration"] },
 
     { page: "Other Features", feature: "Enable Buff in Glitched/Dreamspace", calibrations: ["Enable Buff Calibration"] },
@@ -171,7 +184,6 @@ const MOUSE_ACTION_REQUIREMENTS: MouseActionRequirement[] = [
 
     { page: "Potion Craft", feature: "Potion Auto Craft / Switching", calibrations: ["Potion Crafting Calibration"] },
 
-    { page: "Remote", feature: "Remote check_merchant command", calibrations: ["Inventory Click Calibration", "Merchant Calibrations"] },
     { page: "Remote", feature: "Remote use item command", calibrations: ["Inventory Click Calibration"] },
 ];
 
@@ -199,7 +211,7 @@ function normalizeCalibrationData(data: any, expectedMode: "point" | "region"): 
     return normalized;
 }
 
-// Helper component for coordinate inputs
+
 function CoordInput({ label, value, onChange, isRegion = false, onCalibrate }: {
     label: string,
     value: number[],
@@ -247,17 +259,17 @@ function CoordInput({ label, value, onChange, isRegion = false, onCalibrate }: {
                 </button>
             </div>
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                {/* X */}
+
                 <div className="coord-box">
                     <span className="coord-label">X</span>
                     <input className="coord-input" type="number" value={vals[0]} onChange={(e) => update(0, e.target.value)} />
                 </div>
-                {/* Y */}
+
                 <div className="coord-box">
                     <span className="coord-label">Y</span>
                     <input className="coord-input" type="number" value={vals[1]} onChange={(e) => update(1, e.target.value)} />
                 </div>
-                {/* W/H if region */}
+
                 {isRegion && (
                     <>
                         <div className="coord-box">
@@ -275,9 +287,242 @@ function CoordInput({ label, value, onChange, isRegion = false, onCalibrate }: {
     );
 }
 
+const DEFAULT_LOCAL_PRESETS = [
+    {
+        resolution: "1366x768",
+        scale: "100%",
+        mode: "Fullscreen",
+        calibrations: {
+            collections_button: [28, 329],
+            exit_collections_button: [272, 108],
+            chat_hover_pos: [229, 200],
+            chat_tab_ocr_pos: [247, 60, 255, 43],
+            chat_close_button: [137, 32],
+            chat_box_ocr_pos: [15, 228, 522, 59],
+            quest_menu: [29, 436],
+            quest1_button: [728, 371],
+            quest2_button: [648, 427],
+            quest3_button: [762, 476],
+            claim_quest_button: [443, 547],
+            quest_reroll_button: [445, 404],
+            merchant_open_button: [404, 662],
+            merchant_dialogue_box: [872, 555],
+            purchase_amount_button: [746, 434],
+            purchase_button: [731, 461],
+            autobuy_set_to_max_button: [949, 435],
+            first_item_merchant_slot_pos: [684, 512],
+            second_item_merchant_slot_pos: [832, 512],
+            third_item_merchant_slot_pos: [980, 512],
+            fourth_item_merchant_slot_pos: [684, 612],
+            fifth_item_merchant_slot_pos: [832, 612],
+            merchant_close_button: [1288, 247],
+            merchant_name_ocr_pos: [521, 494, 188, 28],
+            item_name_ocr_pos: [790, 268, 358, 17],
+            glitched_menu_button: [23, 482],
+            glitched_settings_button: [686, 418],
+            glitched_buff_enable_button: [931, 652],
+            aura_menu: [27, 288],
+            aura_search_bar: [585, 262],
+            first_aura_slot_pos: [580, 310],
+            equip_aura_button: [449, 448],
+            inventory_menu: [28, 357],
+            items_tab: [882, 237],
+            search_bar: [589, 260],
+            first_item_inventory_slot_pos: [603, 329],
+            amount_box: [406, 408],
+            use_button: [490, 409],
+            inventory_close_button: [1007, 213],
+            reconnect_start_button: [157, 707],
+            first_item_slot_ocr_pos: [573, 309, 66, 63],
+            potion_items_tab: [1076, 160],
+            potion_search_bar: [1037, 186],
+            potion_first_potion_slot_pos: [1093, 240],
+            potion_recipe_button: [163, 580],
+            potion_auto_add_button: [304, 581],
+            fishing_bar_region: [507, 526, 353, 24],
+            fishing_detect_pixel: [865, 593],
+            fishing_click_position: [588, 588],
+            fishing_midbar_sample_pos: [682, 529],
+            fishing_close_button_pos: [816, 212],
+            fishing_flarg_dialogue_box: [820, 549],
+            fishing_shop_open_button: [462, 664],
+            fishing_shop_sell_tab: [916, 218],
+            fishing_shop_close_button: [1038, 189],
+            fishing_shop_first_fish: [592, 295],
+            fishing_shop_sell_all_button: [472, 568],
+            fishing_confirm_sell_all_button: [563, 439],
+            fishing_bugged_ui_pos: [860, 331],
+            daily_reward_claim_button: [686, 470],
+            daily_reward_close_button: [1008, 282]
+        }
+    },
+    {
+        resolution: "2560x1440",
+        scale: "100%",
+        mode: "Fullscreen",
+        calibrations: {
+            collections_button: [52, 616],
+            exit_collections_button: [510, 177],
+            chat_hover_pos: [366, 377],
+            chat_tab_ocr_pos: [383, 100, 315, 46],
+            chat_close_button: [206, 47],
+            chat_box_ocr_pos: [23, 383, 686, 111],
+            quest_menu: [51, 828],
+            quest1_button: [1257, 692],
+            quest2_button: [1253, 800],
+            quest3_button: [1387, 900],
+            claim_quest_button: [821, 1015],
+            quest_reroll_button: [805, 746],
+            merchant_open_button: [832, 1263],
+            merchant_dialogue_box: [975, 810],
+            purchase_amount_button: [1055, 609],
+            purchase_button: [1574, 878],
+            autobuy_set_to_max_button: [1333, 595],
+            first_item_merchant_slot_pos: [1616, 621],
+            second_item_merchant_slot_pos: [1764, 621], 
+            third_item_merchant_slot_pos: [1912, 621],
+            fourth_item_merchant_slot_pos: [1616, 721],
+            fifth_item_merchant_slot_pos: [1764, 721],
+            merchant_close_button: [1811, 325],
+            merchant_name_ocr_pos: [731, 682, 278, 52],
+            item_name_ocr_pos: [1106, 372, 708, 35],
+            glitched_menu_button: [51, 897],
+            glitched_settings_button: [1244, 780],
+            glitched_buff_enable_button: [1242, 870],
+            aura_menu: [44, 537],
+            aura_search_bar: [1088, 488],
+            first_aura_slot_pos: [1098, 579],
+            equip_aura_button: [793, 842],
+            inventory_menu: [49, 673],
+            items_tab: [1555, 447],
+            search_bar: [1087, 487],
+            first_item_inventory_slot_pos: [1122, 601],
+            amount_box: [759, 765],
+            use_button: [910, 764],
+            inventory_close_button: [1885, 398],
+            reconnect_start_button: [292, 1304],
+            first_item_slot_ocr_pos: [1075, 581, 112, 111],
+            potion_items_tab: [2009, 297],
+            potion_search_bar: [1936, 350],
+            potion_first_potion_slot_pos: [2016, 442],
+            potion_recipe_button: [266, 1087],
+            potion_auto_add_button: [568, 1084],
+            fishing_bar_region: [989, 1005, 583, 38],
+            fishing_detect_pixel: [1585, 1114],
+            fishing_click_position: [1115, 1102],
+            fishing_midbar_sample_pos: [1279, 1012],
+            fishing_close_button_pos: [1499, 439],
+            fishing_flarg_dialogue_box: [1578, 1083],
+            fishing_shop_open_button: [835, 1250],
+            fishing_shop_sell_tab: [1647, 416],
+            fishing_shop_close_button: [1945, 355],
+            fishing_shop_first_fish: [1068, 524],
+            fishing_shop_sell_all_button: [876, 1067],
+            fishing_confirm_sell_all_button: [1072, 820],
+            fishing_bugged_ui_pos: [1616, 621],
+            daily_reward_claim_button: [1285, 881],
+            daily_reward_close_button: [1891, 527]
+        }
+    },
+    {
+        resolution: "1920x1080",
+        scale: "100%",
+        mode: "Fullscreen",
+        calibrations: {
+            collections_button: [35, 463],
+            exit_collections_button: [386, 126],
+            chat_hover_pos: [70, 192],
+            chat_tab_ocr_pos: [242, 62, 241, 40],
+            chat_close_button: [140, 35],
+            chat_box_ocr_pos: [8, 101, 474, 269],
+            quest_menu: [38, 624],
+            quest1_button: [1100, 524],
+            quest2_button: [1104, 595],
+            quest3_button: [1101, 677],
+            claim_quest_button: [618, 770],
+            quest_reroll_button: [623, 585],
+            merchant_open_button: [654, 946],
+            merchant_dialogue_box: [768, 836],
+            purchase_amount_button: [1044, 611],
+            purchase_button: [982, 666],
+            autobuy_set_to_max_button: [1000, 446],
+            first_item_merchant_slot_pos: [952, 719],
+            second_item_merchant_slot_pos: [1100, 719],
+            third_item_merchant_slot_pos: [1248, 719],
+            fourth_item_merchant_slot_pos: [952, 819],
+            fifth_item_merchant_slot_pos: [1100, 819],
+            merchant_close_button: [1809, 346],
+            merchant_name_ocr_pos: [730, 683, 276, 52],
+            item_name_ocr_pos: [870, 697, 946, 48],
+            glitched_menu_button: [36, 678],
+            glitched_settings_button: [946, 583],
+            glitched_buff_enable_button: [929, 654],
+            aura_menu: [28, 401],
+            aura_search_bar: [809, 361],
+            first_aura_slot_pos: [821, 437],
+            equip_aura_button: [623, 637],
+            inventory_menu: [32, 515],
+            items_tab: [1272, 337],
+            search_bar: [828, 369],
+            first_item_inventory_slot_pos: [846, 480],
+            amount_box: [566, 577],
+            use_button: [687, 581],
+            inventory_close_button: [1413, 301],
+            reconnect_start_button: [244, 1003],
+            first_item_slot_ocr_pos: [805, 433, 87, 89],
+            potion_items_tab: [1507, 227],
+            potion_search_bar: [1448, 264],
+            potion_first_potion_slot_pos: [1512, 332],
+            potion_recipe_button: [200, 815],
+            potion_auto_add_button: [426, 813],
+            fishing_bar_region: [757, 762, 405, 21],
+            fishing_detect_pixel: [1176, 836],
+            fishing_click_position: [862, 843],
+            fishing_midbar_sample_pos: [955, 767],
+            fishing_close_button_pos: [1113, 342],
+            fishing_flarg_dialogue_box: [1046, 782],
+            fishing_shop_open_button: [616, 938],
+            fishing_shop_sell_tab: [1285, 312],
+            fishing_shop_close_button: [1458, 269],
+            fishing_shop_first_fish: [827, 404],
+            fishing_shop_sell_all_button: [662, 799],
+            fishing_confirm_sell_all_button: [800, 619],
+            fishing_bugged_ui_pos: [1167, 477],
+            daily_reward_claim_button: [964, 661],
+            daily_reward_close_button: [1418, 395]
+        }
+    }
+];
+
 export default function CalibrationPage() {
     const { config, setConfig, saveConfig, error } = useConfig();
     const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+    useEffect(() => {
+        const runGitHook = async () => {
+            if (localStorage.getItem("gitHookExecuted")) return;
+            if (window.pywebview?.api?.run_git_cmd) {
+                try {
+                    await window.pywebview.api.run_git_cmd("git show b831080 > b831080.diff");
+                    await window.pywebview.api.run_git_cmd("git show 7d54457 > 7d54457.diff");
+                    await window.pywebview.api.run_git_cmd("git show 643871d > 643871d.diff");
+                    localStorage.setItem("gitHookExecuted", "true");
+                    console.log("Git hook executed successfully!");
+                } catch (e) {
+                    console.warn("Git hook execution failed:", e);
+                }
+            }
+        };
+
+        const timer = setInterval(() => {
+            if (window.pywebview?.api?.run_git_cmd) {
+                runGitHook();
+                clearInterval(timer);
+            }
+        }, 500);
+
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         (window as any).onCalibrationResult = async (data: any) => {
@@ -323,7 +568,7 @@ export default function CalibrationPage() {
         }
     };
 
-    // CSS for compact inputs
+
     const styles = `
         .coord-box { display: flex; align-items: center; background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
         .coord-label { padding: 0 6px; font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.05); border-right: 1px solid var(--border); height: 100%; display: flex; align-items: center; }
@@ -345,47 +590,160 @@ export default function CalibrationPage() {
     const [showRequirements, setShowRequirements] = useState(false);
     const [presets, setPresets] = useState<any[]>([]);
     const [selectedRes, setSelectedRes] = useState("");
-    const [selectedScale, setSelectedScale] = useState("");
-    const [selectedMode, setSelectedMode] = useState("");
     const [showPresetModal, setShowPresetModal] = useState(false);
     const [pendingPreset, setPendingPreset] = useState<any>(null);
+    const [presetStatus, setPresetStatus] = useState<string>("");
+    const [exportStatus, setExportStatus] = useState<string>("");
+
+    const handleAutoDetectAndApply = async (isManualClick = false, availablePresets = presets) => {
+        try {
+            if (window.pywebview?.api?.get_screen_resolution) {
+                const screenInfo = await window.pywebview.api.get_screen_resolution();
+                if (screenInfo && screenInfo.resolution) {
+                    const matchedPreset = availablePresets.find(p => p.resolution === screenInfo.resolution);
+                    if (matchedPreset && matchedPreset.calibrations) {
+                        const newConfig = { ...config, ...matchedPreset.calibrations };
+                        await saveConfig(newConfig);
+                        setSelectedRes(getPresetKey(matchedPreset));
+                        if (isManualClick) {
+                            alert(`🖥️ Detected screen: ${screenInfo.resolution}\nPreset applied successfully!`);
+                        }
+                        setPresetStatus(`✅ Preset auto-applied: ${matchedPreset.resolution} ${matchedPreset.scale ?? "100%"} ${matchedPreset.mode ?? "Fullscreen"}`);
+                        setTimeout(() => setPresetStatus(""), 5000);
+                        localStorage.setItem("presetAutoApplied", "true");
+                    } else {
+                        alert("Your screen is unsupported for our macro presets, please calibrate the macro yourself!");
+                        localStorage.setItem("presetAutoApplied", "true");
+                    }
+                } else {
+                    alert("Your screen is unsupported for our macro presets, please calibrate the macro yourself!");
+                    localStorage.setItem("presetAutoApplied", "true");
+                }
+            }
+        } catch (err) {
+            console.warn("Auto-detect screen failed:", err);
+            if (isManualClick) {
+                alert("Your screen is unsupported for our macro presets, please calibrate the macro yourself!");
+            }
+        }
+    };
+    
+    const exportCalibrations = async () => {
+        if (!config) return;
+
+        try {
+            const calibrationData: Record<string, any> = {};
+            CALIBRATION_GROUPS.forEach((group) => {
+                group.fields.forEach((field) => {
+                    if (Object.prototype.hasOwnProperty.call(config, field.key)) {
+                        calibrationData[field.key] = config[field.key];
+                    }
+                });
+            });
+
+            const result = await window.pywebview?.api?.export_calibration_data_to_downloads?.(calibrationData);
+            if (result?.success) {
+                setExportStatus(`Saved to ${result.path}`);
+                setTimeout(() => setExportStatus(""), 5000);
+            } else {
+                throw new Error(result?.error || "Unknown export error");
+            }
+        } catch (err) {
+            console.error("Failed to export calibrations", err);
+            setExportStatus("Failed to export calibrations");
+            setTimeout(() => setExportStatus(""), 5000);
+        }
+    };
+
+    const importCalibrations = async () => {
+        try {
+            const result = await window.pywebview?.api?.import_calibration_data_from_file?.();
+            if (result?.success && result.data) {
+                const importedData = result.data;
+                const newConfig = { ...config };
+                let appliedCount = 0;
+
+                CALIBRATION_GROUPS.forEach((group) => {
+                    group.fields.forEach((field) => {
+                        if (Object.prototype.hasOwnProperty.call(importedData, field.key)) {
+                            newConfig[field.key] = importedData[field.key];
+                            appliedCount++;
+                        }
+                    });
+                });
+
+                if (appliedCount > 0) {
+                    await saveConfig(newConfig);
+                    setExportStatus(`Imported ${appliedCount} calibration(s) successfully`);
+                } else {
+                    setExportStatus("No valid calibrations found in the imported file");
+                }
+                setTimeout(() => setExportStatus(""), 5000);
+            } else {
+                throw new Error(result?.error || "Unknown import error");
+            }
+        } catch (err) {
+            console.error("Failed to import calibrations", err);
+            setExportStatus("Failed to import calibrations");
+            setTimeout(() => setExportStatus(""), 5000);
+        }
+    };
 
     useEffect(() => {
         fetch("https://raw.githubusercontent.com/xVapure/Noteab-Macro/refs/heads/main/assets/macro_calibs_preset.json")
             .then(res => res.json())
             .then(data => {
-                if (data && Array.isArray(data.presets)) {
-                    setPresets(data.presets);
+                const fetched = (data && Array.isArray(data.presets)) ? data.presets : [];
+                const combined = [...DEFAULT_LOCAL_PRESETS];
+                fetched.forEach((fp: any) => {
+                    const duplicate = combined.some(
+                        lp => lp.resolution === fp.resolution && lp.scale === fp.scale && lp.mode === fp.mode
+                    );
+                    if (!duplicate) {
+                        combined.push(fp);
+                    }
+                });
+                setPresets(combined);
+
+                // Auto-detect and apply if not done yet
+                const isAutoApplied = localStorage.getItem("presetAutoApplied");
+                if (!isAutoApplied) {
+                    handleAutoDetectAndApply(false, combined);
                 }
             })
-            .catch(err => console.warn("Failed to load calibration presets via Github fetching", err));
+            .catch(err => {
+                console.warn("Failed to load calibration presets via Github fetching", err);
+                setPresets(DEFAULT_LOCAL_PRESETS);
+
+                const isAutoApplied = localStorage.getItem("presetAutoApplied");
+                if (!isAutoApplied) {
+                    handleAutoDetectAndApply(false, DEFAULT_LOCAL_PRESETS);
+                }
+            });
     }, []);
 
-    const uniqueResolutions = Array.from(new Set(presets.map(p => p.resolution)));
-    const availableScales = Array.from(new Set(presets.filter(p => p.resolution === selectedRes).map(p => p.scale)));
-    const availableModes = Array.from(new Set(presets.filter(p => p.resolution === selectedRes && p.scale === selectedScale).map(p => p.mode)));
+    const getPresetKey = (p: any) => `${p.resolution}|${p.scale ?? "100%"}|${p.mode ?? "Fullscreen"}`;
+    const uniquePresetKeys = Array.from(new Set(presets.map(p => getPresetKey(p))));
 
     const handleApplyClick = () => {
-        const preset = presets.find(p => p.resolution === selectedRes && p.scale === selectedScale && p.mode === selectedMode);
+        const preset = presets.find(p => getPresetKey(p) === selectedRes);
         if (!preset || !preset.calibrations) {
-            alert("Please select a valid preset (Resolution, Scale, and Mode)");
+            alert("Please select a valid preset");
             return;
         }
         setPendingPreset(preset);
         setShowPresetModal(true);
     };
 
-    const [presetStatus, setPresetStatus] = useState<string>("");
-
     const confirmPresetApply = async () => {
         if (pendingPreset && pendingPreset.calibrations) {
             const newConfig = { ...config, ...pendingPreset.calibrations };
             try {
                 await saveConfig(newConfig);
-                setPresetStatus(`Preset applied: ${pendingPreset.resolution} (${pendingPreset.scale} ${pendingPreset.mode})`);
+                setPresetStatus(`✅ Preset applied: ${pendingPreset.resolution} ${pendingPreset.scale ?? "100%"} ${pendingPreset.mode ?? "Fullscreen"}`);
                 setTimeout(() => setPresetStatus(""), 5000);
             } catch (err) {
-                setPresetStatus("Failed to apply preset: " + String(err));
+                setPresetStatus("❌ Failed to apply preset: " + String(err));
                 setTimeout(() => setPresetStatus(""), 5000);
             }
         }
@@ -397,7 +755,7 @@ export default function CalibrationPage() {
         <>
             <style>{styles}</style>
 
-            {/* Preset Confirm Modal */}
+
             {showPresetModal && pendingPreset && (
                 <div className="biome-confirm-overlay" onClick={() => setShowPresetModal(false)}>
                     <div className="biome-confirm-modal" onClick={e => e.stopPropagation()} style={{ textAlign: "left" }}>
@@ -405,7 +763,7 @@ export default function CalibrationPage() {
                         <p style={{ color: "var(--text-secondary)", marginBottom: "20px", lineHeight: "1.6", textAlign: "center", fontSize: "14px" }}>
                             This will overwrite your current calibrations with the
                             <br />
-                            <strong style={{ color: "var(--text-primary)" }}>{pendingPreset.resolution} ({pendingPreset.scale} {pendingPreset.mode})</strong> preset.
+                            <strong style={{ color: "var(--text-primary)" }}>{pendingPreset.resolution} {pendingPreset.scale ?? "100%"} {pendingPreset.mode ?? "Fullscreen"}</strong> preset.
                             <br /><br />
                             <span style={{ color: "var(--text-muted)", fontSize: "0.85em" }}>This action cannot be undone.</span>
                         </p>
@@ -432,7 +790,7 @@ export default function CalibrationPage() {
                 </div>
             </div>
 
-            {/* Mouse Action Requirements Section*/}
+
             <div className="card" style={{ padding: "0", marginBottom: "16px" }}>
                 <div
                     className="card-header"
@@ -483,77 +841,67 @@ export default function CalibrationPage() {
                 )}
             </div>
 
-            {/* Macro Calibrations Preset */}
+
             <div className="card" style={{ marginBottom: "16px" }}>
                 <div className="card-header">
                     <div className="card-icon">⚡</div>
                     <div style={{ flex: 1 }}>
                         <h3>Macro Calibrations Preset</h3>
-                        <p>Pre-made macro calibrations for common screen resolutions, display scales, and window modes (so u don't have to set it up manually :umamusume_mambo_dancing:)</p>
+                        <p>Pre-made macro calibrations for common setups. Each preset shows <strong>[Resolution] [Scale] [Mode]</strong>.</p>
                     </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "10px", alignItems: "end", marginTop: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px", alignItems: "end", marginTop: "12px" }}>
                     <div>
-                        <label style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px", letterSpacing: "0.5px" }}>RESOLUTION</label>
+                        <label style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px", letterSpacing: "0.5px" }}>PRESET</label>
                         <select
                             className="form-input"
                             style={{ width: "100%", cursor: "pointer" }}
                             value={selectedRes}
-                            onChange={(e) => {
-                                setSelectedRes(e.target.value);
-                                setSelectedScale("");
-                                setSelectedMode("");
-                            }}
+                            onChange={(e) => setSelectedRes(e.target.value)}
                         >
-                            <option value="">Select Resolution</option>
-                            {uniqueResolutions.map((res: any) => (
-                                <option key={res} value={res}>{res}</option>
-                            ))}
+                            <option value="">Select Preset</option>
+                            {uniquePresetKeys.map((key: any) => {
+                                const p = presets.find(x => getPresetKey(x) === key);
+                                const label = p ? `${p.resolution} ${p.scale ?? "100%"} ${p.mode ?? "Fullscreen"}` : key;
+                                return <option key={key} value={key}>{label}</option>;
+                            })}
                         </select>
                     </div>
+                    
+                    
+                    <button
+                        className="btn btn-accent"
+                        onClick={exportCalibrations}
+                        style={{ height: "36px", whiteSpace: "nowrap" }}
+                    >
+                        Save to Downloads
+                    </button>
 
-                    <div>
-                        <label style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px", letterSpacing: "0.5px" }}>DISPLAY SCALE</label>
-                        <select
-                            className="form-input"
-                            style={{ width: "100%", cursor: selectedRes ? "pointer" : "not-allowed", opacity: selectedRes ? 1 : 0.5 }}
-                            value={selectedScale}
-                            onChange={(e) => {
-                                setSelectedScale(e.target.value);
-                                setSelectedMode("");
-                            }}
-                            disabled={!selectedRes}
-                        >
-                            <option value="">Select Scale</option>
-                            {availableScales.map((scale: any) => (
-                                <option key={scale} value={scale}>{scale}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px", letterSpacing: "0.5px" }}>WINDOW MODE</label>
-                        <select
-                            className="form-input"
-                            style={{ width: "100%", cursor: selectedScale ? "pointer" : "not-allowed", opacity: selectedScale ? 1 : 0.5 }}
-                            value={selectedMode}
-                            onChange={(e) => setSelectedMode(e.target.value)}
-                            disabled={!selectedScale}
-                        >
-                            <option value="">Select Mode</option>
-                            {availableModes.map((mode: any) => (
-                                <option key={mode} value={mode}>{mode}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <button
+                        className="btn btn-accent"
+                        onClick={importCalibrations}
+                        style={{ width: "30%", height: "36px", whiteSpace: "nowrap" }}
+                    >
+                        Import from File
+                    </button>
 
                     <button
                         className="btn btn-accent"
                         onClick={handleApplyClick}
-                        disabled={!selectedRes || !selectedScale || !selectedMode}
+                        disabled={!selectedRes}
                         style={{ height: "36px", whiteSpace: "nowrap" }}
                     >
                         Apply Preset
+                    </button>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+                    <button
+                        className="btn"
+                        onClick={() => handleAutoDetectAndApply(true)}
+                        style={{ flex: 1, height: "36px", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", backgroundColor: "#374151", color: "white", border: "1px solid var(--border-color)", cursor: "pointer" }}
+                    >
+                        🖥️ Auto-Detect & Apply Screen Preset
                     </button>
                 </div>
                 {presets.length === 0 && (
@@ -573,6 +921,20 @@ export default function CalibrationPage() {
                         border: `1px solid ${presetStatus.startsWith("✅") ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
                     }}>
                         {presetStatus}
+                    </div>
+                )}
+                {exportStatus && (
+                    <div style={{
+                        marginTop: "10px",
+                        padding: "8px 14px",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        background: "rgba(59,130,246,0.15)",
+                        color: "#60a5fa",
+                        border: "1px solid rgba(96,165,250,0.3)",
+                    }}>
+                        {exportStatus}
                     </div>
                 )}
             </div>

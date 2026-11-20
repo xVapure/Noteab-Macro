@@ -61,7 +61,7 @@ export default function MiscPage() {
         const checkOcr = async () => {
             try {
                 if (window.pywebview?.api) {
-                    const result = await window.pywebview.api.check_winocr_status();
+                    const result = await window.pywebview.api.check_rapidocr_status();
                     setOcrStatus(result);
                 }
             } catch {
@@ -153,7 +153,7 @@ export default function MiscPage() {
                     flexShrink: 0
                 }} />
                 <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>
-                    WinOCR Status:
+                    RapidOCR Status:
                 </span>
                 <span style={{ color: ocrStatus === null ? "var(--text-muted)" : ocrStatus.installed ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
                     {ocrStatus === null ? "Checking..." : ocrStatus.installed ? "Installed" : "Not Installed"}
@@ -165,11 +165,18 @@ export default function MiscPage() {
                 )}
                 {ocrStatus && !ocrStatus.installed && (
                     <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>
-                        — OCR failsafe will not work (if WinOCR haven't installed, ask macro helper to assist you about this!)
+                        — OCR features will not work until RapidOCR is available.
                     </span>
                 )}
             </div>
 
+            <div className="card">
+                <ToggleSwitch
+                    label="Claim Daily Rewards"
+                    checked={config.claim_daily_rewards ?? true}
+                    onChange={(value) => updateConfig("claim_daily_rewards", value)}
+                />
+            </div>
             <div className="card">
                 <div className="card-header">
                     <div className="card-icon">📦</div>
@@ -529,13 +536,6 @@ export default function MiscPage() {
                         </div>
                     </div>
                 )}
-
-                <ToggleSwitch
-                    label="Rare Biomes Screenshot"
-                    description="Automatically send a screenshot in your webhook when Glitched, Dreamspace, or Cyberspace is found"
-                    checked={config.rare_biome_screenshot !== false}
-                    onChange={(value) => updateConfig("rare_biome_screenshot", value)}
-                />
             </div>
 
             <div className="card">

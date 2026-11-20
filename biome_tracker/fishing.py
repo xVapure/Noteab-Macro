@@ -18,6 +18,11 @@ except Exception:
 pyautogui.FAILSAFE = False
 
 DEFAULT_FISHING_CONFIG = {
+    "click_to_water": [0, 0],                           # click to water
+    "click_to_fishing_spot": [0, 0],                    # click to fishing spot
+    "click_to_fishing_spot_2": [0, 0],                  # click to fishing spot 2
+    "click_to_sell": [0, 0],                            # click to sell
+    "click_to_sell_2": [0, 0],                          # click to sell 2
     "fishing_bar_region": [757, 762, 405, 21],          # this is the big ahh fishing bar
     "fishing_detect_pixel": [1176, 836],                # this is the thingy at the corner when a fish gets detected (fishing diamond)
     "fishing_click_position": [862, 843],               # fishing click boom
@@ -30,6 +35,7 @@ DEFAULT_FISHING_CONFIG = {
     "fishing_shop_first_fish": [827, 404],              # first fish slot in shop
     "fishing_shop_sell_all_button": [662, 799],         # sell all button in shop
     "fishing_confirm_sell_all_button": [800, 619],      # confirm sell-all button
+    "fishing_bugged_ui_pos": [1167, 477],               # bugged fishing UI position
     "collections_button": [33, 443],                    # collections menu button
     "exit_collections_button": [385, 164],              # close collections menu button
     "aura_menu": [1200, 500],                           # aura menu button
@@ -40,7 +46,7 @@ DEFAULT_FISHING_CONFIG = {
 }
 
 AUTOIT_KEY_MAP = {
-    "space": "SPACE",
+    "space": "SPACE", # HOLY SPACEDEV REFERENCE!
     "enter": "ENTER",
     "tab": "TAB",
     "esc": "ESC",
@@ -141,6 +147,11 @@ def load_fishing_config(raw_config: dict[str, Any] | None = None) -> dict[str, A
     fishing_failsafe_enabled = bool(raw.get("fishing_failsafe_rejoin", False)) and auto_reconnect_enabled
     movement_aura_name = str(raw.get("fishing_movement_aura_name", "")).strip()
     return {
+        "click_to_water": _coerce_point(raw.get("click_to_water"), DEFAULT_FISHING_CONFIG["click_to_water"]),
+        "click_to_fishing_spot": _coerce_point(raw.get("click_to_fishing_spot"), DEFAULT_FISHING_CONFIG["click_to_fishing_spot"]),
+        "click_to_fishing_spot_2": _coerce_point(raw.get("click_to_fishing_spot_2"), DEFAULT_FISHING_CONFIG["click_to_fishing_spot_2"]),
+        "click_to_sell": _coerce_point(raw.get("click_to_sell"), DEFAULT_FISHING_CONFIG["click_to_sell"]),
+        "click_to_sell_2": _coerce_point(raw.get("click_to_sell_2"), DEFAULT_FISHING_CONFIG["click_to_sell_2"]),
         "fishing_bar_region": _coerce_region(raw.get("fishing_bar_region"), DEFAULT_FISHING_CONFIG["fishing_bar_region"]),
         "fishing_detect_pixel": _coerce_point(raw.get("fishing_detect_pixel"), DEFAULT_FISHING_CONFIG["fishing_detect_pixel"]),
         "fishing_click_position": _coerce_point(start_fishing_button, DEFAULT_FISHING_CONFIG["fishing_click_position"]),
@@ -160,7 +171,11 @@ def load_fishing_config(raw_config: dict[str, Any] | None = None) -> dict[str, A
         "first_aura_slot_pos": _coerce_point(raw.get("first_aura_slot_pos"), DEFAULT_FISHING_CONFIG["first_aura_slot_pos"]),
         "equip_aura_button": _coerce_point(raw.get("equip_aura_button"), DEFAULT_FISHING_CONFIG["equip_aura_button"]),
         "inventory_close_button": _coerce_point(raw.get("inventory_close_button"), DEFAULT_FISHING_CONFIG["inventory_close_button"]),
+        "fishing_bugged_ui_pos": _coerce_point(raw.get("fishing_bugged_ui_pos"), DEFAULT_FISHING_CONFIG["fishing_bugged_ui_pos"]),
         "fishing_failsafe_rejoin": fishing_failsafe_enabled,
+        "fishing_sell_on_rejoin": bool(raw.get("fishing_sell_on_rejoin", True)),
+        "fishing_path_on_start": bool(raw.get("fishing_path_on_start", True)),
+        "fishing_bugged_ui_rejoin_failsafe": bool(raw.get("fishing_bugged_ui_rejoin_failsafe", True)),
         "fishing_enable_selling": bool(raw.get("fishing_enable_selling", False)),
         "fishing_sell_after_x_fish": _coerce_int(raw.get("fishing_sell_after_x_fish"), 30, 1, 100000),
         "fishing_sell_how_many_fish": _coerce_int(raw.get("fishing_sell_how_many_fish"), 1, 1, 100000),
@@ -168,13 +183,10 @@ def load_fishing_config(raw_config: dict[str, Any] | None = None) -> dict[str, A
         "fishing_movement_aura_name": movement_aura_name,
         "fishing_movement_aura_delay_seconds": _coerce_float(raw.get("fishing_movement_aura_delay_seconds"), 0.67, 0.1, 2.0),
         "merchant_teleporter": bool(raw.get("merchant_teleporter", False)),
-        "fishing_use_merchant_every_x_fish": bool(raw.get("fishing_use_merchant_every_x_fish", False)),
-        "fishing_merchant_every_x_fish": _coerce_int(raw.get("fishing_merchant_every_x_fish"), 30, 1, 100000),
-        "fishing_use_merchant_ocr_every_x_fish": bool(raw.get("fishing_use_merchant_ocr_every_x_fish", False)),
-        "fishing_merchant_ocr_every_x_fish_amt": _coerce_int(raw.get("fishing_merchant_ocr_every_x_fish_amt"), 30, 1, 100000),
+        "fishing_auto_merchant": bool(raw.get("fishing_auto_merchant", raw.get("fishing_use_merchant_every_x_fish", False))),
         "fishing_use_br_sc_every_x_fish": bool(raw.get("fishing_use_br_sc_every_x_fish", False)),
         "fishing_br_sc_every_x_fish": _coerce_int(raw.get("fishing_br_sc_every_x_fish"), 30, 1, 100000),
-        "fishing_actions_delay_ms": _coerce_int(raw.get("fishing_actions_delay_ms"), 100, 0, 5000),
+        "fishing_actions_delay_ms": _coerce_int(raw.get("fishing_actions_delay_ms"), 100, -2000, 5000),
         "fishing_playback_multiplier": _coerce_float(raw.get("fishing_playback_multiplier"), 1.0, 1.0, 2.0),
         "non_vip_movement_path": bool(raw.get("non_vip_movement_path", False)),
 
@@ -189,7 +201,7 @@ def load_fishing_config(raw_config: dict[str, Any] | None = None) -> dict[str, A
 
 
 def _get_fishing_actions_delay_seconds(cfg: dict[str, Any]) -> float:
-    return _coerce_int(cfg.get("fishing_actions_delay_ms"), 100, 0, 5000) / 1000.0
+    return _coerce_int(cfg.get("fishing_actions_delay_ms"), 100, -2000, 5000) / 1000.0
 
 
 def _get_pixel_rgb(x: int, y: int, sct: Any | None = None) -> tuple[int, int, int]:
@@ -372,7 +384,6 @@ def _run_pre_fishing_sequence(
     should_continue: Callable[[], bool],
     can_run: Callable[[], bool],
     activate_roblox_cb: Callable[[], None] | None = None,
-    close_chat_fn: Callable[[], None] | None = None,
 ) -> bool:
     if not should_continue() or not can_run():
         return False
@@ -387,20 +398,13 @@ def _run_pre_fishing_sequence(
     ):
         return False
 
-    # Close chat if open before clicking collection button
-    if close_chat_fn is not None:
-        try:
-            print("[Fishing] Checking and closing chat if open...")
-            close_chat_fn()
-        except Exception as e:
-            print(f"[Fishing] close_chat_fn error: {e}")
     if not sleep_interruptible(0.2 + fishing_actions_delay):
         return False
 
     collections_x, collections_y = cfg["collections_button"]
     if collections_x > 0:
         autoit.mouse_click("left", collections_x, collections_y, speed=3)
-    if not sleep_interruptible(1.0 + fishing_actions_delay):
+    if not sleep_interruptible(0.6 + fishing_actions_delay):
         return False
 
     exit_x, exit_y = cfg["exit_collections_button"]
@@ -441,7 +445,7 @@ def _run_respawn_sequence(
         return False
 
     _autoit_key_tap("enter")
-    if not sleep_interruptible(5.5 + action_delay_seconds):
+    if not sleep_interruptible(2.5 + action_delay_seconds):
         return False
 
     return True
@@ -562,8 +566,10 @@ def _run_sell_fish_sequence(
     should_continue: Callable[[], bool],
     can_run: Callable[[], bool],
     activate_roblox_cb: Callable[[], None] | None = None,
-    close_chat_fn: Callable[[], None] | None = None,
     set_busy_cb: Callable[[bool], None] | None = None,
+    skip_respawn: bool = False,
+    merchant_pending_cb: Callable[[], bool] | None = None,
+    on_sale_remaining: Callable[[int], None] | None = None,
 ) -> bool:
     if fish_sell_count <= 0:
         return True
@@ -574,7 +580,7 @@ def _run_sell_fish_sequence(
             pass
 
     fishing_actions_delay = _get_fishing_actions_delay_seconds(cfg)
-    if not _run_respawn_sequence(
+    if not skip_respawn and not _run_respawn_sequence(
         sleep_interruptible=sleep_interruptible,
         should_continue=should_continue,
         can_run=can_run,
@@ -583,18 +589,13 @@ def _run_sell_fish_sequence(
     ):
         return False
 
-    if close_chat_fn is not None:
-        try:
-            close_chat_fn()
-        except Exception as e:
-            print(f"[Fishing] close_chat_fn error before selling: {e}")
     if not sleep_interruptible(0.2 + fishing_actions_delay):
         return False
 
     collections_x, collections_y = cfg["collections_button"]
     if collections_x > 0:
         autoit.mouse_click("left", collections_x, collections_y, speed=3)
-    if not sleep_interruptible(1.0 + fishing_actions_delay):
+    if not sleep_interruptible(0.5 + fishing_actions_delay):
         return False
 
     exit_x, exit_y = cfg["exit_collections_button"]
@@ -626,19 +627,19 @@ def _run_sell_fish_sequence(
     dialogue_x, dialogue_y = cfg["fishing_flarg_dialogue_box"]
     if dialogue_x > 0:
         autoit.mouse_click("left", dialogue_x, dialogue_y, 1, speed=3)
-        if not sleep_interruptible(0.3 + fishing_actions_delay):
+        if not sleep_interruptible(0.8 + fishing_actions_delay):
             return False
 
-        if not sleep_interruptible(0.2 + fishing_actions_delay):
+        if not sleep_interruptible(0.8 + fishing_actions_delay):
             return False
         autoit.mouse_click("left", dialogue_x, dialogue_y, 1, speed=3)
-    if not sleep_interruptible(0.6 + fishing_actions_delay):
+    if not sleep_interruptible(0.8 + fishing_actions_delay):
         return False
 
     shop_x, shop_y = cfg["fishing_shop_open_button"]
     if shop_x > 0:
         autoit.mouse_click("left", shop_x, shop_y, 1, speed=3)
-    if not sleep_interruptible(1.5 + fishing_actions_delay):
+    if not sleep_interruptible(0.8 + fishing_actions_delay):
         return False
 
     sell_tab_x, sell_tab_y = cfg["fishing_shop_sell_tab"]
@@ -646,12 +647,18 @@ def _run_sell_fish_sequence(
     first_fish_x, first_fish_y = cfg["fishing_shop_first_fish"]
     sell_x, sell_y = cfg["fishing_shop_sell_all_button"]
     confirm_x, confirm_y = cfg["fishing_confirm_sell_all_button"]
-    for _ in range(max(1, int(fish_sell_count))):
+    remaining = max(1, int(fish_sell_count))
+    for _ in range(remaining):
         if not should_continue() or not can_run():
+            return False
+        if merchant_pending_cb is not None and merchant_pending_cb():
+            if close_shop_x > 0:
+                autoit.mouse_click("left", close_shop_x, close_shop_y, 1, speed=3)
+                sleep_interruptible(0.25 + fishing_actions_delay)
             return False
         if sell_tab_x > 0:
             autoit.mouse_click("left", sell_tab_x, sell_tab_y, 1, speed=3)
-        if not sleep_interruptible(0.3 + fishing_actions_delay):
+        if not sleep_interruptible(0.7 + fishing_actions_delay):
             return False
         if first_fish_x > 0:
             autoit.mouse_click("left", first_fish_x, first_fish_y, 1, speed=3)
@@ -661,14 +668,23 @@ def _run_sell_fish_sequence(
             autoit.mouse_click("left", sell_x, sell_y, 1, speed=3)
         if not sleep_interruptible(0.3 + fishing_actions_delay):
             return False
-        if confirm_x > 0:
-            autoit.mouse_click("left", confirm_x, confirm_y, 1, speed=3)
-        if not sleep_interruptible(1.5 + fishing_actions_delay):
+        if confirm_x <= 0:
+            return False
+        autoit.mouse_click("left", confirm_x, confirm_y, 1, speed=3)
+        remaining -= 1
+        if on_sale_remaining is not None:
+            on_sale_remaining(remaining)
+        if not sleep_interruptible(0.35 + fishing_actions_delay):
+            return False
+        if merchant_pending_cb is not None and merchant_pending_cb():
+            if close_shop_x > 0:
+                autoit.mouse_click("left", close_shop_x, close_shop_y, 1, speed=3)
+                sleep_interruptible(0.25 + fishing_actions_delay)
             return False
 
     if close_shop_x > 0:
         autoit.mouse_click("left", close_shop_x, close_shop_y, 1, speed=3)
-    if not sleep_interruptible(0.85 + fishing_actions_delay):
+    if not sleep_interruptible(0.3 + fishing_actions_delay):
         return False
 
     if not _run_respawn_sequence(
@@ -680,7 +696,7 @@ def _run_sell_fish_sequence(
     ):
         return False
 
-    if not sleep_interruptible(0.2 + fishing_actions_delay):
+    if not sleep_interruptible(0.15 + fishing_actions_delay):
         return False
 
     return True
@@ -697,12 +713,15 @@ def run_fishing_loop(
     on_failsafe_timeout: Callable[[], None] | None = None,
     run_br_sc_sequence_cb: Callable[[], bool] | None = None,
     run_merchant_sequence_cb: Callable[[], bool] | None = None,
-    merchant_ocr_check_cb: Callable[[], None] | None = None,
     activate_roblox_cb: Callable[[], None] | None = None,
-    close_chat_fn: Callable[[], None] | None = None,
     runtime_state: dict[str, Any] | None = None,
     set_fishing_busy_cb: Callable[[bool], None] | None = None,
+    pause_daily_reward_cb: Callable[[], bool] | None = None,
+    run_fishing_action_cb: Callable[[], bool] | None = None,
+    on_fishing_event_cb: Callable[[str], None] | None = None,
+    merchant_event_lock=None,
     on_f2_pressed_cb: Callable[[], None] | None = None,
+    is_failsafe_ignored_cb: Callable[[], bool] | None = None,
 ) -> None:
     stop_event = stop_event or threading.Event()
     config_provider = config_provider or _load_config_file
@@ -738,6 +757,14 @@ def run_fishing_loop(
         except Exception:
             return False
 
+    def _run_fishing_action() -> bool:
+        if run_fishing_action_cb is None:
+            return False
+        try:
+            return bool(run_fishing_action_cb())
+        except Exception:
+            return False
+
     def _should_continue() -> bool:
         return not stop_event.is_set()
 
@@ -760,28 +787,26 @@ def run_fishing_loop(
             time.sleep(min(poll, remaining))
         return _should_continue() and _can_run()
 
-    def _get_due_actions() -> tuple[bool, int, bool, bool, bool]:
+    def _get_due_actions() -> tuple[bool, int, bool, bool]:
         sell_after = max(1, int(cfg.get("fishing_sell_after_x_fish", 30)))
-        should_sell = bool(cfg.get("fishing_enable_selling", False)) and (fish_caught_count >= sell_after)
+        should_sell = bool(cfg.get("fishing_enable_selling", False)) and (fish_caught_count >= sell_after or _state_counter("fish_sale_remaining") > 0)
         sell_count = max(1, int(cfg.get("fishing_sell_how_many_fish", 1)))
 
-        use_merchant_every_x = bool(cfg.get("fishing_use_merchant_every_x_fish", False))
-        merchant_after = max(1, int(cfg.get("fishing_merchant_every_x_fish", 30)))
-        should_use_merchant = use_merchant_every_x and (fish_caught_since_merchant >= merchant_after)
-
-        use_merchant_ocr_every_x = bool(cfg.get("fishing_use_merchant_ocr_every_x_fish", False))
-        merchant_ocr_after = max(1, int(cfg.get("fishing_merchant_ocr_every_x_fish_amt", 30)))
-        should_use_merchant_ocr = use_merchant_ocr_every_x and (fish_caught_since_merchant_ocr >= merchant_ocr_after)
+        should_use_merchant = _state_flag("merchant_reset_pending") or (
+            _has_pending_merchant()
+            and (bool(cfg.get("fishing_auto_merchant", False)) or bool(cfg.get("merchant_teleporter", False)))
+        )
 
         use_br_sc_every_x = bool(cfg.get("fishing_use_br_sc_every_x_fish", False))
         br_sc_after = max(1, int(cfg.get("fishing_br_sc_every_x_fish", 30)))
         should_use_br_sc = use_br_sc_every_x and (fish_caught_since_br_sc >= br_sc_after)
 
-        return should_sell, sell_count, should_use_merchant, should_use_br_sc, should_use_merchant_ocr
+        return should_sell, sell_count, should_use_merchant, should_use_br_sc
 
     cfg = load_fishing_config(config_provider())
     next_cfg_refresh_at = time.monotonic()
     was_runnable = False
+    failsafe_reset_attempted = False
 
     runtime_state_dict = runtime_state if isinstance(runtime_state, dict) else None
 
@@ -807,18 +832,50 @@ def run_fishing_loop(
             return
         runtime_state_dict[name] = bool(value)
 
+    def _set_state_counter(name: str, value: int) -> None:
+        if runtime_state_dict is not None:
+            runtime_state_dict[name] = max(0, int(value))
+
+    def merchantretrywait() -> float:
+        if runtime_state_dict is None:
+            return 0.0
+        try:
+            return max(0.0, float(runtime_state_dict.get("merchant_retry_after", 0.0)) - time.monotonic())
+        except Exception:
+            return 0.0
+
+    def setmerchantretry() -> None:
+        if runtime_state_dict is None:
+            return
+        try:
+            delay = float(runtime_state_dict.get("merchant_retry_delay", 0.0))
+        except Exception:
+            delay = 0.0
+        delay = min(30.0, max(2.0, delay * 2.0 if delay else 2.0))
+        runtime_state_dict["merchant_retry_delay"] = delay
+        runtime_state_dict["merchant_retry_after"] = time.monotonic() + delay
+
+    def clearmerchantretry() -> None:
+        if runtime_state_dict is None:
+            return
+        runtime_state_dict["merchant_retry_delay"] = 0.0
+        runtime_state_dict["merchant_retry_after"] = 0.0
+
     def _consume_state_flag(name: str) -> bool:
         value = _state_flag(name)
         _set_state_flag(name, False)
         return value
 
+    last_start_fishing_click_at: float | None = None
+
     def _run_merchant_sequence_with_state() -> tuple[bool, bool]:
+        nonlocal last_start_fishing_click_at
         ran = _run_merchant_sequence()
+        last_start_fishing_click_at = time.monotonic()
         return ran, _consume_state_flag("merchant_requires_reset")
 
     fish_caught_count = _state_counter("fish_caught_count")
     fish_caught_since_merchant = _state_counter("fish_caught_since_merchant")
-    fish_caught_since_merchant_ocr = _state_counter("fish_caught_since_merchant_ocr")
     fish_caught_since_br_sc = _state_counter("fish_caught_since_br_sc")
     _set_state_flag("merchant_requires_reset", False)
 
@@ -827,12 +884,172 @@ def run_fishing_loop(
             return
         runtime_state_dict["fish_caught_count"] = max(0, int(fish_caught_count))
         runtime_state_dict["fish_caught_since_merchant"] = max(0, int(fish_caught_since_merchant))
-        runtime_state_dict["fish_caught_since_merchant_ocr"] = max(0, int(fish_caught_since_merchant_ocr))
         runtime_state_dict["fish_caught_since_br_sc"] = max(0, int(fish_caught_since_br_sc))
 
     _persist_runtime_counters()
 
-    last_start_fishing_click_at: float | None = None
+    def _claim_merchant_event() -> str | None:
+        if runtime_state_dict is None:
+            return None
+
+        def claim() -> str | None:
+            events = runtime_state_dict.get("merchant_event_queue")
+            if isinstance(events, list) and events:
+                name = str(events.pop(0) or "")
+                runtime_state_dict["merchant_event_active_name"] = name
+                runtime_state_dict["merchant_event_pending"] = bool(events)
+                runtime_state_dict["merchant_event_name"] = name
+                runtime_state_dict["merchant_event_pending_name"] = str(events[0]) if events else ""
+                return name
+            if not _state_flag("merchant_event_pending"):
+                return None
+            name = str(
+                runtime_state_dict.get("merchant_event_name")
+                or runtime_state_dict.get("merchant_event_pending_name")
+                or ""
+            )
+            runtime_state_dict["merchant_event_active_name"] = name
+            runtime_state_dict["merchant_event_pending"] = False
+            return name
+
+        if merchant_event_lock is None:
+
+            return claim()
+
+        with merchant_event_lock:
+
+            return claim()
+
+
+    def _has_pending_merchant() -> bool:
+        if runtime_state_dict is None:
+            return False
+        if merchant_event_lock is None:
+            return _state_flag("merchant_event_pending")
+        with merchant_event_lock:
+            return _state_flag("merchant_event_pending")
+
+    def _finish_merchant_event(name: str, succeeded: bool) -> None:
+        if runtime_state_dict is None:
+            return
+
+        def finish() -> None:
+            events = runtime_state_dict.get("merchant_event_queue")
+            if isinstance(events, list):
+                if not succeeded and name:
+                    events.insert(0, name)
+                runtime_state_dict["merchant_event_active_name"] = ""
+                runtime_state_dict["merchant_event_pending"] = bool(events)
+                next_name = str(events[0]) if events else ""
+                runtime_state_dict["merchant_event_name"] = next_name
+                runtime_state_dict["merchant_event_pending_name"] = next_name
+                return
+            runtime_state_dict["merchant_event_active_name"] = ""
+            runtime_state_dict["merchant_event_pending"] = not succeeded
+            if succeeded:
+                if str(runtime_state_dict.get("merchant_event_name") or "") == name:
+                    runtime_state_dict.pop("merchant_event_name", None)
+                if str(runtime_state_dict.get("merchant_event_pending_name") or "") == name:
+                    runtime_state_dict.pop("merchant_event_pending_name", None)
+            elif name and not runtime_state_dict.get("merchant_event_name"):
+                runtime_state_dict["merchant_event_name"] = name
+
+        if merchant_event_lock is None:
+            finish()
+        else:
+            with merchant_event_lock:
+                finish()
+
+    def _run_pending_merchant() -> bool:
+        nonlocal fish_caught_since_merchant
+        wait = merchantretrywait()
+        if wait > 0 and not _sleep_interruptible(wait):
+            return False
+        if _state_flag("merchant_reset_pending"):
+            if not _run_respawn_sequence(
+                sleep_interruptible=_sleep_interruptible,
+                should_continue=_should_continue,
+                can_run=_can_run,
+                action_delay_seconds=_get_fishing_actions_delay_seconds(cfg),
+                activate_roblox_cb=activate_roblox_cb,
+            ):
+                if _should_continue() and _can_run():
+                    setmerchantretry()
+                return False
+            _set_state_flag("merchant_reset_pending", False)
+            clearmerchantretry()
+            return True
+        merchant_name = _claim_merchant_event()
+        if merchant_name is None:
+            return False
+        _set_busy(True)
+        merchant_ran, requires_reset = _run_merchant_sequence_with_state()
+        _finish_merchant_event(merchant_name, merchant_ran)
+        if not merchant_ran:
+            setmerchantretry()
+            _set_busy(False)
+            return False
+        clearmerchantretry()
+        fish_caught_since_merchant = 0
+        _persist_runtime_counters()
+        if requires_reset:
+            _set_state_flag("merchant_reset_pending", True)
+            if not _run_pending_merchant():
+                _set_busy(False)
+                return False
+        _set_busy(False)
+        return True
+    def _run_sell_batch(sell_count: int) -> bool:
+        if _state_flag("merchant_reset_pending") and not _run_pending_merchant():
+            return False
+        if _has_pending_merchant() and not _run_pending_merchant():
+            return False
+        remaining = _state_counter("fish_sale_remaining") or max(1, int(sell_count))
+        _set_state_counter("fish_sale_remaining", remaining)
+        resume = False
+        while remaining > 0 and _should_continue() and _can_run():
+            def _sale_progress(value: int) -> None:
+                nonlocal remaining
+                remaining = max(0, int(value))
+                _set_state_counter("fish_sale_remaining", remaining)
+                _persist_runtime_counters()
+
+            done = _run_sell_fish_sequence(
+                cfg=cfg,
+                fish_sell_count=remaining,
+                sleep_interruptible=_sleep_interruptible,
+                should_continue=_should_continue,
+                can_run=_can_run,
+                activate_roblox_cb=activate_roblox_cb,
+                set_busy_cb=_set_busy,
+                skip_respawn=resume,
+                merchant_pending_cb=lambda: _has_pending_merchant(),
+                on_sale_remaining=_sale_progress,
+            )
+            if done:
+                if _has_pending_merchant():
+                    if not _run_pending_merchant():
+                        return False
+                    if remaining > 0:
+                        resume = True
+                        continue
+                _set_state_counter("fish_sale_remaining", 0)
+                if on_fishing_event_cb is not None:
+                    try:
+                        on_fishing_event_cb("sale")
+                    except Exception:
+                        pass
+                return True
+            if not _has_pending_merchant() or not _should_continue() or not _can_run():
+                return False
+            if not _run_pending_merchant():
+                return False
+            if remaining <= 0:
+                _set_state_counter("fish_sale_remaining", 0)
+                return True
+            resume = True
+        return False
+
     sct = None
     if mss is not None:
         try:
@@ -850,6 +1067,17 @@ def run_fishing_loop(
 
     try:
         while _should_continue():
+            if _run_fishing_action():
+                _set_busy(False)
+                if was_runnable and last_start_fishing_click_at is not None:
+                    last_start_fishing_click_at = time.monotonic()
+                continue
+            if pause_daily_reward_cb is not None:
+                try:
+                    if pause_daily_reward_cb():
+                        continue
+                except Exception:
+                    pass
             now = time.monotonic()
             if now >= next_cfg_refresh_at:
                 try:
@@ -867,143 +1095,73 @@ def run_fishing_loop(
 
             if not was_runnable:
                 _set_busy(True)
-                if close_chat_fn is not None:
-                    try:
-                        close_chat_fn()
-                    except Exception as e:
-                        print(f"{log_prefix} close_chat_fn error on resume: {e}")
+                initial_start = _state_flag("initial_start_pending")
 
                 if _state_flag("force_sell_on_next_cycle"):
+                    _set_state_flag("initial_start_pending", False)
+                    if bool(cfg.get("fishing_enable_selling", False)) and bool(cfg.get("fishing_sell_on_rejoin", True)):
+                        force_sell_count = max(1, int(cfg.get("fishing_sell_how_many_fish", 1)))
+                        print(
+                            f"{log_prefix} rejoin completed; forced selling flow before fishing path "
+                            f"(selling {force_sell_count} fish)."
+                        )
+                        if not _run_sell_batch(force_sell_count):
+                            continue
+                        fish_caught_count = 0
+                        _persist_runtime_counters()
+                        last_start_fishing_click_at = None
+                        was_runnable = False
+                        _set_state_flag("force_sell_on_next_cycle", False)
+                        continue
                     _set_state_flag("force_sell_on_next_cycle", False)
-                    force_sell_count = max(1, int(cfg.get("fishing_sell_how_many_fish", 1)))
-                    print(
-                        f"{log_prefix} rejoin completed; forced selling flow before fishing path "
-                        f"(selling {force_sell_count} fish)."
-                    )
-                    if not _run_sell_fish_sequence(
-                        cfg=cfg,
-                        fish_sell_count=force_sell_count,
-                        sleep_interruptible=_sleep_interruptible,
-                        should_continue=_should_continue,
-                        can_run=_can_run,
-                        activate_roblox_cb=activate_roblox_cb,
-                        close_chat_fn=close_chat_fn,
-                        set_busy_cb=_set_busy,
-                    ):
-                        continue
-                    fish_caught_count = 0
-                    _persist_runtime_counters()
-                    last_start_fishing_click_at = None
-                    was_runnable = False
-                    continue
-
-                should_sell, sell_count, should_use_merchant, should_use_br_sc, should_use_merchant_ocr = _get_due_actions()
-
-                if should_sell:
-                    print(
-                        f"{log_prefix} pending selling flow triggered before fishing path "
-                        f"after {fish_caught_count} catches (selling {sell_count} fish)."
-                    )
-                    if not _run_sell_fish_sequence(
-                        cfg=cfg,
-                        fish_sell_count=sell_count,
-                        sleep_interruptible=_sleep_interruptible,
-                        should_continue=_should_continue,
-                        can_run=_can_run,
-                        activate_roblox_cb=activate_roblox_cb,
-                        close_chat_fn=close_chat_fn,
-                        set_busy_cb=_set_busy,
-                    ):
-                        continue
-                    fish_caught_count = 0
-                    _persist_runtime_counters()
-
-                    # Re-evaluate counters after selling because merchant/BRSC counters are independent.
-                    _, _, should_use_merchant, should_use_br_sc, should_use_merchant_ocr = _get_due_actions()
-
-                    if should_use_merchant:
-                        print(f"{log_prefix} merchant flow triggered after pending selling.")
-                        merchant_ran, _ = _run_merchant_sequence_with_state()
-                        if merchant_ran:
-                            fish_caught_since_merchant = 0
-                        _persist_runtime_counters()
-                        if not merchant_ran:
-                            print(f"{log_prefix} merchant flow skipped/failed during fishing.")
-                            
-                    if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
-                        print(f"{log_prefix} merchant OCR triggered after pending selling.")
-                        try:
-                            _set_busy(True)
-                            merchant_ocr_check_cb()
-                        except Exception as e:
-                            print(f"{log_prefix} merchant OCR check failure: {e}")
-                        finally:
-                            _set_busy(False)
-                            fish_caught_since_merchant_ocr = 0
-                            _persist_runtime_counters()
-
-                    if should_use_br_sc:
-                        print(f"{log_prefix} BR/SC flow triggered after pending selling.")
-                        br_sc_ran = _run_br_sc_sequence()
-                        if br_sc_ran:
-                            fish_caught_since_br_sc = 0
-                        _persist_runtime_counters()
-
-                    last_start_fishing_click_at = None
-                    was_runnable = False
-                    continue
+                should_sell, sell_count, should_use_merchant, should_use_br_sc = _get_due_actions()
 
                 if should_use_merchant:
-                    print(
-                        f"{log_prefix} pending merchant flow triggered before fishing path "
-                        f"after {fish_caught_since_merchant} catches."
-                    )
-                    merchant_ran, _ = _run_merchant_sequence_with_state()
-                    if merchant_ran:
-                        fish_caught_since_merchant = 0
-                    _persist_runtime_counters()
-                    if not merchant_ran:
-                        print(f"{log_prefix} merchant flow skipped/failed during fishing.")
-
+                    _set_state_flag("initial_start_pending", False)
+                    print(f"{log_prefix} pending merchant flow triggered from merchant logs.")
+                    if not _run_pending_merchant():
+                        last_start_fishing_click_at = None
+                        was_runnable = False
+                        continue
                     if should_use_br_sc:
                         print(f"{log_prefix} BR/SC flow triggered after pending merchant.")
                         br_sc_ran = _run_br_sc_sequence()
                         if br_sc_ran:
                             fish_caught_since_br_sc = 0
                         _persist_runtime_counters()
-
                     last_start_fishing_click_at = None
                     was_runnable = False
                     continue
-                    
-                if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
+
+                if should_sell:
+                    _set_state_flag("initial_start_pending", False)
                     print(
-                        f"{log_prefix} pending merchant OCR flow triggered before fishing path "
-                        f"after {fish_caught_since_merchant_ocr} catches."
+                        f"{log_prefix} pending selling flow triggered before fishing path "
+                        f"after {fish_caught_count} catches (selling {sell_count} fish)."
                     )
-                    try:
-                        _set_busy(True)
-                        merchant_ocr_check_cb()
-                    except Exception as e:
-                        print(f"{log_prefix} merchant OCR check failure: {e}")
-                    finally:
-                        _set_busy(False)
-                        fish_caught_since_merchant_ocr = 0
-                        _persist_runtime_counters()
-                        
-                        
+                    if not _run_sell_batch(sell_count):
+                        continue
+                    fish_caught_count = 0
+                    _persist_runtime_counters()
+                    _, _, should_use_merchant, should_use_br_sc = _get_due_actions()
+                    if should_use_merchant:
+                        print(f"{log_prefix} merchant flow triggered after pending selling.")
+                        if not _run_pending_merchant():
+                            last_start_fishing_click_at = None
+                            was_runnable = False
+                            continue
                     if should_use_br_sc:
-                        print(f"{log_prefix} BR/SC flow triggered after merchant OCR.")
+                        print(f"{log_prefix} BR/SC flow triggered after pending selling.")
                         br_sc_ran = _run_br_sc_sequence()
                         if br_sc_ran:
                             fish_caught_since_br_sc = 0
                         _persist_runtime_counters()
-
                     last_start_fishing_click_at = None
                     was_runnable = False
                     continue
 
                 if should_use_br_sc:
+                    _set_state_flag("initial_start_pending", False)
                     print(
                         f"{log_prefix} pending BR/SC flow triggered before fishing path "
                         f"after {fish_caught_since_br_sc} catches."
@@ -1017,46 +1175,45 @@ def run_fishing_loop(
                     was_runnable = False
                     continue
 
-                if not _run_pre_fishing_sequence(
-                    cfg=cfg,
-                    sleep_interruptible=_sleep_interruptible,
-                    should_continue=_should_continue,
-                    can_run=_can_run,
-                    activate_roblox_cb=activate_roblox_cb,
-                    close_chat_fn=close_chat_fn,
-                ):
-                    continue
-                if not _run_equip_aura_before_movement(
-                    cfg=cfg,
-                    sleep_interruptible=_sleep_interruptible,
-                    should_continue=_should_continue,
-                    can_run=_can_run,
-                ):
-                    continue
-                _non_vip = bool(cfg.get("non_vip_movement_path", False))
-                _walk_multiplier = NON_VIP_WALK_SPEED_MULTIPLIER if _non_vip else 1.0
-                _playback_mult = float(cfg.get("fishing_playback_multiplier", 1.0))
-                _combined_multiplier = _walk_multiplier * _playback_mult
-                if not _run_walk_to_fish_path(
-                    sleep_interruptible=_sleep_interruptible,
-                    should_continue=_should_continue,
-                    can_run=_can_run,
-                    speed_multiplier=_combined_multiplier,
-                ):
-                    continue
-                
+                if not (initial_start and not bool(cfg.get("fishing_path_on_start", True))):
+                    if not _run_pre_fishing_sequence(
+                        cfg=cfg,
+                        sleep_interruptible=_sleep_interruptible,
+                        should_continue=_should_continue,
+                        can_run=_can_run,
+                        activate_roblox_cb=activate_roblox_cb,
+                    ):
+                        continue
+                    if not _run_equip_aura_before_movement(
+                        cfg=cfg,
+                        sleep_interruptible=_sleep_interruptible,
+                        should_continue=_should_continue,
+                        can_run=_can_run,
+                    ):
+                        continue
+                    _non_vip = bool(cfg.get("non_vip_movement_path", False))
+                    _walk_multiplier = NON_VIP_WALK_SPEED_MULTIPLIER if _non_vip else 1.0
+                    _playback_mult = float(cfg.get("fishing_playback_multiplier", 1.0))
+                    _combined_multiplier = _walk_multiplier * _playback_mult
+                    if not _run_walk_to_fish_path(
+                        sleep_interruptible=_sleep_interruptible,
+                        should_continue=_should_continue,
+                        can_run=_can_run,
+                        speed_multiplier=_combined_multiplier,
+                    ):
+                        continue
                 close_x, close_y = cfg["fishing_close_button_pos"]
                 for _ in range(3):
                     autoit.mouse_click("left", close_x, close_y, speed=3)
-                    if not _sleep_interruptible(0.15): break
+                    if not _sleep_interruptible(0.3): break
                 if not _sleep_interruptible(0.3): continue
 
                 click_x, click_y = cfg["fishing_click_position"]
                 autoit.mouse_click("left", click_x, click_y, speed=3)
                 last_start_fishing_click_at = time.monotonic()
+                _set_state_flag("initial_start_pending", False)
                 if not _sleep_interruptible(0.25): continue
                 was_runnable = True
-                _set_busy(False)
 
             if (
                 was_runnable
@@ -1064,43 +1221,45 @@ def run_fishing_loop(
                 and last_start_fishing_click_at is not None
                 and (time.monotonic() - float(last_start_fishing_click_at)) >= 60.0
             ):
-                # UI navigation failsafe
-                if not getattr(_notify_failsafe_timeout, '_ui_nav_attempted', False):
-                    print(f"{log_prefix} failsafe: 60s timeout! Attempting UI navigation to close minigame popup...")
-                    try:
-                        _autoit_key_tap("\\")
-                        if not _sleep_interruptible(1.5): continue
-                        _autoit_key_tap("s")
-                        if not _sleep_interruptible(1.5): continue
-                        _autoit_key_tap("a")
-                        if not _sleep_interruptible(1.5): continue
-                        _autoit_key_tap("enter")
-                        if not _sleep_interruptible(1.5): continue
-                        _autoit_key_tap("\\")
-                        if not _sleep_interruptible(1.0): continue
-                    except Exception as e:
-                        print(f"{log_prefix} UI nav failsafe error: {e}")
+                if is_failsafe_ignored_cb is not None and is_failsafe_ignored_cb():
+                    last_start_fishing_click_at = time.monotonic()
+                    time.sleep(0.1)
+                    continue
+
+                if bool(cfg.get("fishing_bugged_ui_rejoin_failsafe", True)) and not failsafe_reset_attempted:
+                    bugged_x, bugged_y = cfg.get("fishing_bugged_ui_pos", (0, 0))
+                    if bugged_x > 0 and bugged_y > 0:
+                        print(f"{log_prefix} failsafe: 60s timeout! Clicking bugged fishing UI at ({bugged_x}, {bugged_y}) with 5px spread...")
+                        try:
+                            for dx, dy in [(0, 0), (0, -5), (0, 5), (-5, 0), (5, 0)]:
+                                autoit.mouse_click("left", bugged_x + dx, bugged_y + dy, 1, speed=3)
+                                if not _sleep_interruptible(2):
+                                    break
+                        except Exception as e:
+                            print(f"{log_prefix} bugged UI click error: {e}")
+                    else:
+                        print(f"{log_prefix} failsafe: 60s timeout! No bugged UI pos calibrated, retrying fishing click...")
 
                     try:
                         click_x, click_y = cfg["fishing_click_position"]
                         autoit.mouse_click("left", click_x, click_y, speed=3)
-                        if not _sleep_interruptible(0.3): continue
-                        print(f"{log_prefix} UI nav failsafe: clicked fish button")
+                        if not _sleep_interruptible(0.3):
+                            continue
+                        print(f"{log_prefix} bugged UI failsafe: clicked fish button, waiting 60s for fish...")
                     except Exception as e:
-                        print(f"{log_prefix} UI nav failsafe: failed to click fish button: {e}")
+                        print(f"{log_prefix} bugged UI failsafe: failed to click fish button: {e}")
 
                     last_start_fishing_click_at = time.monotonic()
-                    _notify_failsafe_timeout._ui_nav_attempted = True
-                    print(f"{log_prefix} UI nav failsafe done, retrying fishing...")
-                    continue
-                else:
-                    print(f"{log_prefix} failsafe triggered: no minigame detected for 60s after UI nav failsafe!")
-                    _notify_failsafe_timeout._ui_nav_attempted = False
-                    _notify_failsafe_timeout()
-                    was_runnable = False
-                    last_start_fishing_click_at = None
+                    failsafe_reset_attempted = True
                     continue
 
+                print(f"{log_prefix} failsafe triggered: no fish caught after 60s timeout!")
+                failsafe_reset_attempted = False
+                _notify_failsafe_timeout()
+                was_runnable = False
+                last_start_fishing_click_at = None
+                _set_busy(False)
+                continue
             detect_x, detect_y = cfg["fishing_detect_pixel"]
             pixel = _get_pixel_rgb(detect_x, detect_y, sct=sct)
             if not is_indicator_active(pixel):
@@ -1148,29 +1307,32 @@ def run_fishing_loop(
             close_x, close_y = cfg["fishing_close_button_pos"]
             for _ in range(5):
                 autoit.mouse_click("left", close_x, close_y, speed=3)
-                if not _sleep_interruptible(0.55):
+                if not _sleep_interruptible(0.3):
                     break
 
             fish_caught_count += 1
             fish_caught_since_merchant += 1
-            fish_caught_since_merchant_ocr += 1
             fish_caught_since_br_sc += 1
+            failsafe_reset_attempted = False
             _persist_runtime_counters()
 
+            if on_fishing_event_cb is not None:
+                try:
+                    on_fishing_event_cb("catch")
+                except Exception:
+                    pass
             _set_busy(False)
             if not _sleep_interruptible(0.42): continue
-            _set_busy(True)
 
             if not _should_continue() or not _can_run():
                 continue
 
-            use_merchant_every_x = bool(cfg.get("fishing_use_merchant_every_x_fish", False))
-            merchant_after = max(1, int(cfg.get("fishing_merchant_every_x_fish", 30)))
-            should_use_merchant = use_merchant_every_x and (fish_caught_since_merchant >= merchant_after)
-
-            use_merchant_ocr_every_x = bool(cfg.get("fishing_use_merchant_ocr_every_x_fish", False))
-            merchant_ocr_after = max(1, int(cfg.get("fishing_merchant_ocr_every_x_fish_amt", 30)))
-            should_use_merchant_ocr = use_merchant_ocr_every_x and (fish_caught_since_merchant_ocr >= merchant_ocr_after)
+            should_use_merchant = (
+                _state_flag("merchant_reset_pending")
+                or (_has_pending_merchant() and (
+                    bool(cfg.get("fishing_auto_merchant", False)) or bool(cfg.get("merchant_teleporter", False))
+                ))
+            )
 
             use_br_sc_every_x = bool(cfg.get("fishing_use_br_sc_every_x_fish", False))
             br_sc_after = max(1, int(cfg.get("fishing_br_sc_every_x_fish", 30)))
@@ -1185,38 +1347,21 @@ def run_fishing_loop(
                         f"{log_prefix} selling flow triggered after {fish_caught_count} catches "
                         f"(selling {max(1, sell_count)} fish)."
                     )
-                    if not _run_sell_fish_sequence(
-                        cfg=cfg,
-                        fish_sell_count=max(1, sell_count),
-                        sleep_interruptible=_sleep_interruptible,
-                        should_continue=_should_continue,
-                        can_run=_can_run,
-                        activate_roblox_cb=activate_roblox_cb,
-                        close_chat_fn=close_chat_fn,
-                        set_busy_cb=_set_busy,
-                    ):
+                    if not _run_sell_batch(max(1, sell_count)):
+                        was_runnable = False
+                        last_start_fishing_click_at = None
+                        _set_busy(False)
                         continue
                     fish_caught_count = 0
                     _persist_runtime_counters()
 
                     if should_use_merchant:
                         print(f"{log_prefix} merchant flow triggered after selling.")
-                        merchant_ran, _ = _run_merchant_sequence_with_state()
-                        if merchant_ran:
-                            fish_caught_since_merchant = 0
-                        _persist_runtime_counters()
-                        if not merchant_ran:
-                            print(f"{log_prefix} merchant flow skipped/failed during fishing.")
-
-                    if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
-                        print(f"{log_prefix} merchant OCR triggered after selling.")
-                        try:
-                            merchant_ocr_check_cb()
-                        except Exception as e:
-                            print(f"{log_prefix} merchant OCR check failure: {e}")
-                        finally:
-                            fish_caught_since_merchant_ocr = 0
-                            _persist_runtime_counters()
+                        if not _run_pending_merchant():
+                            was_runnable = False
+                            last_start_fishing_click_at = None
+                            _set_busy(False)
+                            continue
 
                     if should_use_br_sc:
                         print(f"{log_prefix} BR/SC flow triggered after selling.")
@@ -1230,71 +1375,42 @@ def run_fishing_loop(
                     _set_busy(False)
                     continue
 
-            if should_use_merchant:
-                print(f"{log_prefix} merchant flow triggered after {fish_caught_since_merchant} catches.")
-                merchant_ran, merchant_requires_reset = _run_merchant_sequence_with_state()
-                if merchant_ran:
-                    fish_caught_since_merchant = 0
+            if should_use_merchant and _has_pending_merchant():
+                print(f"{log_prefix} merchant flow triggered from merchant logs after a successful catch.")
+                _set_busy(True)
+                merchant_ran = _run_pending_merchant()
                 _persist_runtime_counters()
                 if not merchant_ran:
-                    print(f"{log_prefix} merchant flow skipped/failed during fishing.")
-
-                if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
-                    print(f"{log_prefix} merchant OCR triggered after merchant flow.")
-                    try:
-                        merchant_ocr_check_cb()
-                    except Exception as e:
-                        print(f"{log_prefix} merchant OCR check failure: {e}")
-                    finally:
-                        fish_caught_since_merchant_ocr = 0
-                        _persist_runtime_counters()
+                    was_runnable = False
+                    last_start_fishing_click_at = None
+                    continue
 
                 if should_use_br_sc:
                     print(f"{log_prefix} BR/SC flow triggered after merchant.")
                     br_sc_ran = _run_br_sc_sequence()
                     if br_sc_ran:
                         fish_caught_since_br_sc = 0
-                    should_use_br_sc = False
                     _persist_runtime_counters()
 
-                if merchant_requires_reset:
-                    if not _sleep_interruptible(0.4 + _get_fishing_actions_delay_seconds(cfg)):
-                        continue
-                    was_runnable = False
-                    last_start_fishing_click_at = None
-                    continue
-
-            if should_use_merchant_ocr and merchant_ocr_check_cb is not None:
-                print(f"{log_prefix} merchant OCR triggered after {fish_caught_since_merchant_ocr} catches.")
-                try:
-                    merchant_ocr_check_cb()
-                except Exception as e:
-                    print(f"{log_prefix} merchant OCR check failure: {e}")
-                finally:
-                    fish_caught_since_merchant_ocr = 0
-                    _persist_runtime_counters()
-
-            if should_use_br_sc:
-                print(f"{log_prefix} BR/SC flow triggered after {fish_caught_since_br_sc} catches.")
-                br_sc_ran = _run_br_sc_sequence()
-                if br_sc_ran:
-                    fish_caught_since_br_sc = 0
-                _persist_runtime_counters()
-
+                was_runnable = False
+                last_start_fishing_click_at = None
+                _set_busy(False)
+                continue
             start_x, start_y = cfg["fishing_click_position"]
+            _set_busy(True)
             autoit.mouse_click("left", start_x, start_y, speed=3)
             last_start_fishing_click_at = time.monotonic()
             _sleep_interruptible(0.3)
             _set_busy(False)
     finally:
         _set_busy(False)
-        
+
         for k in ("w", "a", "s", "d", "space"):
             try:
                 _autoit_key_up(k)
             except Exception:
                 pass
-            
+
         if sct is not None:
             try:
                 sct.close()
@@ -1313,4 +1429,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-print("Sven is sick") 
+print("Sven is sick")

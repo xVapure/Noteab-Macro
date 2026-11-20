@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useConfig } from "../contexts/ConfigContext";
 
 interface ModuleStatus {
@@ -14,11 +14,8 @@ interface ActiveModulesResponse {
 export default function StatusPage() {
     const { isMacroRunning } = useConfig();
     const [statusData, setStatusData] = useState<ActiveModulesResponse | null>(null);
-    const [logLines, setLogLines] = useState<string[]>([]);
-    const [autoScroll, setAutoScroll] = useState(true);
     const [modulePage, setModulePage] = useState(0);
     const [moduleFilter, setModuleFilter] = useState<"all" | "active" | "idle" | "disabled">("all");
-    const logContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -43,43 +40,6 @@ export default function StatusPage() {
             clearInterval(interval);
         };
     }, []);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const fetchLogs = async () => {
-            if (!window.pywebview?.api?.get_macro_logs) return;
-            try {
-                const data = await window.pywebview.api.get_macro_logs();
-                if (isMounted && data?.lines) {
-                    setLogLines(data.lines);
-                }
-            } catch (err) {
-                console.error("Failed to fetch macro logs:", err);
-            }
-        };
-
-        fetchLogs();
-        const logInterval = setInterval(fetchLogs, 3000);
-
-        return () => {
-            isMounted = false;
-            clearInterval(logInterval);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (autoScroll && logContainerRef.current) {
-            logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-        }
-    }, [logLines, autoScroll]);
-
-    const handleLogScroll = () => {
-        const el = logContainerRef.current;
-        if (!el) return;
-        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-        setAutoScroll(nearBottom);
-    };
 
     if (!statusData) {
         return <div style={{ padding: "20px" }}>Loading status information...</div>;
@@ -117,7 +77,7 @@ export default function StatusPage() {
                     </div>
                 </div>
 
-                {/* module filter */}
+
                 <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap" }}>
                     {([
                         { key: "all" as const, label: "All", color: "var(--text-bright)", dotColor: "" },
@@ -262,92 +222,6 @@ export default function StatusPage() {
                         </>
                     );
                 })()}
-            </div>
-
-            {/* Macro Log Viewer */}
-            <div className="card">
-                <div className="card-header">
-                    <div className="card-icon">📋</div>
-                    <div>
-                        <h3>Macro Session Log</h3>
-                    </div>
-                </div>
-
-                <div
-                    ref={logContainerRef}
-                    onScroll={handleLogScroll}
-                    style={{
-                        marginTop: "10px",
-                        maxHeight: "320px",
-                        overflowY: "auto",
-                        background: "rgba(0, 0, 0, 0.35)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "6px",
-                        padding: "10px 14px",
-                        fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-                        fontSize: "0.75rem",
-                        lineHeight: "1.55",
-                        color: "var(--text-muted)",
-                        scrollbarWidth: "thin",
-                    }}
-                >
-                    {logLines.length === 0 ? (
-                        <div style={{ color: "var(--text-muted)", opacity: 0.5, fontStyle: "italic" }}>
-                            No log entries yet — start the macro to see output here.
-                        </div>
-                    ) : (
-                        logLines.map((line, idx) => {
-                            let lineColor = "var(--text-muted)";
-                            const lower = line.toLowerCase();
-                            if (lower.includes("error") || lower.includes("failed")) {
-                                lineColor = "#f87171";
-                            } else if (lower.includes("warn")) {
-                                lineColor = "#fbbf24";
-                            } else if (lower.includes("[log]")) {
-                                lineColor = "#94a3b8";
-                            } else if (lower.includes("biome") || lower.includes("aura")) {
-                                lineColor = "#67e8f9";
-                            } else if (lower.includes("webhook") || lower.includes("sent")) {
-                                lineColor = "#86efac";
-                            }
-
-                            return (
-                                <div key={idx} style={{
-                                    color: lineColor,
-                                    padding: "1px 0",
-                                    wordBreak: "break-all",
-                                    borderBottom: "1px solid rgba(255,255,255,0.03)",
-                                }}>
-                                    {line}
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-
-                {!autoScroll && logLines.length > 0 && (
-                    <div style={{ textAlign: "center", marginTop: "6px" }}>
-                        <button
-                            onClick={() => {
-                                setAutoScroll(true);
-                                if (logContainerRef.current) {
-                                    logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-                                }
-                            }}
-                            style={{
-                                background: "rgba(59, 130, 246, 0.15)",
-                                border: "1px solid rgba(59, 130, 246, 0.3)",
-                                color: "#60a5fa",
-                                padding: "4px 14px",
-                                borderRadius: "4px",
-                                fontSize: "0.75rem",
-                                cursor: "pointer",
-                            }}
-                        >
-                            ↓ Scroll to bottom
-                        </button>
-                    </div>
-                )}
             </div>
 
             {!isMacroRunning && (

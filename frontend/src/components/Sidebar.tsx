@@ -6,9 +6,10 @@ interface SidebarProps {
 }
 import GlitchOverlay from "./GlitchOverlay";
 import { useGlitchText } from "../hooks/useGlitchText";
+import { useConfig } from "../contexts/ConfigContext";
 
-const SidebarItem = ({ item, isActive, onClick, isGlitching, locked }: { item: any; isActive: boolean; onClick: () => void; isGlitching: boolean; locked?: boolean }) => {
-    const label = useGlitchText(item.label || "", isGlitching);
+const SidebarItem = ({ item, isActive, onClick, isGlitching, locked, customLabel, customIcon }: { item: any; isActive: boolean; onClick: () => void; isGlitching: boolean; locked?: boolean; customLabel?: string; customIcon?: string }) => {
+    const label = useGlitchText(customLabel || item.label || "", isGlitching);
     const isDisabled = item.disabled || locked;
     return (
         <div
@@ -17,7 +18,9 @@ const SidebarItem = ({ item, isActive, onClick, isGlitching, locked }: { item: a
             style={isDisabled ? { opacity: 0.3, cursor: "not-allowed", pointerEvents: "none" } : {}}
             title={locked ? "🔒 Locked" : undefined}
         >
-            <span className="icon">{locked ? "🔒" : item.icon}</span>
+            <span className="icon">
+                {locked ? "🔒" : (customIcon ? <img src={customIcon} alt="" style={{width: "18px", height: "18px", objectFit: "contain"}} /> : item.icon)}
+            </span>
             {label}
             {item.disabled && <span style={{ fontSize: "10px", marginLeft: "auto", opacity: 0.7 }}>(WIP)</span>}
         </div>
@@ -43,21 +46,31 @@ const navItems = [
     { id: "potioncraft", label: "Potion Crafting", icon: "🧪" },
     { id: "otherfeatures", label: "Other Features", icon: "🔧" },
     { id: "customization", label: "Customizations", icon: "🔧" },
+    { id: "themedesign", label: "Theme Design", icon: "🎨" },
     { section: "Others" },
     { id: "credits", label: "Credits", icon: "💜" },
     { id: "donations", label: "Donations <3", icon: "💎" },
 ];
 
 export default function Sidebar({ activeTab, onTabChange, isGlitching, macroVersion }: SidebarProps) {
-    const title = useGlitchText("Coteab Macro", isGlitching);
-    const version = useGlitchText(macroVersion || "v?.?.?", isGlitching);
+    const { config } = useConfig();
+    const isCustom = config?.selected_theme === 'custom';
+    
+    const customTitle = (isCustom && config?.custom_macro_title) ? config.custom_macro_title : "Coteab Macro";
+    const customVersion = (isCustom && config?.custom_macro_version) ? config.custom_macro_version : (macroVersion || "v?.?.?");
+
+    const title = useGlitchText(customTitle, isGlitching);
+    const version = useGlitchText(customVersion, isGlitching);
+
+    const customLabels = isCustom ? (config?.custom_labels || {}) : {};
+    const customIcons = isCustom ? (config?.custom_icons || {}) : {};
 
     return (
         <div className="sidebar" style={{ position: "relative" }}>
             {isGlitching && <GlitchOverlay />}
             <div className="sidebar-brand">
-                <h1>{title}</h1>
-                <div className="version">{version}</div>
+                <h1>{title.split('').map((c, i) => <span key={i} className="title-letter">{c}</span>)}</h1>
+                <div className="version">{version.split('').map((c, i) => <span key={i} className={`version-letter ${c === '0' ? 'is-zero' : ''}`}>{c}</span>)}</div>
             </div>
 
             <div className="sidebar-nav">
@@ -76,6 +89,8 @@ export default function Sidebar({ activeTab, onTabChange, isGlitching, macroVers
                             isActive={activeTab === item.id}
                             onClick={() => item.id && onTabChange(item.id)}
                             isGlitching={isGlitching}
+                            customLabel={item.id ? customLabels[item.id] : undefined}
+                            customIcon={item.id ? customIcons[item.id] : undefined}
                         />
                     );
                 })}

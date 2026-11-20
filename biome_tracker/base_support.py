@@ -13,10 +13,43 @@ import itertools
 import zipfile, subprocess, tempfile
 import keyboard as kb
 import json, requests, time, os, threading, re, webbrowser, random, keyboard, pyautogui, autoit, psutil, \
-    locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys, hashlib, winocr, asyncio, win32api, traceback
+    locale, win32gui, win32process, win32con, ctypes, queue, mouse, sys, hashlib, asyncio, win32api, traceback
+idle_mouse_tracker = None
+idle_mouse_originals = {}
 
 
-current_ver = os.environ.get("COTEAB_MACRO_VERSION", "v2.1.8-hotfix1")
+def install_idle_mouse_guard(tracker):
+    global idle_mouse_tracker
+    idle_mouse_tracker = tracker
+    if idle_mouse_originals:
+        return
+
+    inputs = (
+        (autoit, ("control_click", "control_click_by_handle", "control_move", "control_move_by_handle", "mouse_click", "mouse_click_drag", "mouse_down", "mouse_move", "mouse_up", "mouse_wheel")),
+        (pyautogui, ("click", "doubleClick", "drag", "dragRel", "dragTo", "hscroll", "leftClick", "middleClick", "mouseDown", "mouseUp", "move", "moveRel", "moveTo", "rightClick", "scroll", "vscroll")),
+        (mouse, ("click", "double_click", "drag", "move", "press", "release", "right_click", "wheel")),
+    )
+
+    def guard(original, action):
+        def guarded(*args, **kwargs):
+            try:
+                idle = bool(idle_mouse_tracker.config.get("enable_idle_mode", False)) and not bool(getattr(idle_mouse_tracker, "reconnecting_state", False))
+            except Exception:
+                idle = False
+            if idle and action not in ("mouse_up", "mouseUp", "release"):
+                return None
+            return original(*args, **kwargs)
+        return guarded
+
+    for module, names in inputs:
+        for name in names:
+            original = getattr(module, name, None)
+            if callable(original):
+                idle_mouse_originals[(module, name)] = original
+                setattr(module, name, guard(original, name))
+
+
+current_ver = os.environ.get("COTEAB_MACRO_VERSION", "v2.2.0-hotfix1")
 rare_biomes = ["GLITCHED", "DREAMSPACE", "CYBERSPACE"]
 
 class ConfigVar:
@@ -142,6 +175,7 @@ class SnippingWidget:
 
     # hi im tea (ffffffffff)
 
+
     def on_mouse_press(self, event):
         self.begin_x = event.x
         self.begin_y = event.y
@@ -176,6 +210,7 @@ class CalibrationManager:
     def __init__(self):
         self._queue = queue.Queue()
         self._window = None  # pywebview window ref
+
         self._tracker = None
         self._save_fn = None
         self._emit_fn = None
@@ -525,21 +560,33 @@ class CalibrationManager:
         root.after(100, poll)
         root.mainloop()
 
+def apply_headers(url: str) -> dict:
+    headers = {}
+    if BETA_AUTH_URL in url:
+        headers["x-api-key"] = BETA_AUTH_KEY
+    return headers
+
+BETA_AUTH_URL = "https://authenciation-test.vercel.app/api"
+BETA_AUTH_KEY = "betareleaseauthhello_thisgonnabeimplementinfuturelol"
+
 class ActionScheduler:
     def __init__(self, owner, worker_name="ActionScheduler"):
         self.owner = owner
         self._pq = queue.PriorityQueue()
         self._counter = itertools.count()
         self._running = True
-        self._worker_thread = threading.Thread(target=self._worker, name=worker_name, daemon=True)
-        self._worker_thread.start()
         self._action_lock = threading.RLock()
         self._action_active = threading.Event()
+        self._transition_lock = threading.Lock()
+        self._paused = False
+        self._worker_thread = threading.Thread(target=self._worker, name=worker_name, daemon=True)
+        self._worker_thread.start()
 
     def enqueue_action(self, fn, name=None, priority=5, block=False, timeout=None):
         idx = next(self._counter)
         qname = name or f"action-{idx}"
-        self._pq.put((priority, idx, qname, fn))
+        with self._transition_lock:
+            self._pq.put((priority, idx, qname, fn))
         if block:
             start = time.time()
             while True:
@@ -551,41 +598,61 @@ class ActionScheduler:
             return True
         return True
 
+    def cancel_pending(self):
+        with self._transition_lock:
+            with self._pq.mutex:
+                self._pq.queue.clear()
+
+    def cancel_pending_and_wait(self):
+        with self._transition_lock:
+            self._paused = True
+            with self._pq.mutex:
+                self._pq.queue.clear()
+        if threading.current_thread() is self._worker_thread:
+            with self._transition_lock:
+                with self._pq.mutex:
+                    self._pq.queue.clear()
+                self._paused = False
+            return
+        with self._action_lock:
+            pass
+        with self._transition_lock:
+            with self._pq.mutex:
+                self._pq.queue.clear()
+            self._paused = False
+
     def _worker(self):
         while self._running:
             try:
-                try:
-                    priority, idx, name, fn = self._pq.get(timeout=0.7)
-                except Exception:
-                    continue
-
-                self._action_active.set()
-                self._action_lock.acquire()
-                try:
-                    try:
-                        fn()
-                    except Exception:
+                with self._transition_lock:
+                    if self._paused:
+                        fn = None
+                    else:
                         try:
-                            self.owner.error_logging(
-                                sys.exc_info(),
-                                f"Error executing scheduled action {name}"
-                            )
-                        except Exception:
-                            pass
-                finally:
+                            priority, idx, name, fn = self._pq.get_nowait()
+                        except queue.Empty:
+                            fn = None
+                        if fn is not None:
+                            self._action_active.set()
+                            self._action_lock.acquire()
+                if fn is None:
+                    time.sleep(0.05)
+                    continue
+                try:
+                    fn()
+                except Exception:
                     try:
-                        self._action_lock.release()
+                        self.owner.error_logging(
+                            sys.exc_info(),
+                            f"Error executing scheduled action {name}"
+                        )
                     except Exception:
                         pass
+                finally:
+                    self._action_lock.release()
                     self._action_active.clear()
-
             except Exception:
                 self._action_active.clear()
-                try:
-                    self._action_lock.release()
-                except Exception:
-                    pass
-
     def stop(self):
         self._running = False
         try:
@@ -593,3 +660,4 @@ class ActionScheduler:
                 self._pq.get_nowait()
         except Exception:
             pass
+    
