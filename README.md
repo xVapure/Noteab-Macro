@@ -1,7 +1,7 @@
 # Coteab Macro notice.
 ## I. Introduction
 1) New developer??!?
-- Hi everyone. I am Vapure, aka "criticize." or "C". I work with Akito and a few others to maintain this macro. If you have any inquires, feel free to contact us on discord, or by email `work.vapure@gmail.com`.
+- Hi everyone. I am Vapure, aka "criticize." or "C". I work with a few others to maintain this macro. If you have any inquires, feel free to contact us on discord, or by email `work.vapure@gmail.com`.
 - You might have seen me somewhere inside other Sol's RNG related servers.
 2) The project.
 - This project is a fork of the original [Noteab's Biome Macro](https://github.com/NotWindyZ/Noteab-Macro/).
